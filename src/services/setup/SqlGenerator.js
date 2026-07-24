@@ -220,14 +220,28 @@ CREATE TRIGGER ${def.name}
   }
 
   _createPolicy(pol) {
-    return `DROP POLICY IF EXISTS ${pol.name} ON ${pol.table};
-CREATE POLICY ${pol.name} ON ${pol.table}
-  FOR ${pol.command} USING (${pol.using});`;
+    let sql = `DROP POLICY IF EXISTS ${pol.name} ON ${pol.table};\n`;
+    sql += `CREATE POLICY ${pol.name} ON ${pol.table}\n`;
+    sql += `  FOR ${pol.command}`;
+    if (pol.using && pol.check) {
+      sql += `\n  USING (${pol.using})\n  WITH CHECK (${pol.check})`;
+    } else if (pol.using) {
+      sql += `\n  USING (${pol.using})`;
+    } else if (pol.check) {
+      sql += `\n  WITH CHECK (${pol.check})`;
+    }
+    sql += ';';
+    return sql;
   }
 
   _createGrant(def) {
-    const params = def.params && def.params.length > 0 ? `(${def.params.join(', ')})` : '()';
-    return `GRANT ${def.type} ON FUNCTION ${def.function}${params} TO ${def.role};`;
+    if (def.kind === 'function') {
+      const params = def.params?.length > 0 ? `(${def.params.join(', ')})` : '()';
+      return `GRANT ${def.type} ON FUNCTION ${def.name}${params} TO ${def.roles.join(', ')};`;
+    }
+    const onMap = { schema: 'SCHEMA', all_tables: 'ALL TABLES IN SCHEMA', all_sequences: 'ALL SEQUENCES IN SCHEMA' };
+    const onClause = onMap[def.kind] || def.kind.toUpperCase();
+    return `GRANT ${def.type} ON ${onClause} ${def.target} TO ${def.roles.join(', ')};`;
   }
 
   _createMetadata(meta) {

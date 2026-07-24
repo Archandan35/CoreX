@@ -24,8 +24,8 @@ const MANIFEST = {
         { name: 'id', type: 'UUID', primaryKey: true, default: 'gen_random_uuid()', nullable: false },
         { name: 'email', type: 'VARCHAR(255)', unique: true, nullable: false },
         { name: 'name', type: 'VARCHAR(255)', nullable: false },
-        { name: 'password', type: 'VARCHAR(255)' },
-        { name: 'role', type: 'VARCHAR(100)', default: "'user'" },
+        { name: 'password', type: 'VARCHAR(255)', nullable: true },
+        { name: 'role', type: 'VARCHAR(50)', default: "'user'", nullable: false, check: "role IN ('user', 'admin', 'superadmin', 'owner')" },
         { name: 'permissions', type: 'TEXT[]', default: "'{}'" },
         { name: 'status', type: 'VARCHAR(20)', default: "'active'", check: "status IN ('active', 'inactive', 'suspended')" },
         { name: 'created_at', type: 'TIMESTAMPTZ', default: 'NOW()' },
@@ -38,7 +38,7 @@ const MANIFEST = {
       ],
       rls: true,
       triggers: ['set_updated_at'],
-      policies: ['users_select_own', 'admin_all_access'],
+      policies: ['users_select', 'users_insert', 'users_update', 'users_delete'],
     },
     {
       name: 'roles',
@@ -46,7 +46,7 @@ const MANIFEST = {
         { name: 'id', type: 'UUID', primaryKey: true, default: 'gen_random_uuid()', nullable: false },
         { name: 'code', type: 'VARCHAR(100)', unique: true, nullable: false },
         { name: 'name', type: 'VARCHAR(100)', nullable: false },
-        { name: 'description', type: 'TEXT' },
+        { name: 'description', type: 'TEXT', nullable: true },
         { name: 'permissions', type: 'TEXT[]', default: "'{}'" },
         { name: 'all', type: 'BOOLEAN', default: 'FALSE' },
         { name: 'inherits', type: 'TEXT[]', default: "'{}'" },
@@ -70,7 +70,7 @@ const MANIFEST = {
         { name: 'id', type: 'UUID', primaryKey: true, default: 'gen_random_uuid()', nullable: false },
         { name: 'code', type: 'VARCHAR(100)', unique: true, nullable: false },
         { name: 'label', type: 'VARCHAR(255)', nullable: false },
-        { name: 'category', type: 'VARCHAR(100)' },
+        { name: 'category', type: 'VARCHAR(100)', nullable: true },
         { name: 'created_at', type: 'TIMESTAMPTZ', default: 'NOW()' },
       ],
       foreignKeys: [],
@@ -85,7 +85,7 @@ const MANIFEST = {
       name: 'settings',
       columns: [
         { name: 'key', type: 'VARCHAR(255)', primaryKey: true, nullable: false },
-        { name: 'value', type: 'JSONB' },
+        { name: 'value', type: 'JSONB', nullable: true },
         { name: 'updated_at', type: 'TIMESTAMPTZ', default: 'NOW()' },
       ],
       foreignKeys: [],
@@ -99,9 +99,9 @@ const MANIFEST = {
       columns: [
         { name: 'id', type: 'UUID', primaryKey: true, default: 'gen_random_uuid()', nullable: false },
         { name: 'action', type: 'VARCHAR(100)', nullable: false },
-        { name: 'module', type: 'VARCHAR(100)' },
+        { name: 'module', type: 'VARCHAR(100)', nullable: true },
         { name: 'user_id', type: 'UUID', references: { table: 'users', column: 'id' } },
-        { name: 'details', type: 'JSONB' },
+        { name: 'details', type: 'JSONB', nullable: true },
         { name: 'ip_address', type: 'VARCHAR(45)' },
         { name: 'created_at', type: 'TIMESTAMPTZ', default: 'NOW()' },
       ],
@@ -123,7 +123,7 @@ const MANIFEST = {
         { name: 'id', type: 'UUID', primaryKey: true, default: 'gen_random_uuid()', nullable: false },
         { name: 'user_id', type: 'UUID', references: { table: 'users', column: 'id' } },
         { name: 'token', type: 'VARCHAR(500)', nullable: false },
-        { name: 'expires_at', type: 'TIMESTAMPTZ' },
+        { name: 'expires_at', type: 'TIMESTAMPTZ', nullable: true },
         { name: 'created_at', type: 'TIMESTAMPTZ', default: 'NOW()' },
       ],
       foreignKeys: [
@@ -143,7 +143,7 @@ const MANIFEST = {
         { name: 'id', type: 'UUID', primaryKey: true, default: 'gen_random_uuid()', nullable: false },
         { name: 'user_id', type: 'UUID', references: { table: 'users', column: 'id' } },
         { name: 'title', type: 'VARCHAR(255)', nullable: false },
-        { name: 'body', type: 'TEXT' },
+        { name: 'body', type: 'TEXT', nullable: true },
         { name: 'read', type: 'BOOLEAN', default: 'FALSE' },
         { name: 'created_at', type: 'TIMESTAMPTZ', default: 'NOW()' },
       ],
@@ -182,7 +182,7 @@ const MANIFEST = {
       returns: 'BOOLEAN',
       language: 'sql',
       security: 'SECURITY DEFINER',
-      body: `SELECT EXISTS (SELECT 1 FROM public.users u JOIN public.roles r ON u.role = r.code WHERE r."all" = TRUE);`,
+      body: `SELECT EXISTS (SELECT 1 FROM public.users WHERE permissions @> ARRAY['SYSTEM_ADMIN']);`,
     },
     {
       name: 'check_permission',
@@ -226,6 +226,15 @@ const MANIFEST = {
       security: 'SECURITY DEFINER',
       body: `BEGIN\n  RETURN EXISTS (SELECT 1 FROM pg_proc WHERE proname = func_name AND pronamespace = 'public'::regnamespace);\nEND;`,
     },
+    {
+      name: 'is_admin',
+      type: 'function',
+      params: [],
+      returns: 'BOOLEAN',
+      language: 'sql',
+      security: 'SECURITY DEFINER',
+      body: `SELECT EXISTS (\n  SELECT 1 FROM public.users\n  WHERE id = auth.uid()\n  AND role IN ('admin', 'superadmin')\n);`,
+    },
   ],
 
   procedures: [],
@@ -249,22 +258,38 @@ const MANIFEST = {
 
   rlsPolicies: [
     {
-      name: 'users_select_own',
+      name: 'users_select',
       table: 'users',
       command: 'SELECT',
-      using: "id = current_setting('app.user_id')::UUID",
+      using: "auth.uid() = id OR is_admin() OR auth.role() = 'service_role'",
     },
     {
-      name: 'admin_all_access',
+      name: 'users_insert',
       table: 'users',
-      command: 'ALL',
-      using: "EXISTS (SELECT 1 FROM public.roles r WHERE r.code = current_setting('app.user_role') AND r.\"all\" = TRUE)",
+      command: 'INSERT',
+      check: "auth.role() = 'service_role' OR (auth.uid() = id)",
+    },
+    {
+      name: 'users_update',
+      table: 'users',
+      command: 'UPDATE',
+      using: "auth.uid() = id OR is_admin() OR auth.role() = 'service_role'",
+    },
+    {
+      name: 'users_delete',
+      table: 'users',
+      command: 'DELETE',
+      using: "is_admin() OR auth.role() = 'service_role'",
     },
   ],
 
   grants: [
-    { type: 'EXECUTE', function: 'is_first_install', params: [], role: 'anon' },
-    { type: 'EXECUTE', function: 'has_admin_user', params: [], role: 'anon' },
+    { kind: 'schema', type: 'USAGE', target: 'public', roles: ['anon', 'authenticated'] },
+    { kind: 'all_tables', type: 'ALL', target: 'public', roles: ['anon', 'authenticated'] },
+    { kind: 'all_sequences', type: 'ALL', target: 'public', roles: ['anon', 'authenticated'] },
+    { kind: 'function', type: 'EXECUTE', name: 'is_first_install', params: [], roles: ['anon'] },
+    { kind: 'function', type: 'EXECUTE', name: 'has_admin_user', params: [], roles: ['anon'] },
+    { kind: 'function', type: 'EXECUTE', name: 'is_admin', params: [], roles: ['anon', 'authenticated'] },
   ],
 
   defaultPrivileges: [],
@@ -356,8 +381,9 @@ export function resolveDependencyOrder() {
   }
 
   for (const grant of MANIFEST.grants) {
-    order.push({ type: 'grant', name: `grant_${grant.function}`, def: grant });
-    added.add(`grant:${grant.function}`);
+    const grantName = grant.kind === 'function' ? grant.name : `${grant.kind}_${grant.target}`;
+    order.push({ type: 'grant', name: `grant_${grantName}`, def: grant });
+    added.add(`grant:${grantName}`);
   }
 
   for (const table of MANIFEST.tables) {

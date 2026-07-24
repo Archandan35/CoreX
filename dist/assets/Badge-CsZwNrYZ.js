@@ -1,1 +1,0 @@
-import{r as n,j as d}from"./index-D91ZjrzC.js";const m=n.memo(function({children:e,variant:s="secondary",size:a="",dot:o=!1,className:t=""}){const r=["badge",`badge-${s}`,a?`badge-${a}`:"",o?"badge-dot":"",t].filter(Boolean).join(" ");return d.jsx("span",{className:r,children:e})});export{m as B};
