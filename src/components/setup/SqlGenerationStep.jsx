@@ -1,17 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import Button from '../Button.jsx';
 import SqlGenerator from '../../services/setup/SqlGenerator.js';
 
 export default function SqlGenerationStep({ scanResult, sqlText, setSqlText, setCanProceed, next, back }) {
   const [copied, setCopied] = useState(false);
   const [regenerateKey, setRegenerateKey] = useState(0);
-  const [fullSchema, setFullSchema] = useState('');
+  const [showFullSchema, setShowFullSchema] = useState(false);
 
   const missing = scanResult?.missing || {};
   const totalMissing = Object.values(missing).reduce((a, b) => a + b.length, 0);
   const isAlreadyInstalled = totalMissing === 0;
 
-  const generated = useMemo(() => {
+  const generated = () => {
     if (!sqlText || regenerateKey > 0) {
       const gen = new SqlGenerator();
       const text = gen.generate(scanResult);
@@ -19,40 +19,11 @@ export default function SqlGenerationStep({ scanResult, sqlText, setSqlText, set
       return text;
     }
     return sqlText;
-  }, [scanResult, regenerateKey, sqlText]);
-
-  const fullGenerated = useMemo(() => {
-    if (!fullSchema) {
-      const gen = new SqlGenerator();
-      const text = gen.generateFull();
-      setFullSchema(text);
-      return text;
-    }
-    return fullSchema;
-  }, []);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(generated);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {}
   };
 
-  const handleDownload = () => {
-    const blob = new Blob([generated], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'corex_install.sql'; a.click();
-    URL.revokeObjectURL(url);
-  };
+  const fullGenerated = SqlGenerator.generateFull();
 
-  const handleRegenerate = () => {
-    setSqlText('');
-    setRegenerateKey(k => k + 1);
-  };
-
-  const generatedStatementCount = generated.split('\n').filter(l => l.trim() && !l.trim().startsWith('--')).length;
+  const generatedStatementCount = generated().split('\n').filter(l => l.trim() && !l.trim().startsWith('--')).length;
   const fullStatementCount = fullGenerated.split('\n').filter(l => l.trim() && !l.trim().startsWith('--')).length;
 
   return (
@@ -82,19 +53,47 @@ export default function SqlGenerationStep({ scanResult, sqlText, setSqlText, set
             </div>
           </div>
           <div className="setup-sql-tabs">
-            <div className="setup-sql-tab active" onClick={() => {}}>Missing Only (Installation)</div>
-            <div className="setup-sql-tab" onClick={() => {}}>Full Schema (Complete)</div>
+            <div 
+              className="setup-sql-tab active" 
+              onClick={() => setShowFullSchema(false)}
+            >
+              Missing Only (Installation)
+            </div>
+            <div 
+              className="setup-sql-tab" 
+              onClick={() => setShowFullSchema(true)}
+            >
+              Full Schema (Complete)
+            </div>
           </div>
-          <pre className="setup-sql-block">{generated}</pre>
+          <pre className="setup-sql-block">{showFullSchema ? fullGenerated : generated()}</pre>
         </>
       )}
 
       <div className="setup-nav">
         {!isAlreadyInstalled && (
           <>
-            <Button variant="ghost" onClick={handleCopy}>{copied ? 'Copied!' : 'Copy SQL'}</Button>
-            <Button variant="ghost" onClick={handleDownload}>Download SQL</Button>
-            <Button variant="ghost" onClick={handleRegenerate}>Regenerate</Button>
+            <Button variant="ghost" onClick={() => {
+              try {
+                navigator.clipboard.writeText(showFullSchema ? fullGenerated : generated());
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              } catch {}
+            }}>{copied ? 'Copied!' : 'Copy SQL'}</Button>
+            <Button variant="ghost" onClick={() => {
+              const content = showFullSchema ? fullGenerated : generated();
+              const blob = new Blob([content], { type: 'text/plain' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url; 
+              a.download = 'corex_install.sql'; 
+              a.click();
+              URL.revokeObjectURL(url);
+            }}>Download SQL</Button>
+            <Button variant="ghost" onClick={() => {
+              setSqlText('');
+              setRegenerateKey(k => k + 1);
+            }}>Regenerate</Button>
           </>
         )}
         <Button variant="ghost" onClick={back}>Back</Button>
