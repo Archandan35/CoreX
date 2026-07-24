@@ -1,1 +1,0 @@
-import{j as a}from"./index-BIEZR5En.js";const n=({label:s,hint:r,children:e,className:m=""})=>a.jsxs("div",{className:`form-group ${m}`.trim(),children:[s&&a.jsx("label",{className:"form-label",children:s}),r&&a.jsx("span",{className:"form-hint",children:r}),e]}),i=({className:s="",...r})=>a.jsx("input",{...r,className:`form-input ${s}`.trim()});export{n as F,i as I};

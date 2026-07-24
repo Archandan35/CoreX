@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Button from '../Button.jsx';
 import SqlGenerator from '../../services/setup/SqlGenerator.js';
 
@@ -11,19 +11,16 @@ export default function SqlGenerationStep({ scanResult, sqlText, setSqlText, set
   const totalMissing = Object.values(missing).reduce((a, b) => a + b.length, 0);
   const isAlreadyInstalled = totalMissing === 0;
 
-  const generated = () => {
-    if (!sqlText || regenerateKey > 0) {
-      const gen = new SqlGenerator();
-      const text = gen.generate(scanResult);
-      setSqlText(text);
-      return text;
-    }
-    return sqlText;
-  };
+  const generated = useMemo(() => {
+    const gen = new SqlGenerator();
+    const text = gen.generate(scanResult);
+    setSqlText(text);
+    return text;
+  }, [scanResult, regenerateKey]);
 
-  const fullGenerated = SqlGenerator.generateFull();
+  const fullGenerated = useMemo(() => SqlGenerator.generateFull(), []);
 
-  const generatedStatementCount = generated().split('\n').filter(l => l.trim() && !l.trim().startsWith('--')).length;
+  const generatedStatementCount = generated.split('\n').filter(l => l.trim() && !l.trim().startsWith('--')).length;
   const fullStatementCount = fullGenerated.split('\n').filter(l => l.trim() && !l.trim().startsWith('--')).length;
 
   return (
@@ -66,7 +63,7 @@ export default function SqlGenerationStep({ scanResult, sqlText, setSqlText, set
               Full Schema (Complete)
             </div>
           </div>
-          <pre className="setup-sql-block">{showFullSchema ? fullGenerated : generated()}</pre>
+          <pre className="setup-sql-block">{showFullSchema ? fullGenerated : generated}</pre>
         </>
       )}
 
@@ -75,13 +72,13 @@ export default function SqlGenerationStep({ scanResult, sqlText, setSqlText, set
           <>
             <Button variant="ghost" onClick={() => {
               try {
-                navigator.clipboard.writeText(showFullSchema ? fullGenerated : generated());
+                navigator.clipboard.writeText(showFullSchema ? fullGenerated : generated);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               } catch {}
             }}>{copied ? 'Copied!' : 'Copy SQL'}</Button>
             <Button variant="ghost" onClick={() => {
-              const content = showFullSchema ? fullGenerated : generated();
+              const content = showFullSchema ? fullGenerated : generated;
               const blob = new Blob([content], { type: 'text/plain' });
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');

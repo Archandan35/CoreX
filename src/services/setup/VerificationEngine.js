@@ -58,6 +58,40 @@ function buildIssue(type, name) {
 }
 
 export default class VerificationEngine {
+  _getMissingScanResult() {
+    const allNames = MANIFEST.tables.map(t => t.name);
+    const missingSet = {
+      tables: new Set(allNames),
+      functions: new Set(MANIFEST.functions.map(f => f.name)),
+      triggers: new Set(MANIFEST.triggers.map(t => t.name)),
+      policies: new Set(MANIFEST.rlsPolicies.map(p => p.name)),
+      indexes: MANIFEST.tables.flatMap(t => t.indexes.map(i => i.name)),
+      columns: MANIFEST.tables.flatMap(t => t.columns.map(c => `${t.name}.${c.name}`)),
+    };
+
+    return {
+      provider: 'postgresql',
+      schemaVersion: MANIFEST.version,
+      extensions: MANIFEST.extensions.map(e => e.name),
+      existing: { tables: [], functions: [], triggers: [], policies: [], indexes: [], columns: [] },
+      missing: {
+        tables: Array.from(missingSet.tables),
+        functions: Array.from(missingSet.functions),
+        triggers: Array.from(missingSet.triggers),
+        policies: Array.from(missingSet.policies),
+        indexes: missingSet.indexes || [],
+        columns: missingSet.columns || [],
+      },
+      totalComponents: allNames.length +
+                       MANIFEST.functions.length +
+                       MANIFEST.triggers.length +
+                       MANIFEST.rlsPolicies.length +
+                       MANIFEST.tables.reduce((a, t) => a + t.indexes.length, 0) +
+                       MANIFEST.tables.reduce((a, t) => a + t.columns.length, 0),
+      installedComponents: 0,
+    };
+  }
+
   async verify(config) {
     const scanner = new DatabaseScanner();
     let scan = await scanner.scan(config);
@@ -66,7 +100,7 @@ export default class VerificationEngine {
     const generator = new SqlGenerator();
 
     if (scan.provider === 'postgresql' && (scan.missing.tables.length > 0 || scan.missing.columns.length > 0)) {
-      const missingScanResult = generator._getMissingScanResult();
+      const missingScanResult = this._getMissingScanResult();
       const generatedSql = generator.generate({ missing: missingScanResult });
 
       scan = {
