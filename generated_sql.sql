@@ -112,7 +112,7 @@ SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION has_admin_user()
 RETURNS BOOLEAN AS $$
-SELECT EXISTS (SELECT 1 FROM public.users u JOIN public.roles r ON u.role = r.code WHERE r."all" = TRUE);
+SELECT EXISTS (SELECT 1 FROM public.users WHERE permissions @> ARRAY['SYSTEM_ADMIN']);
 $$
 LANGUAGE SQL
 SECURITY DEFINER;

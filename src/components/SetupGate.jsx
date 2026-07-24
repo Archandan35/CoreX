@@ -1,5 +1,5 @@
 import { Suspense, useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Navigate } from 'react-router-dom';
 import AdminSetup from '../pages/AdminSetup';
 import supabaseSync from '../services/supabaseSync';
 
@@ -11,41 +11,45 @@ const Loader = () => (
   </div>
 );
 
-function isSetupComplete() {
-  try { return localStorage.getItem('corex_setup_complete') === 'true'; } catch { return false; }
-}
-
 export default function SetupGate({ children }) {
-  const [state, setState] = useState(() => isSetupComplete() ? 'ready' : 'checking');
-  const [reason, setReason] = useState('');
+  const [decision, setDecision] = useState('checking');
   const location = useLocation();
 
-  const isAuthPage = location.pathname === '/register' || location.pathname === '/login';
-
   useEffect(() => {
-    if (state !== 'checking') return;
     let active = true;
     (async () => {
       try {
         if (!supabaseSync.isConfigured()) {
-          if (active) { setReason('config'); setState('setup'); }
+          if (active) setDecision('config');
           return;
         }
         const schemaOk = await supabaseSync.checkSchemaExists();
         if (!schemaOk) {
-          if (active) { setReason('schema'); setState('setup'); }
+          if (active) setDecision('schema');
           return;
         }
         const adminExists = await supabaseSync.hasAdminUser();
-        if (active) setState(adminExists ? 'ready' : 'setup');
+        if (active) setDecision(adminExists ? 'ready' : 'noadmin');
       } catch {
-        if (active) { setReason('schema'); setState('setup'); }
+        if (active) setDecision('schema');
       }
     })();
     return () => { active = false; };
-  }, [state]);
+  }, [location.pathname]);
 
-  if (state === 'checking') return <Loader />;
-  if (state === 'setup' && (!supabaseSync.isConfigured() || reason === 'schema' || reason === 'config' || !isAuthPage)) return <Suspense fallback={<Loader />}><AdminSetup /></Suspense>;
+  if (decision === 'checking') return <Loader />;
+
+  if (decision === 'config' || decision === 'schema') {
+    return (
+      <Suspense fallback={<Loader />}>
+        <AdminSetup />
+      </Suspense>
+    );
+  }
+
+  if (decision === 'noadmin' && location.pathname !== '/register') {
+    return <Navigate to="/register" replace />;
+  }
+
   return children;
 }

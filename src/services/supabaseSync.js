@@ -68,6 +68,7 @@ export function mapToSupabaseUser(user) {
   record.role = user.roleCode || user.role || '';
   record.status = (user.status || 'active').toLowerCase();
   if (user.createdAt) record.created_at = user.createdAt;
+  if (user.permissions) record.permissions = user.permissions;
   return record;
 }
 
@@ -81,6 +82,7 @@ export function mapFromSupabaseUser(row) {
     phone: row.phone || '',
     address: row.address || '',
     roleCode: row.role,
+    permissions: row.permissions || [],
     extraRoles: row.extra_roles || [],
     grants: [],
     denies: [],
@@ -359,6 +361,7 @@ export const supabaseSync = {
     if (patch.name !== undefined) body.name = patch.name;
     if (patch.email !== undefined) body.email = patch.email;
     if (patch.roleCode !== undefined) body.role = patch.roleCode;
+    if (patch.permissions !== undefined) body.permissions = patch.permissions;
     if (patch.status !== undefined) body.status = patch.status.toLowerCase();
     if (patch.phone !== undefined) body.phone = patch.phone;
     return supabaseServiceFetch(`users?id=eq.${encodeURIComponent(id)}`, 'PATCH', body);

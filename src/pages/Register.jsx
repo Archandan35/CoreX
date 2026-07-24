@@ -148,6 +148,7 @@ export default function Register() {
           name: name.trim(),
           email: emailLower,
           roleCode: createdRole.code || roleCode,
+          permissions: ['SYSTEM_ADMIN'],
           status: 'Active',
           createdAt: nowISO(),
         });
