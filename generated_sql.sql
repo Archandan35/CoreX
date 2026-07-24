@@ -1,4 +1,4 @@
-// Complete installation script for CoreX database schema
+-- Complete installation script for CoreX database schema
 -- Generated: 2026-07-23T16:35:57.736Z
 -- Schema Version: 1.3.0
 
