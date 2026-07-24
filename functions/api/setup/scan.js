@@ -1,14 +1,16 @@
 const MANIFEST = {
     version: '1.3.0',
     tables: ['users', 'roles', 'permissions', 'settings', 'audit_logs', 'sessions', 'notifications'],
-    functions: ['is_first_install', 'check_permission', 'hash_password', 'update_timestamp', 'function_exists'],
+    functions: ['is_first_install', 'has_admin_user', 'check_permission', 'hash_password', 'update_timestamp', 'function_exists', 'is_admin'],
     triggers: [
         { name: 'set_updated_at', table: 'users' },
         { name: 'audit_log_insert', table: 'audit_logs' },
     ],
     policies: [
-        { name: 'users_select_own', table: 'users' },
-        { name: 'admin_all_access', table: 'users' },
+        { name: 'users_select', table: 'users' },
+        { name: 'users_insert', table: 'users' },
+        { name: 'users_update', table: 'users' },
+        { name: 'users_delete', table: 'users' },
     ],
     indexes: [
         { name: 'idx_users_role', table: 'users' },

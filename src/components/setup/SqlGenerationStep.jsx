@@ -5,6 +5,7 @@ import SqlGenerator from '../../services/setup/SqlGenerator.js';
 export default function SqlGenerationStep({ scanResult, sqlText, setSqlText, setCanProceed, next, back }) {
   const [copied, setCopied] = useState(false);
   const [regenerateKey, setRegenerateKey] = useState(0);
+  const [fullSchema, setFullSchema] = useState('');
 
   const missing = scanResult?.missing || {};
   const totalMissing = Object.values(missing).reduce((a, b) => a + b.length, 0);
@@ -18,7 +19,17 @@ export default function SqlGenerationStep({ scanResult, sqlText, setSqlText, set
       return text;
     }
     return sqlText;
-  }, [scanResult, regenerateKey]);
+  }, [scanResult, regenerateKey, sqlText]);
+
+  const fullGenerated = useMemo(() => {
+    if (!fullSchema) {
+      const gen = new SqlGenerator();
+      const text = gen.generateFull();
+      setFullSchema(text);
+      return text;
+    }
+    return fullSchema;
+  }, []);
 
   const handleCopy = async () => {
     try {
@@ -41,7 +52,8 @@ export default function SqlGenerationStep({ scanResult, sqlText, setSqlText, set
     setRegenerateKey(k => k + 1);
   };
 
-  const statementCount = generated.split('\n').filter(l => l.trim() && !l.trim().startsWith('--')).length;
+  const generatedStatementCount = generated.split('\n').filter(l => l.trim() && !l.trim().startsWith('--')).length;
+  const fullStatementCount = fullGenerated.split('\n').filter(l => l.trim() && !l.trim().startsWith('--')).length;
 
   return (
     <div className="setup-step-content">
@@ -61,9 +73,17 @@ export default function SqlGenerationStep({ scanResult, sqlText, setSqlText, set
           <p className="setup-step-desc">Review the generated SQL script before installation. This is the only SQL generation step.</p>
           <div className="setup-plan__summary" style={{ marginBottom: 16 }}>
             <div className="setup-plan__stat">
-              <span className="setup-plan__num">{statementCount}</span>
+              <span className="setup-plan__num">{generatedStatementCount}</span>
               <span className="setup-plan__lbl">Statements</span>
             </div>
+            <div className="setup-plan__stat">
+              <span className="setup-plan__num">{fullStatementCount}</span>
+              <span className="setup-plan__lbl">Total Schema</span>
+            </div>
+          </div>
+          <div className="setup-sql-tabs">
+            <div className="setup-sql-tab active" onClick={() => {}}>Missing Only (Installation)</div>
+            <div className="setup-sql-tab" onClick={() => {}}>Full Schema (Complete)</div>
           </div>
           <pre className="setup-sql-block">{generated}</pre>
         </>

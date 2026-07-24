@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src --ext .jsx,.js"
+    "lint": "eslint src --ext .jsx,.js",
+    "generate-sql": "node scripts/generate-sql.js"
   },
   "dependencies": {
     "react": "^18.2.0",

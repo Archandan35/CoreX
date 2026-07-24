@@ -332,6 +332,7 @@ export function getAllNames(type) {
     indexes: MANIFEST.tables.flatMap(t => t.indexes.map(i => i.name)),
     columns: MANIFEST.tables.flatMap(t => t.columns.map(c => `${t.name}.${c.name}`)),
   };
+  if (type === undefined) return mapping;
   return mapping[type] || [];
 }
 

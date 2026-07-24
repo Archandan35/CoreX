@@ -1,6 +1,21 @@
-import MANIFEST, { getTable, getFunction, getTrigger, getPolicy, resolveDependencyOrder } from './SchemaManifest.js';
+import MANIFEST, { getTable, getFunction, getTrigger, getPolicy, getAllNames, resolveDependencyOrder } from './SchemaManifest.js';
 
 export default class SqlGenerator {
+  static generateFull() {
+    const allNames = getAllNames();
+    const fullScanResult = {
+      missing: {
+        tables: [...allNames.tables],
+        functions: [...allNames.functions],
+        triggers: [...allNames.triggers],
+        policies: [...allNames.policies],
+        indexes: [...allNames.indexes],
+        columns: [...allNames.columns],
+      },
+    };
+    return new SqlGenerator().generate(fullScanResult);
+  }
+
   generate(scanResult) {
     const lines = [];
     lines.push(`-- ${MANIFEST.appName} Database Installation Script`);
