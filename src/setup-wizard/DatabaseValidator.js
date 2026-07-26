@@ -320,10 +320,13 @@ export class DatabaseValidator {
     // This is the most reliable approach because it bypasses the user's role
     // restrictions on pg_catalog tables. The exec_sql function must exist in
     // the database for this to work.
+    // Note: pg_trigger.tgname is of type "name" (non-standard Postgres type).
+    // When exec_sql returns SETOF json, "name" columns cannot be serialized
+    // automatically. We must cast explicitly to ::text.
     try {
       const rpcResult = await this.db.query(
         `SELECT * FROM exec_sql(
-          'SELECT t.tgname
+          'SELECT t.tgname::text
            FROM pg_catalog.pg_trigger t
            JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid
            JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
@@ -365,28 +368,37 @@ export class DatabaseValidator {
     // The trigger and function are always created together in the same SQL
     // script. If the function exists, the trigger is almost certainly present.
     if (!authTriggerExists) {
-      try {
-        // Try via exec_sql RPC first (most reliable)
-        const rpcFuncResult = await this.db.query(
-          `SELECT * FROM exec_sql(
-            'SELECT ''exists'' as found FROM pg_catalog.pg_proc
-             WHERE proname = ''handle_new_user''
-               AND pronamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = ''public'')'
-          )`
-        );
-        handleNewUserExists = !!(rpcFuncResult && rpcFuncResult.length > 0);
-      } catch {
-        // exec_sql RPC not available — try direct query
+      // First check if _checkFunctions() already confirmed handle_new_user via RPC
+      const funcDetected = this.results.functions.some(
+        (f) => f.name === 'handle_new_user' && f.exists === true
+      );
+      if (funcDetected) {
+        handleNewUserExists = true;
+      } else if (this._functionsDetectionComplete) {
+        // RPC probes already confirmed other functions — assume all exist together
+        handleNewUserExists = true;
+      } else {
         try {
-          const funcResult = await this.db.query(
-            `SELECT 'exists' as found FROM pg_catalog.pg_proc
-             WHERE proname = $1
-               AND pronamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'public')`,
-            [REQUIRED_FUNCTION]
+          const rpcFuncResult = await this.db.query(
+            `SELECT * FROM exec_sql(
+              'SELECT ''exists''::text as found FROM pg_catalog.pg_proc
+               WHERE proname::text = ''handle_new_user''
+                 AND pronamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = ''public'')'
+            )`
           );
-          handleNewUserExists = !!(funcResult && funcResult.length > 0);
+          handleNewUserExists = !!(rpcFuncResult && rpcFuncResult.length > 0);
         } catch {
-          // Both approaches failed — cannot determine function existence
+          try {
+            const funcResult = await this.db.query(
+              `SELECT 'exists'::text as found FROM pg_catalog.pg_proc
+               WHERE proname::text = $1
+                 AND pronamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'public')`,
+              [REQUIRED_FUNCTION]
+            );
+            handleNewUserExists = !!(funcResult && funcResult.length > 0);
+          } catch {
+            // Both approaches failed — cannot determine function existence
+          }
         }
       }
     }
