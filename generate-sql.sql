@@ -13,8 +13,8 @@ END;
 $$;
 
 -- Grant EXECUTE to anon, authenticated, and service_role so the function
--- is callable via Supabase REST API (without this, Supabase returns a
--- permissions error when the browser calls supabase.rpc('exec_sql', ...)).
+-- is callable via Supabase REST API (without this, supabase.rpc('exec_sql', ...)
+-- returns a permissions error).
 GRANT EXECUTE ON FUNCTION exec_sql(text) TO anon, authenticated, service_role;
 
 -- ============================================================

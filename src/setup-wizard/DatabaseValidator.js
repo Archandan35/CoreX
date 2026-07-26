@@ -2,11 +2,6 @@ export class DatabaseValidator {
   constructor(db) {
     this.db = db;
     this.results = this._emptyResults();
-    // Track whether _checkFunctions completed its final strategy (RPC probes).
-    // When true, _checkRequiredFunctions will NOT add "missing" entries because
-    // RPC probes are definitive — they confirm a function exists when it's callable,
-    // and functions that can't be probed (e.g. trigger functions like handle_new_user)
-    // are inferred as existing because the install SQL creates them together.
     this._functionsDetectionComplete = false;
   }
 
@@ -49,22 +44,11 @@ export class DatabaseValidator {
       await this._checkIndexes(schema);
     }
 
-    // Always check functions, triggers, views, and policies — even when no
-    // tables exist yet (fresh database). Previously guarded by someTableExists,
-    // which meant a brand-new database never had these objects checked and
-    // therefore never reported them as missing. This caused SqlGenerator to
-    // skip generating them in delta mode, producing an incomplete schema that
-    // differed from the full generate-sql.sql script.
     await this._checkFunctions();
     await this._checkTriggers();
     await this._checkViews();
     await this._checkPolicies();
 
-    // Cross-reference schema-defined function objects against what was
-    // actually detected in the database. Even if _checkFunctions() ran,
-    // it only lists functions that ARE found — it never logs missing ones.
-    // _checkRequiredFunctions fills that gap so SqlGenerator can correctly
-    // emit missing helper functions in delta mode.
     await this._checkRequiredFunctions(schema);
 
     await this._checkVersion(schema);
@@ -192,9 +176,9 @@ export class DatabaseValidator {
   }
 
   async _checkFunctions() {
-    // Strategy 1: Query information_schema.routines (works for direct DB connections,
-    // but Supabase REST API cannot query this reliably and returns []).
     let detected = false;
+
+    // Strategy 1: information_schema.routines
     try {
       const result = await this.db.query(
         `SELECT routine_name FROM information_schema.routines WHERE routine_schema = 'public' AND routine_type = 'FUNCTION'`
@@ -206,16 +190,12 @@ export class DatabaseValidator {
         detected = true;
       }
     } catch {
-      // Fall through to strategy 2
+      // fall through
     }
 
     if (detected) return;
 
-    // Strategy 2: Query pg_catalog.pg_proc via exec_sql RPC (works when exec_sql exists
-    // and is callable — i.e. after the initial install SQL has been executed).
-    // Note: pg_catalog "name" columns must be cast to ::text to ensure they
-    // serialize properly through exec_sql's SETOF json return type, which cannot
-    // handle non-standard Postgres types like "name" or "regproc".
+    // Strategy 2: pg_catalog via exec_sql
     try {
       const result = await this.db.query(
         `SELECT proname::text FROM pg_catalog.pg_proc
@@ -229,44 +209,30 @@ export class DatabaseValidator {
         detected = true;
       }
     } catch {
-      // Fall through to strategy 3
+      // fall through
     }
 
     if (detected) return;
 
-    // Strategy 3: Try direct Supabase RPC calls for each well-known function.
-    // This is the most reliable approach on Supabase because it does not depend
-    // on pg_catalog access or information_schema queries — it calls the function
-    // directly and checks whether the error indicates "function does not exist".
-    // If the function exists, any non-existence error (or success) confirms its presence.
-    //
-    // IMPORTANT: Supabase REST API returns 404 with a generic "Not found" message
-    // when the function does not exist in the schema cache. The error object from
-    // supabase-js has:
-    //   - error.code === '404' (HTTP status)
-    //   - error.message containing "Not found" or similar
-    //   - error.details containing the PostgREST error details
-    //
-    // The code must check for HTTP 404 status code in addition to the Postgres
-    // "function does not exist" message, because Supabase's REST layer returns
-    // a different error format than a direct Postgres connection would.
+    // Strategy 3: Direct Supabase RPC probes — each function tracked individually.
+    // IMPORTANT: Do NOT set _functionsDetectionComplete = true here.
+    // Each function is tracked individually. If is_admin_user succeeds
+    // but exec_sql and check_admin_exists return 404, we must NOT assume
+    // all functions exist. _checkRequiredFunctions() will correctly add
+    // missing entries for any schema-defined function not in the detected set.
     if (this.db._raw && typeof this.db._raw.rpc === 'function') {
       const supabase = this.db._raw;
       const wellKnownFunctions = ['exec_sql', 'check_admin_exists', 'is_admin_user', 'handle_new_user'];
-      let anyRpcSucceeded = false;
       for (const fnName of wellKnownFunctions) {
         try {
           let error;
           if (fnName === 'exec_sql') {
-            // exec_sql expects a query_text argument; pass a trivial query
             const result = await supabase.rpc('exec_sql', { query_text: 'SELECT 1' });
             error = result.error;
           } else {
             const result = await supabase.rpc(fnName, {});
             error = result.error;
           }
-          // If there's no error, the function exists and was callable.
-          // Check for both Postgres "does not exist" message AND Supabase 404 status.
           const is404 = error?.code === '404' || error?.status === 404;
           const doesNotExist = is404
             || error?.message?.includes(`function "${fnName}" does not exist`)
@@ -276,12 +242,8 @@ export class DatabaseValidator {
             || error?.message?.includes('does not exist');
           if (!error || !doesNotExist) {
             this.results.functions.push({ name: fnName, exists: true, status: 'existing' });
-            anyRpcSucceeded = true;
           }
         } catch (err) {
-          // For handle_new_user (trigger function), calling it directly
-          // may throw. If the error is NOT "function does not exist",
-          // the function exists.
           const is404 = err?.code === '404' || err?.status === 404;
           const doesNotExist = is404
             || err?.message?.includes(`function "${fnName}" does not exist`)
@@ -291,26 +253,13 @@ export class DatabaseValidator {
             || err?.message?.includes('does not exist');
           if (!doesNotExist) {
             this.results.functions.push({ name: fnName, exists: true, status: 'existing' });
-            anyRpcSucceeded = true;
           }
         }
-      }
-      // If any RPC probe succeeded, we have definitive detection of at least one
-      // function. Since the install SQL creates all helper functions together in
-      // a single script, ALL schema-defined functions are assumed present.
-      if (anyRpcSucceeded) {
-        // Set the instance-level flag so _checkRequiredFunctions skips adding
-        // "missing" entries for functions that couldn't be individually probed
-        // (e.g. handle_new_user which is a trigger function and cannot be called
-        // as a regular function via RPC).
-        this._functionsDetectionComplete = true;
-        detected = true;
       }
     }
   }
 
   async _checkTriggers() {
-    // public-schema triggers (general coverage)
     try {
       const result = await this.db.query(
         `SELECT trigger_name FROM information_schema.triggers WHERE trigger_schema = 'public'`
@@ -321,30 +270,15 @@ export class DatabaseValidator {
         }
       }
     } catch {
-      // triggers not supported by provider
+      // triggers not supported
     }
 
-    // Critical security object: the on_auth_user_created trigger on auth.users
-    // is the ONLY thing that creates a public.users profile row when a new auth
-    // user signs up. If it is missing or its function is broken, registration
-    // silently produces an auth user with no profile, which the client then
-    // rejects as "missing profile record". information_schema.triggers is
-    // filtered by the current role and historically does not surface `auth`
-    // schema triggers, so we check via the exec_sql RPC function which runs
-    // with SECURITY DEFINER (service_role) privileges.
     const REQUIRED_AUTH_TRIGGER = 'on_auth_user_created';
-    const REQUIRED_FUNCTION = 'handle_new_user';
     let authTriggerExists = false;
     let handleNewUserExists = false;
     let pgCatalogError = null;
 
-    // Strategy 1: Check via exec_sql RPC (SECURITY DEFINER, runs as service_role).
-    // This is the most reliable approach because it bypasses the user's role
-    // restrictions on pg_catalog tables. The exec_sql function must exist in
-    // the database for this to work.
-    // Note: pg_trigger.tgname is of type "name" (non-standard Postgres type).
-    // When exec_sql returns SETOF json, "name" columns cannot be serialized
-    // automatically. We must cast explicitly to ::text.
+    // Strategy 1: Check via exec_sql RPC (SECURITY DEFINER, runs as service_role)
     try {
       const rpcResult = await this.db.query(
         `SELECT * FROM exec_sql(
@@ -360,12 +294,10 @@ export class DatabaseValidator {
       );
       authTriggerExists = !!(rpcResult && rpcResult.length > 0);
     } catch (err) {
-      // exec_sql RPC not available yet — fall through to strategy 2
       pgCatalogError = err;
     }
 
-    // Strategy 2: Direct pg_catalog query (may fail if role lacks privileges).
-    // Only attempt if strategy 1 failed and the trigger wasn't found.
+    // Strategy 2: Direct pg_catalog query
     if (!authTriggerExists) {
       try {
         const result = await this.db.query(
@@ -381,27 +313,12 @@ export class DatabaseValidator {
         );
         authTriggerExists = !!(result && result.length > 0);
       } catch (err) {
-        // Direct pg_catalog query also failed — capture error for diagnostics
         if (!pgCatalogError) pgCatalogError = err;
       }
     }
 
-    // Strategy 3: Check if the handle_new_user function exists (inferred check).
-    // The trigger and function are always created together in the same SQL
-    // script. If the function exists, the trigger is almost certainly present.
-    // However, we ONLY use this as a fallback when pg_catalog is inaccessible
-    // (pgCatalogError is set). If pg_catalog IS accessible and the trigger
-    // was not found, we report it as missing — the function existing does NOT
-    // guarantee the trigger was created on auth.users (permissions issue).
-    //
-    // IMPORTANT: We do NOT use _functionsDetectionComplete here. RPC probes
-    // detecting exec_sql or check_admin_exists does NOT mean the trigger on
-    // auth.users was created. The function handle_new_user existing in public
-    // schema is a separate object from the trigger on auth.users. Only a
-    // direct pg_trigger check (Strategy 1 or 2) is authoritative.
+    // Strategy 3: Inferred from handle_new_user function (only when pg_catalog restricted)
     if (!authTriggerExists && pgCatalogError) {
-      // pg_catalog is inaccessible — try to detect handle_new_user function
-      // via exec_sql RPC (which runs as service_role and bypasses restrictions)
       try {
         const rpcFuncResult = await this.db.query(
           `SELECT * FROM exec_sql(
@@ -412,27 +329,15 @@ export class DatabaseValidator {
         );
         handleNewUserExists = !!(rpcFuncResult && rpcFuncResult.length > 0);
       } catch {
-        // exec_sql RPC not available — cannot determine
+        // cannot determine
       }
     }
 
-    // Determine final trigger status using:
-    // 1. Direct pg_trigger check via exec_sql RPC (authoritative) — Strategy 1
-    // 2. Direct pg_catalog query (authoritative) — Strategy 2
-    // 3. Inferred from handle_new_user function (only when pg_catalog restricted)
-    // 4. Genuinely missing (pg_catalog accessible, trigger not found)
-
     if (authTriggerExists) {
-      // Authoritative: exec_sql RPC confirmed the trigger exists on auth.users
       if (!this.results.triggers.some((t) => t.name === REQUIRED_AUTH_TRIGGER)) {
-        this.results.triggers.push({
-          name: REQUIRED_AUTH_TRIGGER,
-          exists: true,
-          status: 'existing',
-        });
+        this.results.triggers.push({ name: REQUIRED_AUTH_TRIGGER, exists: true, status: 'existing' });
       }
     } else if (handleNewUserExists) {
-      // Inferred: pg_catalog inaccessible but function exists via exec_sql RPC
       if (!this.results.triggers.some((t) => t.name === REQUIRED_AUTH_TRIGGER)) {
         this.results.triggers.push({
           name: REQUIRED_AUTH_TRIGGER,
@@ -442,7 +347,6 @@ export class DatabaseValidator {
         });
       }
     } else if (pgCatalogError) {
-      // pg_catalog inaccessible and no function evidence — cannot determine
       if (!this.results.triggers.some((t) => t.name === REQUIRED_AUTH_TRIGGER)) {
         this.results.triggers.push({
           name: REQUIRED_AUTH_TRIGGER,
@@ -453,7 +357,6 @@ export class DatabaseValidator {
         });
       }
     } else {
-      // pg_catalog accessible and trigger not found — genuinely missing
       this.results.triggers.push({
         name: REQUIRED_AUTH_TRIGGER,
         exists: false,
@@ -475,7 +378,7 @@ export class DatabaseValidator {
         }
       }
     } catch {
-      // views not supported by provider
+      // views not supported
     }
   }
 
@@ -486,16 +389,11 @@ export class DatabaseValidator {
       );
       if (result && result.length > 0) {
         for (const row of result) {
-          this.results.policies.push({
-            table: row.tablename,
-            name: row.policyname,
-            exists: true,
-            status: 'existing',
-          });
+          this.results.policies.push({ table: row.tablename, name: row.policyname, exists: true, status: 'existing' });
         }
       }
     } catch {
-      // policies not supported by provider
+      // policies not supported
     }
   }
 
@@ -576,12 +474,8 @@ export class DatabaseValidator {
       );
       const current = result?.[0]?.version;
       const required = schema.version || 1;
-      // Use loose equality to handle numeric vs string type mismatches from PostgREST.
-      // Also treat null vs required as matching IF tables exist (the INSERT may not have been
-      // picked up by PostgREST schema cache yet, but the table itself was created).
       let match = current == required;
       if (!match && current == null) {
-        // Fallback: if all tables exist, assume version was set correctly
         const someTableMissing = this.results.tables.some((t) => !t.exists);
         if (!someTableMissing) match = true;
       }
@@ -612,37 +506,17 @@ export class DatabaseValidator {
       try {
         const result = await this.db.query(`SELECT COUNT(*) as count FROM ${seed.table}`);
         const count = parseInt(result[0]?.count || 0, 10);
-        this.results.seeds.push({
-          table: seed.table,
-          required: seed.required,
-          count,
-          populated: count >= (seed.minCount || 1),
-        });
+        this.results.seeds.push({ table: seed.table, required: seed.required, count, populated: count >= (seed.minCount || 1) });
       } catch {
         this.results.seeds.push({ table: seed.table, required: seed.required, count: 0, populated: false });
       }
     }
   }
 
-  /**
-   * Cross-reference schema-defined function objects (type: 'function') against
-   * what was actually detected in the database by _checkFunctions().
-   *
-   * _checkFunctions() only lists functions that ARE found — it never logs
-   * missing ones. This method fills that gap by iterating over the schema's
-   * function definitions and adding a "missing" entry for any function that
-   * was not detected, so SqlGenerator can correctly emit them in delta mode.
-   */
   async _checkRequiredFunctions(schema) {
-    // Skip if _checkFunctions completed its RPC probe strategy (Strategy 3)
-    // and confirmed at least one function exists. The RPC probes are definitive
-    // and any function not individually probed (e.g. trigger functions) is still
-    // assumed present because the install SQL creates all functions together.
     if (this._functionsDetectionComplete) return;
 
-    const detectedNames = new Set(
-      this.results.functions.map((f) => f.name)
-    );
+    const detectedNames = new Set(this.results.functions.map((f) => f.name));
 
     for (const [key, def] of Object.entries(schema)) {
       if (!def || typeof def !== 'object') continue;
@@ -650,12 +524,7 @@ export class DatabaseValidator {
 
       const funcName = key;
       if (!detectedNames.has(funcName)) {
-        this.results.functions.push({
-          name: funcName,
-          exists: false,
-          status: 'missing',
-          type: 'function',
-        });
+        this.results.functions.push({ name: funcName, exists: false, status: 'missing', type: 'function' });
       }
     }
   }
@@ -685,19 +554,12 @@ export class DatabaseValidator {
       }
     }
 
-    const total = existing.length + missing.length + issues.length;
-
     return {
       valid: missing.length === 0 && issues.length === 0,
       existing,
       missing,
       issues,
-      summary: {
-        total,
-        existing: existing.length,
-        missing: missing.length,
-        issues: issues.length,
-      },
+      summary: { total: existing.length + missing.length + issues.length, existing: existing.length, missing: missing.length, issues: issues.length },
       details: this.results,
     };
   }
@@ -706,4 +568,3 @@ export class DatabaseValidator {
     return this.getReport().missing.length;
   }
 }
-

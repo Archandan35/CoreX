@@ -42,6 +42,11 @@
 
 ### Step 8: Verification
 - [x] All code changes complete — files are ready for runtime verification
+- [x] `DatabaseValidator._checkFunctions()` no longer sets `_functionsDetectionComplete = true` when only some RPC probes succeed
+- [x] `_checkRequiredFunctions()` correctly adds `exec_sql` and `check_admin_exists` as missing when RPC probes return 404
+- [x] `generate-sql.sql` has all 5 RLS policies, GRANT EXECUTE on all helpers, and `NOTIFY pgrst`
+- [x] `SqlGenerator.js` has single code path for both preview and download via `generate(report, { full })`
+- [x] Static `generate-sql.sql` and dynamic `SqlGenerator.js` now use same source structure
 - [ ] Run the app and verify both outputs produce identical SQL on fresh database
 - [ ] After SQL execution, verify installation passes with 0 missing objects
 - [ ] Test registration flow creates profile record successfully
