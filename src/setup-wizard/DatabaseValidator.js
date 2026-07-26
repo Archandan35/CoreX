@@ -239,6 +239,17 @@ export class DatabaseValidator {
     // on pg_catalog access or information_schema queries — it calls the function
     // directly and checks whether the error indicates "function does not exist".
     // If the function exists, any non-existence error (or success) confirms its presence.
+    //
+    // IMPORTANT: Supabase REST API returns 404 with a generic "Not found" message
+    // when the function does not exist in the schema cache. The error object from
+    // supabase-js has:
+    //   - error.code === '404' (HTTP status)
+    //   - error.message containing "Not found" or similar
+    //   - error.details containing the PostgREST error details
+    //
+    // The code must check for HTTP 404 status code in addition to the Postgres
+    // "function does not exist" message, because Supabase's REST layer returns
+    // a different error format than a direct Postgres connection would.
     if (this.db._raw && typeof this.db._raw.rpc === 'function') {
       const supabase = this.db._raw;
       const wellKnownFunctions = ['exec_sql', 'check_admin_exists', 'is_admin_user', 'handle_new_user'];
@@ -255,8 +266,14 @@ export class DatabaseValidator {
             error = result.error;
           }
           // If there's no error, the function exists and was callable.
-          const doesNotExist = error?.message?.includes(`function "${fnName}" does not exist`)
-            || error?.message?.includes(`function "public.${fnName}" does not exist`);
+          // Check for both Postgres "does not exist" message AND Supabase 404 status.
+          const is404 = error?.code === '404' || error?.status === 404;
+          const doesNotExist = is404
+            || error?.message?.includes(`function "${fnName}" does not exist`)
+            || error?.message?.includes(`function "public.${fnName}" does not exist`)
+            || error?.message?.includes('Not found')
+            || error?.message?.includes('not found')
+            || error?.message?.includes('does not exist');
           if (!error || !doesNotExist) {
             this.results.functions.push({ name: fnName, exists: true, status: 'existing' });
             anyRpcSucceeded = true;
@@ -265,8 +282,13 @@ export class DatabaseValidator {
           // For handle_new_user (trigger function), calling it directly
           // may throw. If the error is NOT "function does not exist",
           // the function exists.
-          const doesNotExist = err?.message?.includes(`function "${fnName}" does not exist`)
-            || err?.message?.includes(`function "public.${fnName}" does not exist`);
+          const is404 = err?.code === '404' || err?.status === 404;
+          const doesNotExist = is404
+            || err?.message?.includes(`function "${fnName}" does not exist`)
+            || err?.message?.includes(`function "public.${fnName}" does not exist`)
+            || err?.message?.includes('Not found')
+            || err?.message?.includes('not found')
+            || err?.message?.includes('does not exist');
           if (!doesNotExist) {
             this.results.functions.push({ name: fnName, exists: true, status: 'existing' });
             anyRpcSucceeded = true;

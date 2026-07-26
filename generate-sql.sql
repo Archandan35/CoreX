@@ -229,3 +229,9 @@ INSERT INTO _schema_version (version, description) VALUES (2, 'Schema installati
 -- ============================================================
 -- Installation script complete
 -- ============================================================
+
+-- Refresh PostgREST schema cache so newly created functions and
+-- tables are immediately available via the REST API (without this,
+-- supabase.rpc() calls return 404 until the cache refreshes automatically,
+-- which can take up to 30 seconds).
+NOTIFY pgrst, 'reload schema';

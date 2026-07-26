@@ -1,4 +1,4 @@
-import { buildExecSqlFunction, buildCheckAdminExistsFunction } from '../schema/models/index.js';
+import { buildExecSqlFunction, buildCheckAdminExistsFunction, buildIsAdminUserFunction } from '../schema/models/index.js';
 
 const STATEMENT_SEPARATOR = '\n\n';
 
@@ -156,27 +156,12 @@ export class SqlGenerator {
       || missing.some((i) => (i.type === 'policy' || i.policyname) && i.table === 'users')
       || missing.some((i) => i.type === 'table' && i.name === 'users');
     if (isAdminMissing) {
-      blocks.push(this._buildIsAdminUserFunction());
+      blocks.push(buildIsAdminUserFunction());
     }
 
     return blocks;
   }
 
-  _buildIsAdminUserFunction() {
-    return [
-      `-- SECURITY DEFINER helper to check admin status (bypasses RLS to prevent infinite recursion)`,
-      `CREATE OR REPLACE FUNCTION public.is_admin_user()`,
-      `RETURNS boolean`,
-      `LANGUAGE plpgsql`,
-      `SECURITY DEFINER`,
-      `SET search_path = public`,
-      `AS $$`,
-      `BEGIN`,
-      `  RETURN EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND full_access = true);`,
-      `END;`,
-      `$$;`,
-    ].join('\n');
-  }
 
   // ---- Extensions ----
 
@@ -348,6 +333,12 @@ export class SqlGenerator {
       '-- ============================================================',
       '-- Installation script complete',
       '-- ============================================================',
+      '',
+      '-- Refresh PostgREST schema cache so newly created functions and',
+      '-- tables are immediately available via the REST API (without this,',
+      '-- supabase.rpc() calls return 404 until the cache refreshes automatically,',
+      '-- which can take up to 30 seconds).',
+      'NOTIFY pgrst, \'reload schema\';',
     ].join('\n');
   }
 
