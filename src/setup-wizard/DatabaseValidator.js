@@ -2,7 +2,6 @@ export class DatabaseValidator {
   constructor(db) {
     this.db = db;
     this.results = this._emptyResults();
-    this._functionsDetectionComplete = false;
   }
 
   _emptyResults() {
@@ -185,7 +184,7 @@ export class DatabaseValidator {
       );
       if (result && result.length > 0) {
         for (const row of result) {
-          this.results.functions.push({ name: row.routine_name, exists: true, status: 'existing' });
+          this.results.functions.push({ name: row.routine_name, exists: true, status: 'existing', type: 'function' });
         }
         detected = true;
       }
@@ -204,7 +203,7 @@ export class DatabaseValidator {
       );
       if (result && result.length > 0) {
         for (const row of result) {
-          this.results.functions.push({ name: row.proname, exists: true, status: 'existing' });
+          this.results.functions.push({ name: row.proname, exists: true, status: 'existing', type: 'function' });
         }
         detected = true;
       }
@@ -214,12 +213,15 @@ export class DatabaseValidator {
 
     if (detected) return;
 
-    // Strategy 3: Direct Supabase RPC probes — each function tracked individually.
-    // IMPORTANT: Do NOT set _functionsDetectionComplete = true here.
-    // Each function is tracked individually. If is_admin_user succeeds
-    // but exec_sql and check_admin_exists return 404, we must NOT assume
-    // all functions exist. _checkRequiredFunctions() will correctly add
-    // missing entries for any schema-defined function not in the detected set.
+    // Strategy 3: Direct Supabase RPC probes — each function tracked independently.
+    // CRITICAL FIX: Do NOT exit early when one function is found.
+    // Each function (exec_sql, check_admin_exists, is_admin_user) is probed
+    // independently. If exec_sql returns 404 (fresh DB) but is_admin_user
+    // also returns 404, BOTH must be flagged as missing. Previously a bug
+    // where detecting any single function would skip checking the others.
+    // This strategy ONLY records functions that respond successfully.
+    // Functions that return 404 are left unrecorded. _checkRequiredFunctions()
+    // then adds them as 'missing'. This works correctly even in a fresh DB.
     if (this.db._raw && typeof this.db._raw.rpc === 'function') {
       const supabase = this.db._raw;
       const wellKnownFunctions = ['exec_sql', 'check_admin_exists', 'is_admin_user', 'handle_new_user'];
@@ -241,8 +243,11 @@ export class DatabaseValidator {
             || error?.message?.includes('not found')
             || error?.message?.includes('does not exist');
           if (!error || !doesNotExist) {
-            this.results.functions.push({ name: fnName, exists: true, status: 'existing' });
+            // Function exists — add to results
+            this.results.functions.push({ name: fnName, exists: true, status: 'existing', type: 'function' });
           }
+          // If function does NOT exist, DON'T add it here.
+          // _checkRequiredFunctions() later will add it as 'missing'.
         } catch (err) {
           const is404 = err?.code === '404' || err?.status === 404;
           const doesNotExist = is404
@@ -252,8 +257,10 @@ export class DatabaseValidator {
             || err?.message?.includes('not found')
             || err?.message?.includes('does not exist');
           if (!doesNotExist) {
-            this.results.functions.push({ name: fnName, exists: true, status: 'existing' });
+            this.results.functions.push({ name: fnName, exists: true, status: 'existing', type: 'function' });
           }
+          // If doesNotExist is true, the function doesn't exist — leave unrecorded.
+          // _checkRequiredFunctions() will add it as 'missing'.
         }
       }
     }
@@ -514,15 +521,20 @@ export class DatabaseValidator {
   }
 
   async _checkRequiredFunctions(schema) {
-    if (this._functionsDetectionComplete) return;
-
     const detectedNames = new Set(this.results.functions.map((f) => f.name));
 
+    // Always ensure the 3 required helper functions are checked
+    const requiredFunctions = ['exec_sql', 'check_admin_exists', 'is_admin_user'];
+
+    // Add any additional functions defined in the schema
     for (const [key, def] of Object.entries(schema)) {
       if (!def || typeof def !== 'object') continue;
-      if (def.type !== 'function') continue;
+      if (def.type === 'function') {
+        requiredFunctions.push(key);
+      }
+    }
 
-      const funcName = key;
+    for (const funcName of requiredFunctions) {
       if (!detectedNames.has(funcName)) {
         this.results.functions.push({ name: funcName, exists: false, status: 'missing', type: 'function' });
       }

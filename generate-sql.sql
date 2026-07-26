@@ -1,6 +1,18 @@
--- SECURITY DEFINER required to run with owner (superuser/service_role)
--- privileges. SET search_path prevents search-path hijacking (CVE-2018-1058)
--- and ensures unqualified references resolve to `public` deterministically.
+-- ============================================================
+-- CoreX Schema Installation Script
+-- THIS FILE IS THE CANONICAL SOURCE OF TRUTH for the database schema.
+-- It is used as the complete installation script.
+-- The dynamic SqlGenerator.js mirrors this file programmatically.
+-- When adding new database objects, update BOTH this file AND
+-- src/setup-wizard/SqlGenerator.js and src/schema/models/index.js
+-- to keep them synchronized.
+-- Generated: 2026-07-26
+-- Schema Version: 2
+-- ============================================================
+
+
+-- ===== Helper Functions =====
+
 CREATE OR REPLACE FUNCTION exec_sql(query_text text)
 RETURNS SETOF json
 LANGUAGE plpgsql
@@ -12,23 +24,33 @@ BEGIN
 END;
 $$;
 
--- Grant EXECUTE to anon, authenticated, and service_role so the function
--- is callable via Supabase REST API (without this, supabase.rpc('exec_sql', ...)
--- returns a permissions error).
 GRANT EXECUTE ON FUNCTION exec_sql(text) TO anon, authenticated, service_role;
 
--- ============================================================
--- CoreX Schema Installation Script
--- THIS FILE IS THE CANONICAL SOURCE OF TRUTH for the database schema.
--- It is used as the complete installation script.
--- The dynamic SqlGenerator.js mirrors this file programmatically.
--- When adding new database objects, update BOTH this file AND
--- src/setup-wizard/SqlGenerator.js and src/schema/models/index.js
--- to keep them synchronized.
--- Generated: 2026-07-25
--- Schema Version: 2
--- ============================================================
+CREATE OR REPLACE FUNCTION public.check_admin_exists()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (SELECT 1 FROM public.users WHERE full_access = true);
+END;
+$$;
 
+GRANT EXECUTE ON FUNCTION public.check_admin_exists() TO anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.is_admin_user()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND full_access = true);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_admin_user() TO anon, authenticated, service_role;
 
 
 -- ===== Tables =====
@@ -71,48 +93,10 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 CREATE INDEX IF NOT EXISTS idx_users_phone ON users (phone);
 
 
--- ===== Helper Functions for Admin Checks =====
--- IMPORTANT: Must be created before RLS policies that reference them.
-
--- Check if any admin exists (used by handle_new_user trigger for first-user promotion)
-CREATE OR REPLACE FUNCTION public.check_admin_exists()
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN EXISTS (SELECT 1 FROM public.users WHERE full_access = true);
-END;
-$$;
-
--- Grant EXECUTE to anon, authenticated, and service_role so the function
--- is callable via Supabase REST API during registration flow.
-GRANT EXECUTE ON FUNCTION public.check_admin_exists() TO anon, authenticated, service_role;
-
--- Check if the current auth user is an admin. SECURITY DEFINER bypasses RLS
--- to prevent infinite recursion when called from within an RLS policy.
-CREATE OR REPLACE FUNCTION public.is_admin_user()
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND full_access = true);
-END;
-$$;
-
--- Grant EXECUTE to anon, authenticated, and service_role so the function
--- is callable via Supabase REST API (used by RLS policies and verification).
-GRANT EXECUTE ON FUNCTION public.is_admin_user() TO anon, authenticated, service_role;
-
-
 -- ===== Row Level Security =====
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
--- Users can read their own record
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -124,7 +108,6 @@ BEGIN
   END IF;
 END $$;
 
--- Admins can read all users (uses is_admin_user() which bypasses RLS)
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -136,7 +119,6 @@ BEGIN
   END IF;
 END $$;
 
--- Authenticated users can insert (during registration flow from trigger)
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -148,7 +130,6 @@ BEGIN
   END IF;
 END $$;
 
--- Users can update their own record
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -161,7 +142,6 @@ BEGIN
   END IF;
 END $$;
 
--- Admins can update all users
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -174,24 +154,22 @@ BEGIN
 END $$;
 
 
--- ===== Trigger: Auto-create user record on signup =====
+-- ===== User Profile Trigger =====
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.users (id, name, email, phone, role_label, full_access, permissions, status, created_at, updated_at)
-  VALUES (
+  INSERT INTO public.users (
+    id, email, name, phone, role_label, full_access, permissions,
+    status, created_at, updated_at
+  ) VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
     NEW.email,
-    NEW.raw_user_meta_data->>'phone',
-    NEW.raw_user_meta_data->>'role_label',
-    -- full_access: the FIRST account is always promoted to administrator
-    -- server-side; subsequent accounts honour the metadata flag (default false).
+    COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'phone', NULL),
+    COALESCE(NEW.raw_user_meta_data->>'role_label', NULL),
     CASE
       WHEN NOT EXISTS (SELECT 1 FROM public.users WHERE full_access = true) THEN true
       ELSE COALESCE((NEW.raw_user_meta_data->>'full_access')::boolean, false)
