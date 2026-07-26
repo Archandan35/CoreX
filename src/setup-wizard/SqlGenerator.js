@@ -113,9 +113,19 @@ export class SqlGenerator {
       }
     }
 
-    const userTrigger = this._genUserTrigger();
-    if (userTrigger) {
-      blocks.push(this._section('User Profile Trigger', [userTrigger]));
+    // Only include the user profile trigger (handle_new_user function +
+    // on_auth_user_created trigger) if the report indicates it is actually
+    // missing. This ensures the Installation Plan's "Objects to Create" count
+    // accurately reflects what the SQL will generate, and avoids regenerating
+    // the (idempotent) trigger SQL when validation already confirmed it exists.
+    const triggerMissing = toCreate.some(
+      (i) => i.name === 'on_auth_user_created' || i.detail?.includes('on_auth_user_created')
+    );
+    if (triggerMissing) {
+      const userTrigger = this._genUserTrigger();
+      if (userTrigger) {
+        blocks.push(this._section('User Profile Trigger', [userTrigger]));
+      }
     }
 
     const version = this.schema.version;

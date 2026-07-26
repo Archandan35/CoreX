@@ -1,7 +1,11 @@
+-- SECURITY DEFINER required to run with owner (superuser/service_role)
+-- privileges. SET search_path prevents search-path hijacking (CVE-2018-1058)
+-- and ensures unqualified references resolve to `public` deterministically.
 CREATE OR REPLACE FUNCTION exec_sql(query_text text)
 RETURNS SETOF json
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
   RETURN QUERY EXECUTE query_text;

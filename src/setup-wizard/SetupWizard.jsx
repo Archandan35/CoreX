@@ -140,7 +140,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
     }
   });
   const copyField = async (value) => {
-    try { await navigator.clipboard.writeText(value || ''); } catch {}
+    try { await navigator.clipboard.writeText(value || ''); } catch { }
   };
 
   const validateStages = [
@@ -261,7 +261,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
                 try {
                   const { data: row } = await supabase.from(t).select('*').limit(1);
                   if (row && row.length > 0) return Object.keys(row[0]).map((c) => ({ column_name: c }));
-                } catch {}
+                } catch { }
                 // Empty table — return a minimal response; the caller handles per-column checks separately
                 return [];
               }
@@ -435,10 +435,16 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
     if (step !== 6) autoSkipRef.current = false;
   }, [step, plan, analysis]);
 
+  // SECURITY DEFINER is required so the function runs with the privileges of its
+  // owner (the database superuser / service_role) rather than the calling anon
+  // role. SET search_path is mandatory for any SECURITY DEFINER function to
+  // prevent search-path hijacking (CVE-2018-1058) and to guarantee that every
+  // unqualified reference resolves deterministically to the `public` schema.
   const execSqlFn = `CREATE OR REPLACE FUNCTION exec_sql(query_text text)
 RETURNS SETOF json
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
   RETURN QUERY EXECUTE query_text;
@@ -737,8 +743,8 @@ $$;`;
                     <div key={i} className={`setup-loading-stage ${i < validatingStage ? 'done' : i === validatingStage ? 'active' : ''}`}>
                       <span className="setup-loading-stage-icon">
                         {i < validatingStage ? <Icon name="check-circle" size={16} /> :
-                         i === validatingStage ? <Icon name="loader" size={16} /> :
-                         <Icon name="circle" size={16} />}
+                          i === validatingStage ? <Icon name="loader" size={16} /> :
+                            <Icon name="circle" size={16} />}
                       </span>
                       <span className="setup-loading-stage-label">{label}</span>
                     </div>
@@ -833,13 +839,13 @@ $$;`;
                 </div>
                 {Object.entries(analysis.categories).map(([key, cat]) => {
                   const badgeClass = cat.status === 'complete' ? 'badge-complete' :
-                                     cat.status === 'missing' ? 'badge-missing' :
-                                     cat.status === 'issues' ? 'badge-issues' :
-                                     cat.status === 'validating' ? 'badge-validating' : 'badge-pending';
+                    cat.status === 'missing' ? 'badge-missing' :
+                      cat.status === 'issues' ? 'badge-issues' :
+                        cat.status === 'validating' ? 'badge-validating' : 'badge-pending';
                   const badgeLabel = cat.status === 'complete' ? 'Complete' :
-                                     cat.status === 'missing' ? 'Missing' :
-                                     cat.status === 'issues' ? 'Issues' :
-                                     cat.status === 'validating' ? 'Validating' : 'Pending';
+                    cat.status === 'missing' ? 'Missing' :
+                      cat.status === 'issues' ? 'Issues' :
+                        cat.status === 'validating' ? 'Validating' : 'Pending';
                   const showBlink = cat.status !== 'complete';
                   return (
                     <details key={key} className="setup-analysis-category" open={cat.status !== 'complete'}>
@@ -895,18 +901,18 @@ $$;`;
                 const groups = {};
                 for (const item of plan.toCreate) {
                   const type = item.type === 'table' ? 'Tables' :
-                              item.column ? 'Columns' :
-                              item.constraint ? 'Constraints' :
-                              item.index ? 'Indexes' :
-                              item.type === 'extension' ? 'Extensions' :
-                              item.type === 'function' ? 'Functions' :
+                    item.column ? 'Columns' :
+                      item.constraint ? 'Constraints' :
+                        item.index ? 'Indexes' :
+                          item.type === 'extension' ? 'Extensions' :
+                            item.type === 'function' ? 'Functions' :
                               item.type === 'trigger' ? 'Triggers' :
-                              item.type === 'policy' || item.type === 'rls' ? 'Policies' :
-                              item.type === 'version' ? 'Schema Version' :
-                              item.type === 'seed' ? 'Seed Data' : 'Other';
+                                item.type === 'policy' || item.type === 'rls' ? 'Policies' :
+                                  item.type === 'version' ? 'Schema Version' :
+                                    item.type === 'seed' ? 'Seed Data' : 'Other';
                   if (!groups[type]) groups[type] = [];
                   const label = item.column ? `${item.table}.${item.column}` :
-                                item.name || item.table || item.constraint || item.index || item.detail || item.type;
+                    item.name || item.table || item.constraint || item.index || item.detail || item.type;
                   if (label && label !== '—') groups[type].push(label);
                 }
                 return Object.entries(groups).filter(([, items]) => items.length > 0).map(([type, items]) => (
@@ -936,8 +942,8 @@ $$;`;
             <div className="setup-gen-steps">
               {genSteps.map((gs) => {
                 const statusIcon = gs.status === 'completed' ? 'check-circle' :
-                                   gs.status === 'running' ? 'loader' :
-                                   gs.status === 'failed' ? 'alert-circle' : 'circle';
+                  gs.status === 'running' ? 'loader' :
+                    gs.status === 'failed' ? 'alert-circle' : 'circle';
                 return (
                   <div key={gs.key} className={`setup-gen-step setup-gen-step--${gs.status}`}>
                     <span className="setup-gen-step-icon">
@@ -1160,17 +1166,17 @@ $$;`;
                 const groups = {};
                 for (const item of items) {
                   const type = item.type === 'table' || item.name ? 'Tables' :
-                              item.column ? 'Columns' :
-                              item.constraint ? 'Constraints' :
-                              item.index ? 'Indexes' :
-                              item.type === 'function' ? 'Functions' :
-                              item.type === 'trigger' ? 'Triggers' :
+                    item.column ? 'Columns' :
+                      item.constraint ? 'Constraints' :
+                        item.index ? 'Indexes' :
+                          item.type === 'function' ? 'Functions' :
+                            item.type === 'trigger' ? 'Triggers' :
                               item.type === 'policy' || item.type === 'rls' ? 'Policies' :
-                              item.type === 'extension' ? 'Extensions' :
-                              item.type === 'version' ? 'Schema Version' : 'Other';
+                                item.type === 'extension' ? 'Extensions' :
+                                  item.type === 'version' ? 'Schema Version' : 'Other';
                   if (!groups[type]) groups[type] = [];
                   const label = item.column ? `${item.table}.${item.column}` :
-                                item.name || item.table || item.constraint || item.index || item.detail || item.type;
+                    item.name || item.table || item.constraint || item.index || item.detail || item.type;
                   if (label && label !== '—') groups[type].push({ label, item });
                 }
                 const missingEls = Object.entries(groups).map(([type, list]) => (

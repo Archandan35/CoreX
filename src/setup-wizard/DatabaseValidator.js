@@ -215,7 +215,13 @@ export class DatabaseValidator {
     // Installation fails loudly instead of masking the registration failure.
     const REQUIRED_AUTH_TRIGGER = 'on_auth_user_created';
     let authTriggerExists = false;
+    let pgCatalogError = null;
     try {
+      // The pg_catalog query requires superuser privileges; it is routed
+      // through the exec_sql SECURITY DEFINER function which runs with the
+      // service_role and SET search_path = public for deterministic resolution.
+      // The query references all pg_catalog tables with explicit schema prefixes
+      // to avoid depending on search_path for system catalog lookups.
       const result = await this.db.query(
         `SELECT t.tgname
          FROM pg_catalog.pg_trigger t
@@ -228,10 +234,12 @@ export class DatabaseValidator {
         [REQUIRED_AUTH_TRIGGER]
       );
       authTriggerExists = !!(result && result.length > 0);
-    } catch {
+    } catch (err) {
+      pgCatalogError = err;
       // Provider does not expose pg_catalog (e.g. SQLite memory mode) — skip
       // rather than falsely reporting a failure for an inapplicable backend.
-      return;
+      // For Supabase/PostgreSQL, capture the error detail so diagnostics can
+      // help the user identify if exec_sql is missing or the query failed.
     }
     // Only surface a result for the auth trigger if we actually ran the check
     // (result known). Avoid duplicates if the public-schema query already
@@ -240,6 +248,18 @@ export class DatabaseValidator {
       if (!this.results.triggers.some((t) => t.name === REQUIRED_AUTH_TRIGGER)) {
         this.results.triggers.push({ name: REQUIRED_AUTH_TRIGGER, exists: true, status: 'existing' });
       }
+    } else if (pgCatalogError) {
+      // The pg_catalog query was attempted but failed. Surface this as an
+      // issue so the user knows the trigger check itself encountered a
+      // problem (e.g. exec_sql function not yet created in the database).
+      this.results.triggers.push({
+        name: REQUIRED_AUTH_TRIGGER,
+        exists: false,
+        status: 'missing',
+        type: 'trigger',
+        detail: `Unable to verify on_auth_user_created trigger: ${pgCatalogError.message || pgCatalogError}. Ensure the exec_sql function exists in your database.`,
+        pgCatalogError: pgCatalogError.message || String(pgCatalogError),
+      });
     } else {
       this.results.triggers.push({
         name: REQUIRED_AUTH_TRIGGER,
