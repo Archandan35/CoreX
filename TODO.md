@@ -29,8 +29,18 @@
 
 ### Step 5: `generate-sql.sql`
 - [x] Verify it already has all required objects (check_admin_exists, is_admin_user, all 5 RLS policies)
+- [x] Add GRANT EXECUTE to all 3 helper functions (exec_sql, check_admin_exists, is_admin_user)
 
-### Step 6: Verification
+### Step 6: `src/schema/models/index.js`
+- [x] Add GRANT EXECUTE to all 3 function builders (exec_sql, check_admin_exists, is_admin_user)
+- [x] Fix merge conflict corruption — rewrite file cleanly
+
+### Step 7: `src/setup-wizard/SqlGenerator.js`
+- [x] Import `buildIsAdminUserFunction` from schema models
+- [x] Remove inline `_buildIsAdminUserFunction()` — use shared builder instead
+- [x] All 3 helper functions now include GRANT EXECUTE via shared builders
+
+### Step 8: Verification
 - [x] All code changes complete — files are ready for runtime verification
 - [ ] Run the app and verify both outputs produce identical SQL on fresh database
 - [ ] After SQL execution, verify installation passes with 0 missing objects

@@ -12,6 +12,11 @@ BEGIN
 END;
 $$;
 
+-- Grant EXECUTE to anon, authenticated, and service_role so the function
+-- is callable via Supabase REST API (without this, Supabase returns a
+-- permissions error when the browser calls supabase.rpc('exec_sql', ...)).
+GRANT EXECUTE ON FUNCTION exec_sql(text) TO anon, authenticated, service_role;
+
 -- ============================================================
 -- CoreX Schema Installation Script
 -- THIS FILE IS THE CANONICAL SOURCE OF TRUTH for the database schema.
@@ -81,6 +86,10 @@ BEGIN
 END;
 $$;
 
+-- Grant EXECUTE to anon, authenticated, and service_role so the function
+-- is callable via Supabase REST API during registration flow.
+GRANT EXECUTE ON FUNCTION public.check_admin_exists() TO anon, authenticated, service_role;
+
 -- Check if the current auth user is an admin. SECURITY DEFINER bypasses RLS
 -- to prevent infinite recursion when called from within an RLS policy.
 CREATE OR REPLACE FUNCTION public.is_admin_user()
@@ -93,6 +102,10 @@ BEGIN
   RETURN EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND full_access = true);
 END;
 $$;
+
+-- Grant EXECUTE to anon, authenticated, and service_role so the function
+-- is callable via Supabase REST API (used by RLS policies and verification).
+GRANT EXECUTE ON FUNCTION public.is_admin_user() TO anon, authenticated, service_role;
 
 
 -- ===== Row Level Security =====
