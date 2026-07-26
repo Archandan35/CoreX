@@ -28,19 +28,16 @@ function describeError(err, fallback) {
     console.error('[auth] raw error:', err);
   }
 
-  const candidate = err.message || err.error_description || err.msg || err.hint || err.details;
-  if (typeof candidate === 'string' && candidate.trim() && candidate.trim() !== '{}' && candidate.trim() !== '[object Object]') {
-    return candidate.trim();
-  }
-
-  // Fall back to well-known Supabase error identifiers (status/name/code)
-  // before giving up with the generic fallback — some AuthRetryableFetchError
-  // / network-layer failures carry no usable `message` but do carry these.
   if (err.status === 0 || err.name === 'AuthRetryableFetchError') {
     return 'Could not reach the authentication server. Check your connection and try again.';
   }
   if (err.status === 429 || err.code === 'over_email_send_rate_limit') {
     return 'Too many attempts. Please wait a moment before trying again.';
+  }
+
+  const candidate = err.message || err.error_description || err.msg || err.hint || err.details;
+  if (typeof candidate === 'string' && candidate.trim() && candidate.trim() !== '{}' && candidate.trim() !== '[object Object]') {
+    return candidate.trim();
   }
   if (err.status && err.name) {
     return `${fallback} (${err.name}, status ${err.status})`;
