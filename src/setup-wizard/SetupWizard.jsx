@@ -8,6 +8,7 @@ import { SchemaAnalyzer } from './SchemaAnalyzer.js';
 import { highlightSql } from './SqlHighlighter.js';
 import { PROVIDERS, getProvider } from './ProviderRegistry.js';
 import { isMissingTableError, isMissingColumnError } from '../utils/dbErrors.js';
+import { bindInline } from '../data/sqlParams.js';
 
 const STEPS = [
   { id: 'welcome', label: 'Welcome', icon: 'home' },
@@ -274,6 +275,32 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
               // 4) information_schema.routines / triggers / views
               if (lower.includes('information_schema.routines') || lower.includes('information_schema.triggers') || lower.includes('information_schema.views')) {
                 return []; // Return empty — not reliably queryable via REST API
+              }
+
+              // 4b) pg_catalog queries (e.g. pg_trigger to verify the
+              // on_auth_user_created trigger on auth.users). PostgREST cannot
+              // query pg_catalog directly and the anon role cannot read the
+              // `auth` schema, but the install SQL defines a SECURITY DEFINER
+              // `exec_sql(query_text text)` RPC that runs as superuser and CAN.
+              // Without this branch, the pg_trigger query fell through to the
+              // DDL/catch-all `return []` below, which made the validator always
+              // report the auth-user trigger as MISSING even after a successful
+              // install. exec_sql returns SETOF json → array of row objects.
+              if (lower.includes('pg_catalog') || lower.includes('from pg_trigger') || lower.includes('from pg_class') || lower.includes('from pg_namespace')) {
+                try {
+                  const bound = bindInline(sql, params);
+                  const { data, error } = await supabase.rpc('exec_sql', { query_text: bound });
+                  if (error) {
+                    // exec_sql missing/not callable yet — fall back to "not found"
+                    // rather than spoofing existence. Registration will still
+                    // surface the real "missing profile record" cause if the
+                    // trigger truly isn't installed.
+                    return [];
+                  }
+                  return Array.isArray(data) ? data : [];
+                } catch {
+                  return [];
+                }
               }
 
               // 5) pg_policies

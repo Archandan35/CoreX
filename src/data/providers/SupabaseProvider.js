@@ -1,4 +1,5 @@
 import { DatabaseProvider } from './index.js';
+import { bindInline } from '../sqlParams.js';
 
 // Supabase does not expose arbitrary SQL over its REST API. Raw SQL execution
 // is therefore routed through the `exec_sql(query_text text)` SECURITY DEFINER
@@ -34,7 +35,7 @@ export class SupabaseProvider extends DatabaseProvider {
   async query(sql, params = []) {
     if (!this.client) throw new Error('Supabase not connected. Call connect() first.');
 
-    const queryText = bindParams(sql, params);
+    const queryText = bindInline(sql, params);
 
     const { data, error } = await this.client.rpc('exec_sql', { query_text: queryText });
 
@@ -70,41 +71,4 @@ export class SupabaseProvider extends DatabaseProvider {
 
   async disconnect() {
   }
-}
-
-// Substitute `$1, $2, ...` placeholders in `sql` with safely-quoted literals
-// built from `params`. exec_sql executes the final text server-side, so we must
-// serialize JS values into valid SQL literals here.
-function bindParams(sql, params) {
-  if (!params || params.length === 0) return sql;
-  let out = '';
-  let paramIndex = 0;
-  for (let i = 0; i < sql.length; i += 1) {
-    const ch = sql[i];
-    if (ch === '$' && /[1-9]/.test(sql[i + 1] || '')) {
-      // Only treat $N as a placeholder when followed by a digit. (Multi-digit
-      // placeholders like $10 are not used anywhere in this codebase, but we
-      // support them for safety by consuming the full run of digits.)
-      let num = '';
-      let j = i + 1;
-      while (j < sql.length && /[0-9]/.test(sql[j])) { num += sql[j]; j += 1; }
-      const pos = parseInt(num, 10) - 1;
-      if (pos >= 0 && pos < params.length) {
-        out += literal(params[pos]);
-        paramIndex += 1;
-        i = j - 1;
-        continue;
-      }
-    }
-    out += ch;
-  }
-  return out;
-}
-
-function literal(value) {
-  if (value === null || value === undefined) return 'NULL';
-  if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
-  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'NULL';
-  // string — escape single quotes per SQL standard (doubled) and wrap in quotes.
-  return `'${String(value).replace(/'/g, "''")}'`;
 }
