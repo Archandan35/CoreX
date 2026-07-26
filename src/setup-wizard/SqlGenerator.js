@@ -113,19 +113,18 @@ export class SqlGenerator {
       }
     }
 
-    // Only include the user profile trigger (handle_new_user function +
-    // on_auth_user_created trigger) if the report indicates it is actually
-    // missing. This ensures the Installation Plan's "Objects to Create" count
-    // accurately reflects what the SQL will generate, and avoids regenerating
-    // the (idempotent) trigger SQL when validation already confirmed it exists.
-    const triggerMissing = toCreate.some(
-      (i) => i.name === 'on_auth_user_created' || i.detail?.includes('on_auth_user_created')
-    );
-    if (triggerMissing) {
-      const userTrigger = this._genUserTrigger();
-      if (userTrigger) {
-        blocks.push(this._section('User Profile Trigger', [userTrigger]));
-      }
+    // User Profile Trigger: ALWAYS include the handle_new_user function and
+    // on_auth_user_created trigger in the generated SQL. The trigger is the
+    // ONLY mechanism that creates public.users profile rows when a new auth
+    // user signs up. Even if the validator reported it as "existing" (e.g.
+    // the pg_catalog query failed or exec_sql was missing), the generated SQL
+    // uses CREATE OR REPLACE and DROP TRIGGER IF EXISTS / CREATE TRIGGER so
+    // it is idempotent. Including it unconditionally guarantees the trigger
+    // SQL is available for the user to run, rather than silently omitting a
+    // critical security object that would silently break registration.
+    const userTrigger = this._genUserTrigger();
+    if (userTrigger) {
+      blocks.push(this._section('User Profile Trigger', [userTrigger]));
     }
 
     const version = this.schema.version;
