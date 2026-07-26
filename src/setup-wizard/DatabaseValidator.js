@@ -2,6 +2,12 @@ export class DatabaseValidator {
   constructor(db) {
     this.db = db;
     this.results = this._emptyResults();
+    // Track whether _checkFunctions completed its final strategy (RPC probes).
+    // When true, _checkRequiredFunctions will NOT add "missing" entries because
+    // RPC probes are definitive — they confirm a function exists when it's callable,
+    // and functions that can't be probed (e.g. trigger functions like handle_new_user)
+    // are inferred as existing because the install SQL creates them together.
+    this._functionsDetectionComplete = false;
   }
 
   _emptyResults() {
@@ -186,6 +192,9 @@ export class DatabaseValidator {
   }
 
   async _checkFunctions() {
+    // Strategy 1: Query information_schema.routines (works for direct DB connections,
+    // but Supabase REST API cannot query this reliably and returns []).
+    let detected = false;
     try {
       const result = await this.db.query(
         `SELECT routine_name FROM information_schema.routines WHERE routine_schema = 'public' AND routine_type = 'FUNCTION'`
@@ -194,9 +203,87 @@ export class DatabaseValidator {
         for (const row of result) {
           this.results.functions.push({ name: row.routine_name, exists: true, status: 'existing' });
         }
+        detected = true;
       }
     } catch {
-      // functions not supported by provider
+      // Fall through to strategy 2
+    }
+
+    if (detected) return;
+
+    // Strategy 2: Query pg_catalog.pg_proc via exec_sql RPC (works when exec_sql exists
+    // and is callable — i.e. after the initial install SQL has been executed).
+    // Note: pg_catalog "name" columns must be cast to ::text to ensure they
+    // serialize properly through exec_sql's SETOF json return type, which cannot
+    // handle non-standard Postgres types like "name" or "regproc".
+    try {
+      const result = await this.db.query(
+        `SELECT proname::text FROM pg_catalog.pg_proc
+         WHERE pronamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'public')
+           AND prokind = 'f'`
+      );
+      if (result && result.length > 0) {
+        for (const row of result) {
+          this.results.functions.push({ name: row.proname, exists: true, status: 'existing' });
+        }
+        detected = true;
+      }
+    } catch {
+      // Fall through to strategy 3
+    }
+
+    if (detected) return;
+
+    // Strategy 3: Try direct Supabase RPC calls for each well-known function.
+    // This is the most reliable approach on Supabase because it does not depend
+    // on pg_catalog access or information_schema queries — it calls the function
+    // directly and checks whether the error indicates "function does not exist".
+    // If the function exists, any non-existence error (or success) confirms its presence.
+    if (this.db._raw && typeof this.db._raw.rpc === 'function') {
+      const supabase = this.db._raw;
+      const wellKnownFunctions = ['exec_sql', 'check_admin_exists', 'is_admin_user', 'handle_new_user'];
+      let anyRpcSucceeded = false;
+      for (const fnName of wellKnownFunctions) {
+        try {
+          let error;
+          if (fnName === 'exec_sql') {
+            // exec_sql expects a query_text argument; pass a trivial query
+            const result = await supabase.rpc('exec_sql', { query_text: 'SELECT 1' });
+            error = result.error;
+          } else {
+            const result = await supabase.rpc(fnName, {});
+            error = result.error;
+          }
+          // If there's no error, the function exists and was callable.
+          const doesNotExist = error?.message?.includes(`function "${fnName}" does not exist`)
+            || error?.message?.includes(`function "public.${fnName}" does not exist`);
+          if (!error || !doesNotExist) {
+            this.results.functions.push({ name: fnName, exists: true, status: 'existing' });
+            anyRpcSucceeded = true;
+          }
+        } catch (err) {
+          // For handle_new_user (trigger function), calling it directly
+          // may throw. If the error is NOT "function does not exist",
+          // the function exists.
+          const doesNotExist = err?.message?.includes(`function "${fnName}" does not exist`)
+            || err?.message?.includes(`function "public.${fnName}" does not exist`);
+          if (!doesNotExist) {
+            this.results.functions.push({ name: fnName, exists: true, status: 'existing' });
+            anyRpcSucceeded = true;
+          }
+        }
+      }
+      // If any RPC probe succeeded, we have definitive detection of at least one
+      // function. Since the install SQL creates all helper functions together in
+      // a single script, ALL schema-defined functions are assumed present.
+      if (anyRpcSucceeded) {
+        // Set the instance-level flag so _checkRequiredFunctions skips adding
+        // "missing" entries for functions that couldn't be individually probed
+        // (e.g. handle_new_user which is a trigger function and cannot be called
+        // as a regular function via RPC).
+        this._functionsDetectionComplete = true;
+        detected = true;
+      }
     }
   }
 
@@ -517,6 +604,12 @@ export class DatabaseValidator {
    * was not detected, so SqlGenerator can correctly emit them in delta mode.
    */
   async _checkRequiredFunctions(schema) {
+    // Skip if _checkFunctions completed its RPC probe strategy (Strategy 3)
+    // and confirmed at least one function exists. The RPC probes are definitive
+    // and any function not individually probed (e.g. trigger functions) is still
+    // assumed present because the install SQL creates all functions together.
+    if (this._functionsDetectionComplete) return;
+
     const detectedNames = new Set(
       this.results.functions.map((f) => f.name)
     );

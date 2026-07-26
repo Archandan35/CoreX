@@ -31,4 +31,5 @@
 - [x] Verify it already has all required objects (check_admin_exists, is_admin_user, all 5 RLS policies)
 
 ### Step 6: Verification
+- [x] All code changes complete — files are ready for runtime verification
 - [ ] Run the app and verify both outputs produce identical SQL on fresh database
