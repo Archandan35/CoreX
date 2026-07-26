@@ -58,6 +58,18 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const INCONSISTENT_ACCOUNT_ERROR =
   'Your account could not be fully set up (missing profile record). Please contact an administrator — do not retry registration with the same email.';
 
+// Build the message shown when a user exists in auth.users but no public.users
+// profile could be read. The canned message alone is unactionable for an admin;
+// appending the real PostgREST/RLS error (when we have one) makes the root
+// cause diagnosable — e.g. a missing/broken handle_new_user trigger surfaces as
+// a concrete code instead of the opaque "missing profile record" string.
+function inconsistentAccountMessage(profileError) {
+  const detail = describeError(profileError, null);
+  return detail
+    ? `${INCONSISTENT_ACCOUNT_ERROR} (Detail: ${detail})`
+    : INCONSISTENT_ACCOUNT_ERROR;
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -68,7 +80,16 @@ function sleep(ms) {
 // transaction as the auth signup — so it is atomic on the database side.
 // However PostgREST's schema cache can lag a moment behind a write, so we
 // poll briefly for the row rather than failing on the very first read.
+//
+// We must keep polling across TRANSIENT errors too (not only "row not found"):
+// immediately after signUp, auth.uid() can briefly evaluate as null on the
+// very first RLS check for the new user, surfacing as a 42501/permissions
+// error that is NOT "not found". Bailing on the first such error (as the old
+// code did) produced false INCONSISTENT_ACCOUNT_ERROR reports even though the
+// trigger had actually written the row a few milliseconds later. Only a
+// persistent, hard error (missing table/column) short-circuits the loop.
 async function fetchProfileRecord(client, userId, { retries = 5, delayMs = 400 } = {}) {
+  let lastError = null;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     const { data, error } = await client
       .from('users')
@@ -77,13 +98,25 @@ async function fetchProfileRecord(client, userId, { retries = 5, delayMs = 400 }
       .maybeSingle();
 
     if (!error && data) return { record: data, error: null };
-    if (error && !isMissingTableError(error) && error.code !== 'PGRST116') {
-      // A real error (not "not found yet") — stop polling, surface it.
-      return { record: null, error };
+
+    if (error) {
+      lastError = error;
+      // Hard schema errors — the table/column genuinely does not exist. No
+      // amount of retrying will fix this; stop and surface it immediately.
+      if (isMissingTableError(error) || error.code === 'PGRST204') {
+        return { record: null, error };
+      }
+      // Everything else (PGRST116 "JSON object requested, multiple/null rows",
+      // 42501 permission, transient RLS/auth.uid lag, network blips) is
+      // retried before we give up — the row is typically arriving momentarily.
     }
+
     if (attempt < retries) await sleep(delayMs);
   }
-  return { record: null, error: null };
+  // Exhausted retries without a row. Return the last error (if any) so the
+  // caller can distinguish "row never appeared" from a real query failure and
+  // surface a useful message instead of the opaque canned string.
+  return { record: null, error: lastError };
 }
 
 export async function supabaseLogin(identifier, password) {
@@ -98,17 +131,13 @@ export async function supabaseLogin(identifier, password) {
     });
     if (error) return { ok: false, error: describeError(error, 'Sign in failed. Please try again.') };
 
-    const { data: userData, error: profileError } = await client
-      .from('users')
-      .select('full_access, role_label, permissions')
-      .eq('id', data.user.id)
-      .maybeSingle();
+    const { record: userData, error: profileError } = await fetchProfileRecord(client, data.user.id);
 
     // Permanent validation rule: never allow an authenticated session for a
     // user that exists in auth.users but has no matching public.users record.
     if (!userData || profileError) {
       await client.auth.signOut();
-      return { ok: false, error: INCONSISTENT_ACCOUNT_ERROR };
+      return { ok: false, error: inconsistentAccountMessage(profileError) };
     }
 
     return {
@@ -181,12 +210,12 @@ export async function supabaseRegister(payload) {
       // sure no session is left active and surface an explicit error instead
       // of silently continuing into the app with a partial account.
       if (data.session) await client.auth.signOut();
-      return { ok: false, error: INCONSISTENT_ACCOUNT_ERROR };
+      return { ok: false, error: inconsistentAccountMessage(profileError) };
     }
 
     if (profile.id !== data.user.id || !profile.email) {
       if (data.session) await client.auth.signOut();
-      return { ok: false, error: INCONSISTENT_ACCOUNT_ERROR };
+      return { ok: false, error: inconsistentAccountMessage(null) };
     }
 
     // If this was expected to create the first administrator account, verify
@@ -262,11 +291,11 @@ export async function restoreSession() {
   const userId = sessionData.session.user.id;
   const metadata = sessionData.session.user.user_metadata || {};
 
-  const { data: userData, error: profileError } = await client
-    .from('users')
-    .select('full_access, role_label, permissions')
-    .eq('id', userId)
-    .maybeSingle();
+  // Reuse the same retry-backed read as registration/login: a single transient
+  // RLS/auth.uid lag on cold page loads previously caused a legitimate session
+  // to be signed out for no real reason. Only a persistently missing profile
+  // should invalidate the session.
+  const { record: userData, error: profileError } = await fetchProfileRecord(client, userId);
 
   // Permanent validation rule: a restored session must never be honored if
   // the matching public.users record is missing — sign the user out instead

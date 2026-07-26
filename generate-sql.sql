@@ -129,20 +129,28 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.users (id, name, email, phone, role_label, full_access, permissions, created_at)
+  INSERT INTO public.users (id, name, email, phone, role_label, full_access, permissions, status, created_at, updated_at)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
     NEW.email,
     NEW.raw_user_meta_data->>'phone',
     NEW.raw_user_meta_data->>'role_label',
-    NOT EXISTS (SELECT 1 FROM public.users WHERE full_access = true),
+    -- full_access: the FIRST account is always promoted to administrator
+    -- server-side; subsequent accounts honour the metadata flag (default false).
+    CASE
+      WHEN NOT EXISTS (SELECT 1 FROM public.users WHERE full_access = true) THEN true
+      ELSE COALESCE((NEW.raw_user_meta_data->>'full_access')::boolean, false)
+    END,
     COALESCE(
       (SELECT ARRAY(SELECT jsonb_array_elements_text(NEW.raw_user_meta_data->'permissions'))),
       ARRAY[]::text[]
     ),
+    'active',
+    NOW(),
     NOW()
   );
   RETURN NEW;

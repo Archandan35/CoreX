@@ -189,6 +189,7 @@ export class DatabaseValidator {
   }
 
   async _checkTriggers() {
+    // public-schema triggers (general coverage)
     try {
       const result = await this.db.query(
         `SELECT trigger_name FROM information_schema.triggers WHERE trigger_schema = 'public'`
@@ -200,6 +201,53 @@ export class DatabaseValidator {
       }
     } catch {
       // triggers not supported by provider
+    }
+
+    // Critical security object: the on_auth_user_created trigger on auth.users
+    // is the ONLY thing that creates a public.users profile row when a new auth
+    // user signs up. If it is missing or its function is broken, registration
+    // silently produces an auth user with no profile, which the client then
+    // rejects as "missing profile record". information_schema.triggers is
+    // filtered by the current role and historically does not surface `auth`
+    // schema triggers, so we check pg_catalog.pg_trigger directly. Because a
+    // missing trigger would otherwise leave `valid: true` (it was never listed
+    // as missing), we explicitly record it as a MISSING item so Verify
+    // Installation fails loudly instead of masking the registration failure.
+    const REQUIRED_AUTH_TRIGGER = 'on_auth_user_created';
+    let authTriggerExists = false;
+    try {
+      const result = await this.db.query(
+        `SELECT t.tgname
+         FROM pg_catalog.pg_trigger t
+         JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid
+         JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+         WHERE NOT t.tgisinternal
+           AND n.nspname = 'auth'
+           AND c.relname = 'users'
+           AND t.tgname = $1`,
+        [REQUIRED_AUTH_TRIGGER]
+      );
+      authTriggerExists = !!(result && result.length > 0);
+    } catch {
+      // Provider does not expose pg_catalog (e.g. SQLite memory mode) — skip
+      // rather than falsely reporting a failure for an inapplicable backend.
+      return;
+    }
+    // Only surface a result for the auth trigger if we actually ran the check
+    // (result known). Avoid duplicates if the public-schema query already
+    // happened to list it (it won't, since it lives in `auth`).
+    if (authTriggerExists) {
+      if (!this.results.triggers.some((t) => t.name === REQUIRED_AUTH_TRIGGER)) {
+        this.results.triggers.push({ name: REQUIRED_AUTH_TRIGGER, exists: true, status: 'existing' });
+      }
+    } else {
+      this.results.triggers.push({
+        name: REQUIRED_AUTH_TRIGGER,
+        exists: false,
+        status: 'missing',
+        type: 'trigger',
+        detail: 'on_auth_user_created trigger on auth.users is missing — registration will fail to create a user profile.',
+      });
     }
   }
 
