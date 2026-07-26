@@ -60,6 +60,35 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 CREATE INDEX IF NOT EXISTS idx_users_phone ON users (phone);
 
 
+-- ===== Helper Functions for Admin Checks =====
+-- IMPORTANT: Must be created before RLS policies that reference them.
+
+-- Check if any admin exists (used by handle_new_user trigger for first-user promotion)
+CREATE OR REPLACE FUNCTION public.check_admin_exists()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (SELECT 1 FROM public.users WHERE full_access = true);
+END;
+$$;
+
+-- Check if the current auth user is an admin. SECURITY DEFINER bypasses RLS
+-- to prevent infinite recursion when called from within an RLS policy.
+CREATE OR REPLACE FUNCTION public.is_admin_user()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND full_access = true);
+END;
+$$;
+
+
 -- ===== Row Level Security =====
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -76,7 +105,7 @@ BEGIN
   END IF;
 END $$;
 
--- Admins can read all users
+-- Admins can read all users (uses is_admin_user() which bypasses RLS)
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -112,34 +141,6 @@ BEGIN
       WITH CHECK (auth.uid() = id);
   END IF;
 END $$;
-
-
--- ===== Helper Functions for Admin Checks =====
-
--- Check if any admin exists (used by handle_new_user trigger for first-user promotion)
-CREATE OR REPLACE FUNCTION public.check_admin_exists()
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN EXISTS (SELECT 1 FROM public.users WHERE full_access = true);
-END;
-$$;
-
--- Check if the current auth user is an admin. SECURITY DEFINER bypasses RLS to
--- prevent infinite recursion when called from within an RLS policy on users.
-CREATE OR REPLACE FUNCTION public.is_admin_user()
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND full_access = true);
-END;
-$$;
 
 
 -- ===== Trigger: Auto-create user record on signup =====
