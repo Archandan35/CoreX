@@ -84,7 +84,7 @@ BEGIN
   ) THEN
     CREATE POLICY "Admins can read all users" ON users
       FOR SELECT
-      USING (auth.uid() IN (SELECT id FROM public.users WHERE full_access = true));
+      USING (public.is_admin_user());
   END IF;
 END $$;
 
@@ -114,15 +114,30 @@ BEGIN
 END $$;
 
 
--- ===== Helper Function: Check if any admin exists =====
+-- ===== Helper Functions for Admin Checks =====
 
+-- Check if any admin exists (used by handle_new_user trigger for first-user promotion)
 CREATE OR REPLACE FUNCTION public.check_admin_exists()
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
   RETURN EXISTS (SELECT 1 FROM public.users WHERE full_access = true);
+END;
+$$;
+
+-- Check if the current auth user is an admin. SECURITY DEFINER bypasses RLS to
+-- prevent infinite recursion when called from within an RLS policy on users.
+CREATE OR REPLACE FUNCTION public.is_admin_user()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND full_access = true);
 END;
 $$;
 

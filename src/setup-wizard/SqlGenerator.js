@@ -320,6 +320,18 @@ export class SqlGenerator {
     ];
     if (def && def.table === 'users') {
       lines.push(
+        `-- SECURITY DEFINER helper to check admin status (bypasses RLS to prevent infinite recursion)`,
+        `CREATE OR REPLACE FUNCTION public.is_admin_user()`,
+        `RETURNS boolean`,
+        `LANGUAGE plpgsql`,
+        `SECURITY DEFINER`,
+        `SET search_path = public`,
+        `AS $$`,
+        `BEGIN`,
+        `  RETURN EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND full_access = true);`,
+        `END;`,
+        `$$;`,
+        ``,
         `DO $$`,
         `BEGIN`,
         `  IF NOT EXISTS (`,
@@ -338,7 +350,7 @@ export class SqlGenerator {
         `  ) THEN`,
         `    CREATE POLICY "Admins can read all users" ON ${tableName}`,
         `      FOR SELECT`,
-        `      USING (auth.uid() IN (SELECT id FROM ${tableName} WHERE full_access = true));`,
+        `      USING (public.is_admin_user());`,
         `  END IF;`,
         `END $$;`,
         ``,
@@ -372,7 +384,7 @@ export class SqlGenerator {
         `  ) THEN`,
         `    CREATE POLICY "Admins can update all users" ON ${tableName}`,
         `      FOR UPDATE`,
-        `      USING (auth.uid() IN (SELECT id FROM ${tableName} WHERE full_access = true));`,
+        `      USING (public.is_admin_user());`,
         `  END IF;`,
         `END $$;`,
       );
