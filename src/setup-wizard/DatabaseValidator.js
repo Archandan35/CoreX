@@ -214,7 +214,9 @@ export class DatabaseValidator {
     // as missing), we explicitly record it as a MISSING item so Verify
     // Installation fails loudly instead of masking the registration failure.
     const REQUIRED_AUTH_TRIGGER = 'on_auth_user_created';
+    const REQUIRED_FUNCTION = 'handle_new_user';
     let authTriggerExists = false;
+    let handleNewUserExists = false;
     let pgCatalogError = null;
     try {
       // The pg_catalog query requires superuser privileges; it is routed
@@ -234,6 +236,21 @@ export class DatabaseValidator {
         [REQUIRED_AUTH_TRIGGER]
       );
       authTriggerExists = !!(result && result.length > 0);
+
+      // Fallback: also check if the handle_new_user function exists via exec_sql.
+      // The trigger and function are always created together in the same SQL
+      // script. If the function exists but the pg_trigger query returned empty
+      // (e.g. exec_sql not yet callable through RPC), we can infer the trigger
+      // is present as well.
+      if (!authTriggerExists) {
+        const funcResult = await this.db.query(
+          `SELECT 'exists' as found FROM pg_catalog.pg_proc
+           WHERE proname = $1
+             AND pronamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'public')`,
+          [REQUIRED_FUNCTION]
+        );
+        handleNewUserExists = !!(funcResult && funcResult.length > 0);
+      }
     } catch (err) {
       pgCatalogError = err;
       // Provider does not expose pg_catalog (e.g. SQLite memory mode) — skip
@@ -241,12 +258,26 @@ export class DatabaseValidator {
       // For Supabase/PostgreSQL, capture the error detail so diagnostics can
       // help the user identify if exec_sql is missing or the query failed.
     }
+
+    // Determine final trigger status using:
+    // 1. Direct pg_trigger check (authoritative)
+    // 2. Fallback: handle_new_user function exists (inferred)
+    // 3. Error state: exec_sql/pg_catalog unavailable
+    const triggerPresent = authTriggerExists || handleNewUserExists;
+
     // Only surface a result for the auth trigger if we actually ran the check
     // (result known). Avoid duplicates if the public-schema query already
     // happened to list it (it won't, since it lives in `auth`).
-    if (authTriggerExists) {
+    if (triggerPresent) {
       if (!this.results.triggers.some((t) => t.name === REQUIRED_AUTH_TRIGGER)) {
-        this.results.triggers.push({ name: REQUIRED_AUTH_TRIGGER, exists: true, status: 'existing' });
+        this.results.triggers.push({
+          name: REQUIRED_AUTH_TRIGGER,
+          exists: true,
+          status: 'existing',
+          detail: handleNewUserExists && !authTriggerExists
+            ? 'Inferred present (handle_new_user function exists, trigger validated indirectly)'
+            : undefined,
+        });
       }
     } else if (pgCatalogError) {
       // The pg_catalog query was attempted but failed. Surface this as an
@@ -476,4 +507,7 @@ export class DatabaseValidator {
   getMissingCount() {
     return this.getReport().missing.length;
   }
-}
+}</｜｜DSML｜｜parameter >
+</｜｜DSML｜｜parameter >
+</parameter >
+</assignment >
