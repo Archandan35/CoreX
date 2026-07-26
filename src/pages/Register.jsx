@@ -164,12 +164,12 @@ export default function Register({ isFirstAccount }) {
           </div>
 
           <Field label="Password" required>
-            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" required />
+            <PasswordInput autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" required />
           </Field>
           {password && <PasswordStrength password={password} />}
 
           <Field label="Confirm Password" required>
-            <PasswordInput value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Re-enter password" required />
+            <PasswordInput autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Re-enter password" required />
           </Field>
 
           <Button

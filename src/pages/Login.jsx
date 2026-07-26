@@ -58,7 +58,7 @@ export default function Login() {
             <Input type="email" value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="e.g. admin@company.com" autoFocus />
           </Field>
           <Field label="Password">
-            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" />
+            <PasswordInput autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" />
           </Field>
           <Button type="submit" variant="primary" className="btn-full" loading={busy} icon="shield">Sign in</Button>
         </form>

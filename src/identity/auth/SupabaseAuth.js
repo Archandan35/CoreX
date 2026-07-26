@@ -2,6 +2,7 @@ import { config } from '../../config/index.js';
 import { isMissingTableError } from '../../utils/dbErrors.js';
 
 let supabaseClient = null;
+let clientPromise = null;
 
 // Whether to write verbose/raw diagnostics to the browser console. Raw auth
 // error objects sometimes embed tokens, request URLs, or other sensitive
@@ -48,14 +49,16 @@ function describeError(err, fallback) {
 
 async function getClient() {
   if (supabaseClient) return supabaseClient;
+  if (clientPromise) return clientPromise;
   if (!config.supabaseUrl || !config.supabaseAnonKey) {
-    // Fail with a clear, actionable message instead of letting
-    // createClient(undefined, undefined) produce a cryptic downstream error.
     throw new Error('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then reload the app before creating an account.');
   }
-  const { createClient } = await import('@supabase/supabase-js');
-  supabaseClient = createClient(config.supabaseUrl, config.supabaseAnonKey);
-  return supabaseClient;
+  clientPromise = (async () => {
+    const { createClient } = await import('@supabase/supabase-js');
+    supabaseClient = createClient(config.supabaseUrl, config.supabaseAnonKey);
+    return supabaseClient;
+  })();
+  return clientPromise;
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
