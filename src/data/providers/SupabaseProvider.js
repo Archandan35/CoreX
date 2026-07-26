@@ -25,11 +25,18 @@ const EXEC_SQL_NOT_INSTALLED_HINT =
   'Run the generated schema SQL (which begins with CREATE FUNCTION exec_sql) ' +
   'in the Supabase SQL Editor, then try again.';
 
+let connectPromise = null;
+
 export class SupabaseProvider extends DatabaseProvider {
   async connect(config) {
     this.type = 'supabase';
-    const { createClient } = await import('@supabase/supabase-js');
-    this.client = createClient(config.url, config.anonKey);
+    if (this.client) return;
+    if (connectPromise) return connectPromise;
+    connectPromise = (async () => {
+      const { createClient } = await import('@supabase/supabase-js');
+      this.client = createClient(config.url, config.anonKey);
+    })();
+    return connectPromise;
   }
 
   async query(sql, params = []) {

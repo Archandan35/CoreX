@@ -1,5 +1,19 @@
 import { config } from '../../config/index.js';
 
+let storageClient = null;
+let storageClientPromise = null;
+
+async function getStorageClient() {
+  if (storageClient) return storageClient;
+  if (storageClientPromise) return storageClientPromise;
+  storageClientPromise = (async () => {
+    const { createClient } = await import('@supabase/supabase-js');
+    storageClient = createClient(config.supabaseUrl, config.supabaseAnonKey);
+    return storageClient;
+  })();
+  return storageClientPromise;
+}
+
 export class StorageService {
   constructor() {
     this.provider = config.storageProvider;
@@ -7,8 +21,7 @@ export class StorageService {
   }
 
   async upload(file, path) {
-    const { createClient } = await import('@supabase/supabase-js');
-    const client = createClient(config.supabaseUrl, config.supabaseAnonKey);
+    const client = await getStorageClient();
     const { data, error } = await client.storage
       .from(config.supabaseBucket)
       .upload(path, file);
@@ -17,8 +30,7 @@ export class StorageService {
   }
 
   async getUrl(path) {
-    const { createClient } = await import('@supabase/supabase-js');
-    const client = createClient(config.supabaseUrl, config.supabaseAnonKey);
+    const client = await getStorageClient();
     const { data } = client.storage
       .from(config.supabaseBucket)
       .getPublicUrl(path);
@@ -26,8 +38,7 @@ export class StorageService {
   }
 
   async delete(path) {
-    const { createClient } = await import('@supabase/supabase-js');
-    const client = createClient(config.supabaseUrl, config.supabaseAnonKey);
+    const client = await getStorageClient();
     const { error } = await client.storage
       .from(config.supabaseBucket)
       .remove([path]);

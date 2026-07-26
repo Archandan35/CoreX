@@ -121,7 +121,7 @@ export default function Register({ isFirstAccount }) {
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your full name" autoFocus required />
           </Field>
           <Field label="Email Address" required>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email address" required />
+            <Input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email address" required />
           </Field>
           <Field label="Phone" required>
             <Input value={phone} onChange={handlePhoneChange} placeholder="Enter 10-digit mobile number" required />
