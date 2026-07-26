@@ -33,3 +33,5 @@
 ### Step 6: Verification
 - [x] All code changes complete — files are ready for runtime verification
 - [ ] Run the app and verify both outputs produce identical SQL on fresh database
+- [ ] After SQL execution, verify installation passes with 0 missing objects
+- [ ] Test registration flow creates profile record successfully

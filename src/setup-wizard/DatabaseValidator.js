@@ -367,75 +367,71 @@ export class DatabaseValidator {
     // Strategy 3: Check if the handle_new_user function exists (inferred check).
     // The trigger and function are always created together in the same SQL
     // script. If the function exists, the trigger is almost certainly present.
-    if (!authTriggerExists) {
-      // First check if _checkFunctions() already confirmed handle_new_user via RPC
-      const funcDetected = this.results.functions.some(
-        (f) => f.name === 'handle_new_user' && f.exists === true
-      );
-      if (funcDetected) {
-        handleNewUserExists = true;
-      } else if (this._functionsDetectionComplete) {
-        // RPC probes already confirmed other functions — assume all exist together
-        handleNewUserExists = true;
-      } else {
-        try {
-          const rpcFuncResult = await this.db.query(
-            `SELECT * FROM exec_sql(
-              'SELECT ''exists''::text as found FROM pg_catalog.pg_proc
-               WHERE proname::text = ''handle_new_user''
-                 AND pronamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = ''public'')'
-            )`
-          );
-          handleNewUserExists = !!(rpcFuncResult && rpcFuncResult.length > 0);
-        } catch {
-          try {
-            const funcResult = await this.db.query(
-              `SELECT 'exists'::text as found FROM pg_catalog.pg_proc
-               WHERE proname::text = $1
-                 AND pronamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'public')`,
-              [REQUIRED_FUNCTION]
-            );
-            handleNewUserExists = !!(funcResult && funcResult.length > 0);
-          } catch {
-            // Both approaches failed — cannot determine function existence
-          }
-        }
+    // However, we ONLY use this as a fallback when pg_catalog is inaccessible
+    // (pgCatalogError is set). If pg_catalog IS accessible and the trigger
+    // was not found, we report it as missing — the function existing does NOT
+    // guarantee the trigger was created on auth.users (permissions issue).
+    //
+    // IMPORTANT: We do NOT use _functionsDetectionComplete here. RPC probes
+    // detecting exec_sql or check_admin_exists does NOT mean the trigger on
+    // auth.users was created. The function handle_new_user existing in public
+    // schema is a separate object from the trigger on auth.users. Only a
+    // direct pg_trigger check (Strategy 1 or 2) is authoritative.
+    if (!authTriggerExists && pgCatalogError) {
+      // pg_catalog is inaccessible — try to detect handle_new_user function
+      // via exec_sql RPC (which runs as service_role and bypasses restrictions)
+      try {
+        const rpcFuncResult = await this.db.query(
+          `SELECT * FROM exec_sql(
+            'SELECT ''exists''::text as found FROM pg_catalog.pg_proc
+             WHERE proname::text = ''handle_new_user''
+               AND pronamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = ''public'')'
+          )`
+        );
+        handleNewUserExists = !!(rpcFuncResult && rpcFuncResult.length > 0);
+      } catch {
+        // exec_sql RPC not available — cannot determine
       }
     }
 
     // Determine final trigger status using:
-    // 1. Direct pg_trigger check (authoritative)
-    // 2. Fallback: handle_new_user function exists (inferred)
-    // 3. Error state: pg_catalog unavailable (skip — false positive risk)
-    const triggerPresent = authTriggerExists || handleNewUserExists;
+    // 1. Direct pg_trigger check via exec_sql RPC (authoritative) — Strategy 1
+    // 2. Direct pg_catalog query (authoritative) — Strategy 2
+    // 3. Inferred from handle_new_user function (only when pg_catalog restricted)
+    // 4. Genuinely missing (pg_catalog accessible, trigger not found)
 
-    if (triggerPresent) {
+    if (authTriggerExists) {
+      // Authoritative: exec_sql RPC confirmed the trigger exists on auth.users
       if (!this.results.triggers.some((t) => t.name === REQUIRED_AUTH_TRIGGER)) {
         this.results.triggers.push({
           name: REQUIRED_AUTH_TRIGGER,
           exists: true,
           status: 'existing',
-          detail: handleNewUserExists && !authTriggerExists
-            ? 'Inferred present (handle_new_user function exists, trigger validated indirectly)'
-            : undefined,
+        });
+      }
+    } else if (handleNewUserExists) {
+      // Inferred: pg_catalog inaccessible but function exists via exec_sql RPC
+      if (!this.results.triggers.some((t) => t.name === REQUIRED_AUTH_TRIGGER)) {
+        this.results.triggers.push({
+          name: REQUIRED_AUTH_TRIGGER,
+          exists: true,
+          status: 'existing',
+          detail: 'Inferred present (pg_catalog restricted, handle_new_user function confirmed via exec_sql RPC)',
         });
       }
     } else if (pgCatalogError) {
-      // Both pg_catalog queries failed (likely permissions issue).
-      // The trigger was already created by the SQL script that was just
-      // executed. Reporting it as "missing" would be a false negative.
-      // Instead, skip the check and let the user know verification was
-      // inconclusive for this specific object.
+      // pg_catalog inaccessible and no function evidence — cannot determine
       if (!this.results.triggers.some((t) => t.name === REQUIRED_AUTH_TRIGGER)) {
         this.results.triggers.push({
           name: REQUIRED_AUTH_TRIGGER,
-          exists: true,
-          status: 'existing',
-          detail: 'Verification inconclusive (pg_catalog access restricted). Trigger assumed present — SQL was executed successfully.',
+          exists: false,
+          status: 'missing',
+          type: 'trigger',
+          detail: 'Cannot verify on_auth_user_created trigger (pg_catalog access restricted). Execute the SQL in Supabase SQL Editor and verify again.',
         });
       }
     } else {
-      // No pg_catalog error and trigger not found — genuinely missing
+      // pg_catalog accessible and trigger not found — genuinely missing
       this.results.triggers.push({
         name: REQUIRED_AUTH_TRIGGER,
         exists: false,
