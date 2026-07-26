@@ -33,7 +33,7 @@ function describeError(err, fallback) {
     return 'Could not reach the authentication server. Check your connection and try again.';
   }
   if (err.status === 429 || err.code === 'over_email_send_rate_limit') {
-    return 'Too many attempts. Please wait a moment before trying again.';
+    return 'Signup is temporarily rate-limited. Please wait a few minutes before trying again.';
   }
 
   const candidate = err.message || err.error_description || err.msg || err.hint || err.details;
