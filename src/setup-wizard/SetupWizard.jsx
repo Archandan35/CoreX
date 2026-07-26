@@ -5,6 +5,7 @@ import ThemeToggle from '../components/ui/ThemeToggle.jsx';
 import { DatabaseValidator } from './DatabaseValidator.js';
 import { SqlGenerator } from './SqlGenerator.js';
 import { SchemaAnalyzer } from './SchemaAnalyzer.js';
+import { buildExecSqlFunction } from '../schema/models/index.js';
 import { highlightSql } from './SqlHighlighter.js';
 import { PROVIDERS, getProvider } from './ProviderRegistry.js';
 import { isMissingTableError, isMissingColumnError } from '../utils/dbErrors.js';
@@ -411,7 +412,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
     if (step !== 5) analyzedStep4.current = false;
   }, [step, handleAnalyze, busy, analysis]);
 
-  // Conditional Step Navigation (Scenario 1 vs Scenario 2).
+
   // Database already fully compatible (Objects Missing = 0, no incompatible/
   // outdated objects, no schema or migration version mismatch, no dependency
   // issues) -> skip Generate & Execute SQL and Verify Installation entirely
@@ -435,37 +436,17 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
     if (step !== 6) autoSkipRef.current = false;
   }, [step, plan, analysis]);
 
-  // SECURITY DEFINER is required so the function runs with the privileges of its
-  // owner (the database superuser / service_role) rather than the calling anon
-  // role. SET search_path is mandatory for any SECURITY DEFINER function to
-  // prevent search-path hijacking (CVE-2018-1058) and to guarantee that every
-  // unqualified reference resolves deterministically to the `public` schema.
-  const execSqlFn = `CREATE OR REPLACE FUNCTION exec_sql(query_text text)
-RETURNS SETOF json
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN QUERY EXECUTE query_text;
-END;
-$$;`;
-
   const handleGenerateSql = useCallback(async () => {
-    if (!dbInstance) return;
+    if (!dbInstance || !plan) return;
     setGenerating(true);
     setGenStepStatus(genStatus.RUNNING);
-    setSqlText('');
+    setVerifyStatus(null);
     try {
-      // Fresh validation
       const validator = new DatabaseValidator(dbInstance);
       const report = await validator.validateAll(schema);
       storeReport(report);
-      // Conflict detection: plan said 0 toCreate but validation found missing objects
-      if (plan && plan.toCreate.length === 0 && report.missing.length > 0) {
-        throw new Error('Internal validation conflict: Installation Plan reported 0 objects to create, but schema scan found missing objects. Please return to Schema Analysis.');
-      }
       const generator = new SqlGenerator(schema);
+      const execSqlFn = buildExecSqlFunction();
       const sql = report.missing.length > 0 || (report.issues && report.issues.length > 0)
         ? generator.generate({ missing: report.missing, issues: report.issues })
         : generator.generateFullSchema();

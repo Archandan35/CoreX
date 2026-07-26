@@ -14,6 +14,12 @@ $$;
 
 -- ============================================================
 -- CoreX Schema Installation Script
+-- THIS FILE IS THE CANONICAL SOURCE OF TRUTH for the database schema.
+-- It is used as the complete installation script.
+-- The dynamic SqlGenerator.js mirrors this file programmatically.
+-- When adding new database objects, update BOTH this file AND
+-- src/setup-wizard/SqlGenerator.js and src/schema/models/index.js
+-- to keep them synchronized.
 -- Generated: 2026-07-25
 -- Schema Version: 2
 -- ============================================================
@@ -139,6 +145,18 @@ BEGIN
       FOR UPDATE
       USING (auth.uid() = id)
       WITH CHECK (auth.uid() = id);
+  END IF;
+END $$;
+
+-- Admins can update all users
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'users' AND policyname = 'Admins can update all users'
+  ) THEN
+    CREATE POLICY "Admins can update all users" ON users
+      FOR UPDATE
+      USING (public.is_admin_user());
   END IF;
 END $$;
 

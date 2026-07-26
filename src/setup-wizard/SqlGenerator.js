@@ -30,6 +30,14 @@ export class SqlGenerator {
     return entities;
   }
 
+  /**
+   * Generate the COMPLETE canonical schema (all objects, no delta filtering).
+   * Delegates to generate() with full=true so there is ONE code path.
+   */
+  generateFullSchema() {
+    return this.generate(null, { full: true });
+  }
+
   generate(report, options = {}) {
     const full = options.full === true;
     const missing = report?.missing || [];
@@ -41,8 +49,8 @@ export class SqlGenerator {
     const blocks = [];
     blocks.push(this._header());
 
-    // Helper Functions (exec_sql, check_admin_exists)
-    const helperFunctions = this._genHelperFunctions(missing, full);
+    // Helper Functions (exec_sql, check_admin_exists, is_admin_user)
+    const helperFunctions = this._genHelperFunctions(report, full);
     if (helperFunctions.length > 0) {
       blocks.push(this._section('Helper Functions', helperFunctions));
     }
@@ -117,8 +125,10 @@ export class SqlGenerator {
 
   // ---- Helper Functions ----
 
-  _genHelperFunctions(missing, full) {
+  _genHelperFunctions(report, full) {
     const blocks = [];
+    const missing = report?.missing || [];
+
     const execSqlMissing = full || missing.some(
       (i) => i.name === 'exec_sql' || (i.type === 'function' && i.name === 'exec_sql')
     );
@@ -128,7 +138,35 @@ export class SqlGenerator {
       (i) => i.name === 'check_admin_exists' || (i.type === 'function' && i.name === 'check_admin_exists')
     );
     if (checkAdminMissing) blocks.push(buildCheckAdminExistsFunction());
+
+    // is_admin_user function — required by RLS policies on the users table.
+    // In full mode it is always emitted. In delta mode it is emitted when
+    // the function itself is missing OR when any users-table RLS policy is
+    // missing (which implies the function is also absent).
+    const isAdminMissing = full
+      || missing.some((i) => i.name === 'is_admin_user' || (i.type === 'function' && i.name === 'is_admin_user'))
+      || missing.some((i) => (i.type === 'policy' || i.policyname) && i.table === 'users');
+    if (isAdminMissing) {
+      blocks.push(this._buildIsAdminUserFunction());
+    }
+
     return blocks;
+  }
+
+  _buildIsAdminUserFunction() {
+    return [
+      `-- SECURITY DEFINER helper to check admin status (bypasses RLS to prevent infinite recursion)`,
+      `CREATE OR REPLACE FUNCTION public.is_admin_user()`,
+      `RETURNS boolean`,
+      `LANGUAGE plpgsql`,
+      `SECURITY DEFINER`,
+      `SET search_path = public`,
+      `AS $$`,
+      `BEGIN`,
+      `  RETURN EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND full_access = true);`,
+      `END;`,
+      `$$;`,
+    ].join('\n');
   }
 
   // ---- Extensions ----
@@ -371,17 +409,6 @@ export class SqlGenerator {
     const lines = [`ALTER TABLE ${tableName} ENABLE ROW LEVEL SECURITY;`];
     if (def && def.table === 'users') {
       lines.push(
-        `-- SECURITY DEFINER helper to check admin status (bypasses RLS to prevent infinite recursion)`,
-        `CREATE OR REPLACE FUNCTION public.is_admin_user()`,
-        `RETURNS boolean`,
-        `LANGUAGE plpgsql`,
-        `SECURITY DEFINER`,
-        `SET search_path = public`,
-        `AS $$`,
-        `BEGIN`,
-        `  RETURN EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND full_access = true);`,
-        `END;`,
-        `$$;`,
         ``,
         `DO $$`,
         `BEGIN`,

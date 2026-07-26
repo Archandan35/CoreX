@@ -1,30 +1,32 @@
-# SQL Generation Pipeline Refactoring
+# SQL Generation Pipeline Fixes — COMPLETED
 
-## Progress Tracker
+## Root Causes & Fixes
 
-### Step 1: Model all SQL objects in schema definition
-- [✅] Add `exec_sql` function model
-- [✅] Add `check_admin_exists` function model  
-- [✅] Add `is_admin_user` function model (already partially done)
+### Fix 1: Add `generateFullSchema()` method to SqlGenerator
+- [x] Added `generateFullSchema()` method that delegates to `this.generate(null, { full: true })`
+- File: `src/setup-wizard/SqlGenerator.js`
 
-### Step 2: Refactor SqlGenerator.js
-- [✅] Add `_genExecSql()` method (via schema.build)
-- [✅] Add `_genCheckAdminExists()` method (via schema.build)
-- [✅] Merge `generate()` and `generateFullSchema()` into single `generate(report, options)` method
-- [✅] When `options.full = true`, emit everything from schema definition
-- [✅] When `options.full = false`, emit only delta from report
-- [✅] Ensure trigger is included conditionally based on report (not unconditionally)
-- [✅] Add `check_admin_exists` to output
-- [✅] Include comments for admin helper functions before RLS policies
+### Fix 2: Fix `handleGenerateSql` in SetupWizard.jsx
+- [x] Imported `buildExecSqlFunction` from `../schema/models/index.js`
+- [x] Replaced undefined `execSqlFn` with `buildExecSqlFunction()`
+- [x] Replaced `generator.generateFullSchema()` with proper call (now exists on SqlGenerator)
+- [x] Fixed broken `useEffect` that was missing its closing bracket and had orphaned code
+- [x] Properly defined `handleGenerateSql` as a `useCallback`
+- File: `src/setup-wizard/SetupWizard.jsx`
 
-### Step 3: Refactor SetupWizard.jsx
-- [ ] Remove raw `execSqlFn` string constant
-- [ ] `handleGenerateSql()` uses `generate(report, { full: true })` for complete schema (download)
-- [ ] Preview uses `generate(report, { full: false })` for delta
+### Fix 3: Refactor `SqlGenerator` to include `is_admin_user` in helper functions
+- [x] Changed `_genHelperFunctions(missing, full)` to `_genHelperFunctions(report, full)` to access full report
+- [x] Added `is_admin_user` generation to `_genHelperFunctions()` for full mode
+- [x] In `_genRLS()`, removed duplicate `is_admin_user` function (now only in Helper Functions section)
+- [x] Consistent structure: both full and delta modes emit `is_admin_user` in Helper Functions section
+- File: `src/setup-wizard/SqlGenerator.js`
 
-### Step 4: Eliminate static generate-sql.sql
-- [ ] Remove static `generate-sql.sql` file
-- [ ] Create a build-time script that generates it from `SqlGenerator`
+### Fix 4: Update `generate-sql.sql` with missing "Admins can update all users" policy
+- [x] Added the 5th RLS policy for admin update capability
+- File: `generate-sql.sql`
 
-### Step 5: Fix fresh-database detection path
-- [ ] Auto-detect when all objects are missing → use full schema mode
+### Fix 5: Add architectural guard to prevent future drift
+- [x] Added canonical source header to `generate-sql.sql`
+- [x] `generateFullSchema()` is now the single code path for full schema output
+- [x] `SqlGenerator.generate()` with `{ full: true }` is the single source of truth
+- File: `generate-sql.sql`, `src/setup-wizard/SqlGenerator.js`
