@@ -30,6 +30,23 @@ END;
 $$;`;
 }
 
+// Helper to generate the is_admin_user function SQL.
+// This SECURITY DEFINER function bypasses RLS to prevent infinite recursion
+// when called from within an RLS policy. Referenced by RLS policies on the
+// users table and must be created before those policies.
+export function buildIsAdminUserFunction() {
+  return `CREATE OR REPLACE FUNCTION public.is_admin_user()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND full_access = true);
+END;
+$$;`;
+}
+
 export const SCHEMAS = {
   users: {
     table: 'users',
@@ -71,6 +88,11 @@ export const SCHEMAS = {
     type: 'function',
     build: buildCheckAdminExistsFunction,
     description: 'Checks whether at least one full_access administrator exists',
+  },
+  is_admin_user: {
+    type: 'function',
+    build: buildIsAdminUserFunction,
+    description: 'SECURITY DEFINER helper to check admin status (bypasses RLS to prevent infinite recursion)',
   },
 };
 

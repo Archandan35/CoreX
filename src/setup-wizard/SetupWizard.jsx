@@ -5,7 +5,6 @@ import ThemeToggle from '../components/ui/ThemeToggle.jsx';
 import { DatabaseValidator } from './DatabaseValidator.js';
 import { SqlGenerator } from './SqlGenerator.js';
 import { SchemaAnalyzer } from './SchemaAnalyzer.js';
-import { buildExecSqlFunction } from '../schema/models/index.js';
 import { highlightSql } from './SqlHighlighter.js';
 import { PROVIDERS, getProvider } from './ProviderRegistry.js';
 import { isMissingTableError, isMissingColumnError } from '../utils/dbErrors.js';
@@ -446,11 +445,15 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
       const report = await validator.validateAll(schema);
       storeReport(report);
       const generator = new SqlGenerator(schema);
-      const execSqlFn = buildExecSqlFunction();
+      // The exec_sql function is now emitted by SqlGenerator itself via
+      // _genHelperFunctions (which checks the report for missing functions
+      // or full mode). Previously it was prepended outside SqlGenerator in
+      // this callback, creating a dual code path that allowed the preview
+      // output to diverge from the downloadable SQL file.
       const sql = report.missing.length > 0 || (report.issues && report.issues.length > 0)
         ? generator.generate({ missing: report.missing, issues: report.issues })
         : generator.generateFullSchema();
-      setSqlText(execSqlFn + '\n\n' + sql);
+      setSqlText(sql);
       setGenStepStatus(genStatus.COMPLETED);
       notify('SQL generated successfully');
     } catch (err) {

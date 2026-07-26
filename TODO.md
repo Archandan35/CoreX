@@ -1,32 +1,34 @@
-# SQL Generation Pipeline Fixes — COMPLETED
+# SQL Generation Pipeline Fix - TODO
 
-## Root Causes & Fixes
+## Root Cause
+3 architectural issues causing divergence between SqlGenerator.js and generate-sql.sql:
 
-### Fix 1: Add `generateFullSchema()` method to SqlGenerator
-- [x] Added `generateFullSchema()` method that delegates to `this.generate(null, { full: true })`
-- File: `src/setup-wizard/SqlGenerator.js`
+1. **DatabaseValidator skips function/trigger/policy checks when no tables exist** (fresh DB)
+2. **DatabaseValidator doesn't cross-reference functions against schema** (never reports missing functions)
+3. **SetupWizard.jsx prepends exec_sql outside SqlGenerator** (dual code path)
 
-### Fix 2: Fix `handleGenerateSql` in SetupWizard.jsx
-- [x] Imported `buildExecSqlFunction` from `../schema/models/index.js`
-- [x] Replaced undefined `execSqlFn` with `buildExecSqlFunction()`
-- [x] Replaced `generator.generateFullSchema()` with proper call (now exists on SqlGenerator)
-- [x] Fixed broken `useEffect` that was missing its closing bracket and had orphaned code
-- [x] Properly defined `handleGenerateSql` as a `useCallback`
-- File: `src/setup-wizard/SetupWizard.jsx`
+## Steps
 
-### Fix 3: Refactor `SqlGenerator` to include `is_admin_user` in helper functions
-- [x] Changed `_genHelperFunctions(missing, full)` to `_genHelperFunctions(report, full)` to access full report
-- [x] Added `is_admin_user` generation to `_genHelperFunctions()` for full mode
-- [x] In `_genRLS()`, removed duplicate `is_admin_user` function (now only in Helper Functions section)
-- [x] Consistent structure: both full and delta modes emit `is_admin_user` in Helper Functions section
-- File: `src/setup-wizard/SqlGenerator.js`
+### Step 1: `src/schema/models/index.js`
+- [x] Add `is_admin_user` function definition to the schema model
+- [x] Add `buildIsAdminUserFunction()` export
 
-### Fix 4: Update `generate-sql.sql` with missing "Admins can update all users" policy
-- [x] Added the 5th RLS policy for admin update capability
-- File: `generate-sql.sql`
+### Step 2: `src/setup-wizard/DatabaseValidator.js`
+- [x] Add `_checkRequiredFunctions()` that cross-references schema's function definitions
+- [x] Remove `someTableExists` guard so functions/triggers/policies are always checked
+- [x] Ensure missing functions are added to the report
 
-### Fix 5: Add architectural guard to prevent future drift
-- [x] Added canonical source header to `generate-sql.sql`
-- [x] `generateFullSchema()` is now the single code path for full schema output
-- [x] `SqlGenerator.generate()` with `{ full: true }` is the single source of truth
-- File: `generate-sql.sql`, `src/setup-wizard/SqlGenerator.js`
+### Step 3: `src/setup-wizard/SqlGenerator.js`
+- [x] In delta mode, include ALL helper functions when users table is missing
+- [x] Ensure `_genHelperFunctions` properly detects missing functions from report
+
+### Step 4: `src/setup-wizard/SetupWizard.jsx`
+- [x] Remove `execSqlFn` prepending — let SqlGenerator handle it consistently
+- [x] Remove unused `buildExecSqlFunction` import
+- [x] Call `generateFullSchema()` when report has no missing objects
+
+### Step 5: `generate-sql.sql`
+- [x] Verify it already has all required objects (check_admin_exists, is_admin_user, all 5 RLS policies)
+
+### Step 6: Verification
+- [ ] Run the app and verify both outputs produce identical SQL on fresh database

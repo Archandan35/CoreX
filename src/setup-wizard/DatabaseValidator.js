@@ -41,13 +41,25 @@ export class DatabaseValidator {
       await this._checkSchemas();
       await this._checkConstraints(schema);
       await this._checkIndexes(schema);
-      if (someTableExists) {
-        await this._checkFunctions();
-        await this._checkTriggers();
-        await this._checkViews();
-        await this._checkPolicies();
-      }
     }
+
+    // Always check functions, triggers, views, and policies — even when no
+    // tables exist yet (fresh database). Previously guarded by someTableExists,
+    // which meant a brand-new database never had these objects checked and
+    // therefore never reported them as missing. This caused SqlGenerator to
+    // skip generating them in delta mode, producing an incomplete schema that
+    // differed from the full generate-sql.sql script.
+    await this._checkFunctions();
+    await this._checkTriggers();
+    await this._checkViews();
+    await this._checkPolicies();
+
+    // Cross-reference schema-defined function objects against what was
+    // actually detected in the database. Even if _checkFunctions() ran,
+    // it only lists functions that ARE found — it never logs missing ones.
+    // _checkRequiredFunctions fills that gap so SqlGenerator can correctly
+    // emit missing helper functions in delta mode.
+    await this._checkRequiredFunctions(schema);
 
     await this._checkVersion(schema);
     await this._checkExtensions(schema);
@@ -491,6 +503,36 @@ export class DatabaseValidator {
         });
       } catch {
         this.results.seeds.push({ table: seed.table, required: seed.required, count: 0, populated: false });
+      }
+    }
+  }
+
+  /**
+   * Cross-reference schema-defined function objects (type: 'function') against
+   * what was actually detected in the database by _checkFunctions().
+   *
+   * _checkFunctions() only lists functions that ARE found — it never logs
+   * missing ones. This method fills that gap by iterating over the schema's
+   * function definitions and adding a "missing" entry for any function that
+   * was not detected, so SqlGenerator can correctly emit them in delta mode.
+   */
+  async _checkRequiredFunctions(schema) {
+    const detectedNames = new Set(
+      this.results.functions.map((f) => f.name)
+    );
+
+    for (const [key, def] of Object.entries(schema)) {
+      if (!def || typeof def !== 'object') continue;
+      if (def.type !== 'function') continue;
+
+      const funcName = key;
+      if (!detectedNames.has(funcName)) {
+        this.results.functions.push({
+          name: funcName,
+          exists: false,
+          status: 'missing',
+          type: 'function',
+        });
       }
     }
   }
