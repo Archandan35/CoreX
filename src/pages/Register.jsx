@@ -5,11 +5,16 @@ import Button from '../components/ui/Button.jsx';
 import PasswordInput from '../components/ui/PasswordInput.jsx';
 import { Field, Input } from '../components/ui/Field.jsx';
 import { useAuth } from '../identity/auth/AuthContext.jsx';
+import { useApp } from '../state/AppContext.jsx';
 import PasswordStrength from '../components/ui/PasswordStrength.jsx';
 
 export default function Register({ isFirstAccount }) {
   const navigate = useNavigate();
   const { register, isAuthenticated } = useAuth();
+  // After this page creates the first administrator, re-run the admin
+  // detection so the "no administrator" banner disappears automatically
+  // across the whole app (per spec) instead of persisting on stale state.
+  const { refreshAdminStatus } = useApp();
   const [isDark, setIsDark] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -59,8 +64,24 @@ export default function Register({ isFirstAccount }) {
         is_first_account: isFirstAccount === true,
       });
       if (result.ok && result.user) {
+        // This registration created the first administrator (Registration is
+        // only reachable when no admin exists — see App.jsx routing). Re-query
+        // the database so the "no administrator" banner clears automatically
+        // across every page, regardless of whether email confirmation was on.
+        if (typeof refreshAdminStatus === 'function') {
+          // Fire-and-refresh; navigation proceeds regardless of its outcome.
+          Promise.resolve(refreshAdminStatus()).catch(() => {});
+        }
         navigate('/', { replace: true });
         return;
+      }
+      // Email confirmation enabled: result.ok true but result.user null with a
+      // notice. The first admin has still been created in the database (the
+      // handle_new_user trigger + verified profile ran before signUp returned),
+      // so refresh admin status so the banner is already gone by the time the
+      // user confirms their email and signs in.
+      if (result.ok && result.notice && isFirstAccount && typeof refreshAdminStatus === 'function') {
+        Promise.resolve(refreshAdminStatus()).catch(() => {});
       }
       if (result?.notice) setNotice(result.notice);
       if (result?.error) setError(result.error);

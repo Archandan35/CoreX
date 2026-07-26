@@ -3,6 +3,14 @@ import { isMissingTableError } from '../../utils/dbErrors.js';
 
 let supabaseClient = null;
 
+// Whether to write verbose/raw diagnostics to the browser console. Raw auth
+// error objects sometimes embed tokens, request URLs, or other sensitive
+// material, so they must NEVER be logged in a production build that the public
+// can open DevTools on. Enabled only in local development.
+const DEBUG_AUTH =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) ||
+  (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'prod');
+
 // Safely extract a human-readable message from any error shape (Error
 // instance, Supabase AuthError/PostgrestError, plain object, string, or
 // something unexpected). Guards against blank/uninformative values —
@@ -12,11 +20,11 @@ function describeError(err, fallback) {
   if (!err) return fallback;
   if (typeof err === 'string') return err.trim() || fallback;
 
-  // Always log the raw error so a real root cause is never silently lost
-  // behind a generic message — this was the reason earlier reports of
-  // "Account creation failed. Please try again." were undiagnosable: the
-  // underlying Supabase error was discarded instead of surfaced anywhere.
-  if (typeof console !== 'undefined' && console.error) {
+  // In development only, log the raw error so a real root cause is never
+  // silently lost behind a generic message. In production this is suppressed
+  // entirely so no token/credential-bearing error object is exposed to the
+  // public via the browser console.
+  if (DEBUG_AUTH && typeof console !== 'undefined' && console.error) {
     console.error('[auth] raw error:', err);
   }
 
@@ -93,7 +101,7 @@ async function fetchProfileRecord(client, userId, { retries = 5, delayMs = 400 }
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     const { data, error } = await client
       .from('users')
-      .select('id, email, full_access, role_label, permissions')
+      .select('id, email, name, status, full_access, role_label, permissions')
       .eq('id', userId)
       .maybeSingle();
 
@@ -201,6 +209,14 @@ export async function supabaseRegister(payload) {
     // in the database via the `handle_new_user()` trigger, but the client must
     // still verify the outcome before treating registration as successful —
     // never continue into the app on the strength of the auth user alone.
+    //
+    // Spec checklist, verified in this exact order (the order matters: admin
+    // authority MUST NOT be checked before the profile record is confirmed to
+    // exist):
+    //   1. Authentication user exists          (data.user — checked above)
+    //   2. Matching public.users record exists (fetchProfileRecord below)
+    //   3. Required fields populated           (id, email, name, status)
+    //   4. Administrator authority correct     (first-account promotion)
     const { record: profile, error: profileError } = await fetchProfileRecord(client, data.user.id);
 
     if (profileError || !profile) {
@@ -213,13 +229,29 @@ export async function supabaseRegister(payload) {
       return { ok: false, error: inconsistentAccountMessage(profileError) };
     }
 
-    if (profile.id !== data.user.id || !profile.email) {
+    // Verify required fields are populated. The id MUST equal the auth user id
+    // (the join key for every downstream query); email and name are NOT NULL in
+    // the schema; status must be present so downstream "active" checks work.
+    const missingFields = [];
+    if (!profile.id) missingFields.push('id');
+    if (!profile.email) missingFields.push('email');
+    if (!profile.name) missingFields.push('name');
+    if (!profile.status) missingFields.push('status');
+    if (profile.id !== data.user.id) missingFields.push('id (mismatch with auth user)');
+    if (missingFields.length > 0) {
       if (data.session) await client.auth.signOut();
-      return { ok: false, error: inconsistentAccountMessage(null) };
+      return {
+        ok: false,
+        error: inconsistentAccountMessage({
+          message: `Profile record is missing required fields: ${missingFields.join(', ')}.`,
+        }),
+      };
     }
 
     // If this was expected to create the first administrator account, verify
-    // administrator authority was actually assigned before continuing.
+    // administrator authority was actually assigned before continuing. Runs ONLY
+    // after the profile record is confirmed to exist (spec: admin detection
+    // must never run before the application user record exists).
     if (payload.is_first_account && profile.full_access !== true) {
       if (data.session) await client.auth.signOut();
       return {

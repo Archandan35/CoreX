@@ -329,7 +329,15 @@ async function adminSupabase() {
   if (_adminSupabase) return _adminSupabase;
   const { createClient } = await import('@supabase/supabase-js');
   const { config } = await import('../src/config/index.js');
-  _adminSupabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey, {
+  // The service role key is a full-admin secret and must NEVER be read from
+  // the client bundle. It comes exclusively from the deployment platform's
+  // process.env via the server-only accessor. See src/config/serverSecrets.js.
+  const { getSupabaseServiceRoleKey } = await import('../src/config/serverSecrets.js');
+  const serviceRoleKey = getSupabaseServiceRoleKey();
+  if (!serviceRoleKey) {
+    throw new Error('Supabase service role key is not configured on the server (process.env.SUPABASE_SERVICE_ROLE_KEY). Administrative API operations require it.');
+  }
+  _adminSupabase = createClient(config.supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   return _adminSupabase;

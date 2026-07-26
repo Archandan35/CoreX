@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './identity/auth/AuthContext.jsx';
 import { PermissionProvider } from './identity/authorization/PermissionContext.jsx';
 import { AppProvider, useApp } from './state/AppContext.jsx';
 import MainLayout from './components/layout/MainLayout.jsx';
+import AdminSetupBanner from './components/layout/AdminSetupBanner.jsx';
 import PermissionGate from './components/ui/PermissionGate.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
@@ -38,14 +39,24 @@ function ProtectedRoute({ children, permission }) {
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
-  const { showWizard, closeSetupWizard, setDbHealth } = useApp();
+  const { showWizard, closeSetupWizard, setDbHealth, adminExists, setAdminExists, setRefreshAdminStatus } = useApp();
   const [appState, setAppState] = useState('loading');
   const [db, setDb] = useState(null);
-  const [adminExists, setAdminExists] = useState(null);
 
   useEffect(() => {
     initApp();
   }, []);
+
+  // Expose checkAdmin to the rest of the app via context so that after the
+  // first administrator is created (Register.jsx), the "no administrator"
+  // banner disappears automatically across every page without a full reload.
+  // Registered once checkAdmin is defined below; re-registered if db changes.
+  // (checkAdmin is recreated each render, but setRefreshAdminStatus is a stable
+  // setter, so this just keeps the slot pointing at the freshest closure.)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (db) setRefreshAdminStatus(() => () => checkAdmin(db));
+  }, [db]);
 
   // A table is considered "missing" (schema incomplete) if PostgREST/Postgres
   // reports it can't find the relation — see src/utils/dbErrors.js for why
@@ -320,6 +331,11 @@ export default function App() {
     <AppProvider>
       <AuthProvider>
         <PermissionProvider>
+          {/* AdminSetupBanner is rendered at the root so it appears on EVERY
+              page (login, register, and authenticated pages alike) when no
+              administrator exists yet. It self-hides when an admin exists or
+              the DB is incompatible, so it is safe to mount unconditionally. */}
+          <AdminSetupBanner />
           <AppRoutes />
         </PermissionProvider>
       </AuthProvider>
