@@ -25,6 +25,7 @@ import RoleEdit from './pages/roles/RoleEdit.jsx';
 import RoleShow from './pages/roles/RoleShow.jsx';
 import Settings from './pages/Settings.jsx';
 import CreateInvoice from './pages/invoices/CreateInvoice.jsx';
+import SetupSchema from './pages/setup/SetupSchema.jsx';
 import { PERMISSIONS } from './identity/rbac/permissions.js';
 import { api } from './services/api.js';
 import { isMissingTableError } from './utils/dbErrors.js';
@@ -366,6 +367,7 @@ function AppRoutes() {
             : <Login />
         }
       />
+      <Route path="/setup/schema" element={<SetupSchema />} />
       <Route
         path="/register"
         element={

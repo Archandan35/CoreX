@@ -2,16 +2,32 @@ import { useState, Fragment } from 'react';
 import { NavLink } from 'react-router-dom';
 import { NAV_GROUPS } from '../../routes/navigation.js';
 import { usePermission } from '../../identity/authorization/PermissionContext.jsx';
+import { useApp } from '../../state/AppContext.jsx';
 import Icon from '../ui/Icon.jsx';
 
 function SidebarItem({ item, collapsed }) {
   const { hasPermission } = usePermission();
+  const { openSetupWizard } = useApp();
 
   if (item.children) {
     return <SubmenuGroup item={item} collapsed={collapsed} hasPermission={hasPermission} />;
   }
 
   if (item.permission && !hasPermission(item.permission)) return null;
+
+  if (item.action === 'setupWizard') {
+    return (
+      <button
+        type="button"
+        className="nav-item nav-item--action"
+        onClick={openSetupWizard}
+        title={item.label}
+      >
+        <span className="nav-item__icon"><Icon name={item.icon} size={18} /></span>
+        <span className="nav-item__label">{item.label}</span>
+      </button>
+    );
+  }
 
   return (
     <NavLink

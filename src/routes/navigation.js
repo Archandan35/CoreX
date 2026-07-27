@@ -28,6 +28,7 @@ export const NAV_GROUPS = [
     label: '',
     items: [
       { to: '/settings', label: 'Settings', icon: 'gear' },
+      { label: 'Setup Wizard', icon: 'wrench', action: 'setupWizard', permission: PERMISSIONS.SETUP_WIZARD },
     ],
   },
 ];
