@@ -43,7 +43,6 @@ export default function CreateInvoice() {
   // --- Header ---
   const [prefix, setPrefix] = useState('INV');
   const [invoiceNumber, setInvoiceNumber] = useState('159');
-  const [numberUnique, setNumberUnique] = useState(true);
   const [saving, setSaving] = useState(false);
 
   // --- Customer ---
@@ -318,10 +317,7 @@ export default function CreateInvoice() {
       <InvoiceHeader
         prefix={prefix} invoiceNumber={invoiceNumber}
         onPrefixChange={setPrefix} onInvoiceNumberChange={setInvoiceNumber}
-        numberUnique={numberUnique}
         onSave={saveInvoice} onDraft={saveDraft}
-        onOpenHeaders={() => setHeaderSettingsOpen(true)}
-        onOpenSettings={() => {}}
         saving={saving} canSave={canSave}
       />
 

@@ -1,5 +1,7 @@
 import { round2 } from '../../business/invoice/calculations.js';
 import Icon from '../ui/Icon.jsx';
+import Dropdown, { DropdownItem } from '../ui/Dropdown.jsx';
+import { PAYMENT_MODE_OPTIONS } from '../../constants/index.js';
 
 export default function InvoiceSummary({
   enableTds, onTds, enableTcs, onTcs,
@@ -26,11 +28,17 @@ export default function InvoiceSummary({
       </div>
 
       <div className="inv-extra-discount-row">
-        <div className="inv-pill-select">
-          Extra Discount <Icon name="chevron-down" size={12} />
-        </div>
+        <Dropdown
+          trigger={
+            <div className="inv-pill-select">
+              Extra Discount <Icon name="chevron-down" size={12} />
+            </div>
+          }
+        >
+          <DropdownItem onClick={() => onExtraDiscountValue(extraDiscountValue)}>Extra Discount</DropdownItem>
+        </Dropdown>
         <div className="inv-num-select">
-          {extraDiscountValue || 0} <Icon name="chevron-down" size={12} />
+          {extraDiscountValue || 0}
         </div>
       </div>
 
@@ -62,13 +70,26 @@ export default function InvoiceSummary({
           <Icon name="plus" size={12} /> Add New Bank
         </button>
       </div>
-      <div className="inv-bank-select" onClick={() => {}}>
-        <div className="inv-bank-left">
-          <div className="inv-bank-icon"><Icon name="landmark" size={14} /></div>
-          {selectedBank ? `${selectedBank.bank_name} (${selectedBank.account_number?.slice(-4) || '0000'})` : 'Select a bank...'}
-        </div>
-        <Icon name="chevron-down" size={14} />
-      </div>
+      <Dropdown
+        trigger={
+          <div className="inv-bank-select">
+            <div className="inv-bank-left">
+              <div className="inv-bank-icon"><Icon name="landmark" size={14} /></div>
+              {selectedBank ? `${selectedBank.bank_name} (${selectedBank.account_number?.slice(-4) || '0000'})` : 'Select a bank...'}
+            </div>
+            <Icon name="chevron-down" size={14} />
+          </div>
+        }
+      >
+        {banks.length === 0 && (
+          <div style={{ padding: '12px 16px', fontSize: 13, color: '#64748b' }}>No banks found.</div>
+        )}
+        {banks.map(b => (
+          <DropdownItem key={b.id} onClick={() => onSelectBank(b)}>
+            {b.bank_name} ({b.account_number?.slice(-4) || '0000'})
+          </DropdownItem>
+        ))}
+      </Dropdown>
 
       <div className="inv-payment-header">
         <span className="inv-pay-label">Add payment (Payment Notes, Amount and Mode)</span>
@@ -115,9 +136,19 @@ export default function InvoiceSummary({
               />
               <Icon name="calendar" size={14} />
             </div>
-            <div className="inv-pay-cell" style={{ cursor: 'pointer' }} onClick={() => {}}>
-              <span className="inv-pay-placeholder">{pmt.mode || 'Select mode'}</span>
-              <Icon name="chevron-down" size={14} />
+            <div className="inv-pay-cell" style={{ cursor: 'pointer' }}>
+              <Dropdown
+                trigger={
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, width: '100%' }}>
+                    <span className="inv-pay-placeholder">{pmt.mode ? PAYMENT_MODE_OPTIONS.find(m => m.value === pmt.mode)?.label || pmt.mode : 'Select mode'}</span>
+                    <Icon name="chevron-down" size={14} />
+                  </div>
+                }
+              >
+                {PAYMENT_MODE_OPTIONS.map(m => (
+                  <DropdownItem key={m.value} onClick={() => onUpdatePayment(i, { ...pmt, mode: m.value })}>{m.label}</DropdownItem>
+                ))}
+              </Dropdown>
             </div>
           </div>
           <button
@@ -158,7 +189,7 @@ export default function InvoiceSummary({
       {selectedBank && (
         <div className="inv-bank-tag-row">
           <div className="inv-bank-tag">
-            {selectedBank.bank_name}... <Icon name="chevron-down" size={12} />
+            {selectedBank.bank_name}...
           </div>
         </div>
       )}
@@ -176,10 +207,21 @@ export default function InvoiceSummary({
         </button>
       </div>
       <div className="inv-signature-grid">
-        <div className="inv-sig-select" onClick={() => {}}>
-          {selectedSignature?.name || 'No Signature'}
-          <Icon name="chevron-down" size={14} />
-        </div>
+        <Dropdown
+          trigger={
+            <div className="inv-sig-select">
+              {selectedSignature?.name || 'No Signature'}
+              <Icon name="chevron-down" size={14} />
+            </div>
+          }
+        >
+          {signatures.length === 0 && (
+            <div style={{ padding: '12px 16px', fontSize: 13, color: '#64748b' }}>No signatures found.</div>
+          )}
+          {signatures.map(s => (
+            <DropdownItem key={s.id} onClick={() => onSelectSignature(s)}>{s.name}</DropdownItem>
+          ))}
+        </Dropdown>
         <div className="inv-sig-preview">
           <div className="inv-sig-cap">Signature on the document</div>
           <div className="inv-sig-box">

@@ -4,6 +4,7 @@ import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import { Field, Input } from '../ui/Field.jsx';
 import Checkbox from '../ui/Checkbox.jsx';
+import Dropdown, { DropdownItem } from '../ui/Dropdown.jsx';
 import { round2 } from '../../business/invoice/calculations.js';
 import { DISCOUNT_TYPE } from '../../constants/index.js';
 
@@ -31,10 +32,19 @@ export default function ProductsToolbar({
       </div>
 
       <div className="inv-ps-controls">
-        <div className="inv-select-field inv-category" onClick={() => {}}>
-          {category ? categories.find(c => String(c.id) === String(category))?.name || 'Filter Category' : 'Filter Category'}
-          <Icon name="chevron-down" size={14} />
-        </div>
+        <Dropdown
+          trigger={
+            <div className="inv-select-field inv-category">
+              {category ? categories.find(c => String(c.id) === String(category))?.name || 'Filter Category' : 'Filter Category'}
+              <Icon name="chevron-down" size={14} />
+            </div>
+          }
+        >
+          <DropdownItem onClick={() => onCategory('')}>All Categories</DropdownItem>
+          {categories.map(c => (
+            <DropdownItem key={c.id} onClick={() => onCategory(c.id)}>{c.name}</DropdownItem>
+          ))}
+        </Dropdown>
         <div className="inv-ps-search">
           <Icon name="search" size={14} />
           <input

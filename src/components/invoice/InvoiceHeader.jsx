@@ -1,13 +1,13 @@
 import { useNavigate } from 'react-router-dom';
-import Button from '../ui/Button.jsx';
 import Icon from '../ui/Icon.jsx';
-import Badge from '../ui/Badge.jsx';
 import PermissionGate from '../ui/PermissionGate.jsx';
+import Dropdown, { DropdownItem } from '../ui/Dropdown.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
+import { INVOICE_PREFIXES } from '../../constants/index.js';
 
 export default function InvoiceHeader({
   prefix, invoiceNumber, onPrefixChange, onInvoiceNumberChange,
-  numberUnique, onSave, onDraft, onOpenHeaders, onOpenSettings,
+  onSave, onDraft,
   saving, canSave,
 }) {
   const navigate = useNavigate();
@@ -25,9 +25,18 @@ export default function InvoiceHeader({
           </div>
         </div>
         <div className="inv-topbar-right">
-          <div className="inv-prefix-select" onClick={() => {}}>
-            {prefix} <Icon name="chevron-down" size={14} />
-          </div>
+          <Dropdown
+            trigger={
+              <div className="inv-prefix-select">
+                {prefix} <Icon name="chevron-down" size={14} />
+              </div>
+            }
+          >
+            <DropdownItem onClick={() => onPrefixChange(prefix)}>{prefix}</DropdownItem>
+            {INVOICE_PREFIXES.filter(p => p.value !== prefix).map(p => (
+              <DropdownItem key={p.value} onClick={() => onPrefixChange(p.value)}>{p.label}</DropdownItem>
+            ))}
+          </Dropdown>
           <input
             className="inv-number-input"
             type="text"
@@ -36,6 +45,9 @@ export default function InvoiceHeader({
             placeholder="000"
           />
           <PermissionGate permission={PERMISSIONS.INVOICE_CREATE}>
+            <button className="inv-btn-save" onClick={onDraft} disabled={!canSave || saving} style={{ marginRight: 6 }}>
+              {saving ? 'Saving...' : 'Save Draft'}
+            </button>
             <button className="inv-btn-save" onClick={onSave} disabled={!canSave || saving}>
               {saving ? 'Saving...' : 'Save Invoice'}
               <Icon name="arrow-right" size={14} />

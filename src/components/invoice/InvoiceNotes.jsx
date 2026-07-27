@@ -9,6 +9,13 @@ export default function InvoiceNotes({
   eInvoice, onEInvoice,
   attachments, onAddAttachment, onRemoveAttachment,
 }) {
+  const handleEmptyNote = (e) => {
+    const val = e.target.value;
+    if (val.trim()) {
+      onAddNote();
+      setTimeout(() => onUpdateNote(0, { id: Date.now().toString(), text: val }), 0);
+    }
+  };
   return (
     <section className="inv-card inv-notes-card">
       <h2>Notes, terms &amp; more</h2>
@@ -23,7 +30,7 @@ export default function InvoiceNotes({
       </div>
       <div className="inv-notes-textarea">
         {notes.length === 0 ? (
-          <textarea placeholder="Enter your notes, say thanks, or anything else..." />
+          <textarea placeholder="Enter your notes, say thanks, or anything else..." onChange={handleEmptyNote} />
         ) : (
           notes.map((n, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'flex-start' }}>
