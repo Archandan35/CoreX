@@ -63,28 +63,21 @@ export default function Register({ isFirstAccount }) {
         password,
         is_first_account: isFirstAccount === true,
       });
-      if (result.ok && result.user) {
-        // This registration created the first administrator (Registration is
-        // only reachable when no admin exists — see App.jsx routing). Re-query
-        // the database so the "no administrator" banner clears automatically
-        // across every page, regardless of whether email confirmation was on.
-        if (typeof refreshAdminStatus === 'function') {
-          // Fire-and-refresh; navigation proceeds regardless of its outcome.
-          Promise.resolve(refreshAdminStatus()).catch(() => {});
-        }
-        navigate('/', { replace: true });
-        return;
-      }
-      // Email confirmation enabled: result.ok true but result.user null with a
-      // notice. The first admin has still been created in the database (the
-      // handle_new_user trigger + verified profile ran before signUp returned),
-      // so refresh admin status so the banner is already gone by the time the
-      // user confirms their email and signs in.
-      if (result.ok && result.notice && isFirstAccount && typeof refreshAdminStatus === 'function') {
+      // Per the spec, registration always redirects to Login — never
+      // auto-navigates to dashboard, even when email confirmation is disabled.
+      // The first admin has still been created in the database, so refresh
+      // admin status so the "no administrator" banner is gone by the time the
+      // user signs in.
+      if (result.ok && isFirstAccount && typeof refreshAdminStatus === 'function') {
         Promise.resolve(refreshAdminStatus()).catch(() => {});
       }
-      if (result?.notice) setNotice(result.notice);
-      if (result?.error) setError(result.error);
+      if (result?.notice) {
+        setNotice(result.notice);
+      } else if (result?.error) {
+        setError(result.error);
+      } else if (result.ok) {
+        setNotice('Account created successfully. Please sign in with your credentials.');
+      }
     } catch {
       setError('Registration failed.');
     } finally {

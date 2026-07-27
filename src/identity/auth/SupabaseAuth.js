@@ -142,18 +142,13 @@ export async function supabaseRegister(payload) {
         return { ok: false, error: 'Administrator authority could not be verified for the first account.' };
       }
 
+      await client.auth.signOut();
+
       return {
         ok: true,
-        user: {
-          id: data.user.id,
-          name: payload.name,
-          email: record.email,
-          role_label: record.role_label || payload.role_label || '',
-          full_access: record.full_access === true,
-          permissions: record.permissions || payload.permissions || [],
-        },
-        token: data.session.access_token,
-        notice: null,
+        user: null,
+        token: null,
+        notice: 'Account created successfully. Please sign in with your credentials.',
       };
     }
 

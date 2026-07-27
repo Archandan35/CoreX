@@ -12,15 +12,15 @@ import { bindInline } from '../data/sqlParams.js';
 
 const STEPS = [
   { id: 'welcome', label: 'Welcome', icon: 'home' },
-  { id: 'driver', label: 'Driver', icon: 'database' },
-  { id: 'connection', label: 'Connection', icon: 'gear' },
-  { id: 'verify', label: 'Verify', icon: 'shield' },
-  { id: 'verified', label: 'Verified', icon: 'check-circle' },
-  { id: 'analysis', label: 'Analysis', icon: 'scan' },
-  { id: 'plan', label: 'Plan', icon: 'list' },
-  { id: 'execute', label: 'Execute', icon: 'bolt' },
-  { id: 'recheck', label: 'Re-check', icon: 'check-circle' },
-  { id: 'done', label: 'Done', icon: 'check' },
+  { id: 'driver', label: 'Database Provider', icon: 'database' },
+  { id: 'connection', label: 'Connection Details', icon: 'gear' },
+  { id: 'verify', label: 'Verify Connection', icon: 'shield' },
+  { id: 'analysis', label: 'Schema Analysis', icon: 'scan' },
+  { id: 'plan', label: 'Installation Plan', icon: 'list' },
+  { id: 'execute', label: 'Generate & Execute SQL', icon: 'bolt' },
+  { id: 'verify-install', label: 'Verify Installation', icon: 'check-circle' },
+  { id: 'final-validation', label: 'Final Validation', icon: 'shield' },
+  { id: 'done', label: 'Setup Complete', icon: 'check' },
 ];
 
 const genStatus = { PENDING: 'pending', RUNNING: 'running', COMPLETED: 'completed', FAILED: 'failed' };
@@ -351,16 +351,16 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
   }, [step, handleValidate]);
   const analyzedStep4 = useRef(false);
   useEffect(() => {
-    if (step === 5 && !analyzedStep4.current && !busy && !analysis) {
+    if (step === 4 && !analyzedStep4.current && !busy && !analysis) {
       analyzedStep4.current = true;
       handleAnalyze();
     }
-    if (step !== 5) analyzedStep4.current = false;
+    if (step !== 4) analyzedStep4.current = false;
   }, [step, handleAnalyze, busy, analysis]);
 
   const autoSkipRef = useRef(false);
   useEffect(() => {
-    if (step === 6 && plan && analysis && !autoSkipRef.current) {
+    if (step === 5 && plan && analysis && !autoSkipRef.current) {
       autoSkipRef.current = true;
       const fullyCompatible =
         plan.toCreate.length === 0 &&
@@ -369,11 +369,11 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
         (analysis.dependencyStatus || 'complete') === 'complete';
       if (fullyCompatible) {
         setInstallSkipped(true);
-        setCompletedSteps((prev) => new Set([...prev, 5, 6, 7, 8]));
+        setCompletedSteps((prev) => new Set([...prev, 4, 5, 6, 7, 8]));
         setStep(9);
       }
     }
-    if (step !== 6) autoSkipRef.current = false;
+    if (step !== 5) autoSkipRef.current = false;
   }, [step, plan, analysis]);
 
   const handleGenerateSql = useCallback(async () => {
@@ -442,7 +442,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
         details: msg,
         suggestion: 'Copy the generated SQL and run it in your Supabase SQL Editor, then verify again.',
         onRegenerate: () => handleGenerateSql(),
-        onBackToPlan: () => goTo(6),
+        onBackToPlan: () => goTo(5),
       });
       setVerifyStatus({ ok: false, message: msg });
       notify('Verification failed', 'error');
@@ -487,14 +487,14 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
 
   const stepTitles = [
     'Welcome',
-    'Select Driver',
+    'Database Provider',
     'Connection Details',
     'Verify Connection',
-    'Connection Verified',
     'Schema Analysis',
     'Installation Plan',
     'Generate & Execute SQL',
     'Verify Installation',
+    'Final Validation',
     'Setup Complete',
   ];
 
@@ -691,74 +691,73 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
               </div>
             )}
 
-            {/* Verify */}
+            {/* Verify Connection */}
             {step === 3 && (
               <div className="setup-wizard-card">
-                <h1>Verify Connection</h1>
-                <p>Your database connection will now be tested.</p>
-                {validating && (
-                  <div className="sw-loading">
-                    <div className="sw-loading-spinner" />
-                    <h2>Validating Connection...</h2>
-                    <div className="sw-loading-stages">
-                      {validateStages.map((label, i) => (
-                        <div key={i} className={`sw-loading-stage ${i < validatingStage ? 'done' : i === validatingStage ? 'active' : ''}`}>
-                          <span className="sw-loading-stage-icon">
-                            {i < validatingStage ? <Icon name="check-circle" size={16} /> :
-                              i === validatingStage ? <Icon name="loader" size={16} /> :
-                                <Icon name="circle" size={16} />}
-                          </span>
-                          <span>{label}</span>
+                {!validationSuccess ? (
+                  <>
+                    <h1>Verify Connection</h1>
+                    <p>Your database connection will now be tested.</p>
+                    {validating && (
+                      <div className="sw-loading">
+                        <div className="sw-loading-spinner" />
+                        <h2>Validating Connection...</h2>
+                        <div className="sw-loading-stages">
+                          {validateStages.map((label, i) => (
+                            <div key={i} className={`sw-loading-stage ${i < validatingStage ? 'done' : i === validatingStage ? 'active' : ''}`}>
+                              <span className="sw-loading-stage-icon">
+                                {i < validatingStage ? <Icon name="check-circle" size={16} /> :
+                                  i === validatingStage ? <Icon name="loader" size={16} /> :
+                                    <Icon name="circle" size={16} />}
+                              </span>
+                              <span>{label}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                        <div className="sw-loading-bar">
+                          <div className="sw-loading-bar-fill" style={{ width: `${(validatingStage / validateStages.length) * 100}%` }} />
+                        </div>
+                      </div>
+                    )}
+                    {!validating && summaryError && (
+                      <div>
+                        <div className="sw-error" style={{ marginTop: 16 }}>
+                          <Icon name="alert-circle" size={16} />
+                          <span>{summaryError}</span>
+                        </div>
+                        <div className="setup-wizard-actions" style={{ marginTop: 24 }}>
+                          <Button variant="secondary" onClick={goPrev}>Back</Button>
+                          <Button variant="primary" onClick={handleValidate} loading={validating} icon="shield">Retry Verification</Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="sw-success-box">
+                    <div className="sw-success-icon">
+                      <svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+                        <circle className="sw-success-circle" cx="26" cy="26" r="25" fill="none" />
+                        <path className="sw-success-check" d="M14 27l7 7 16-16" fill="none" />
+                      </svg>
                     </div>
-                    <div className="sw-loading-bar">
-                      <div className="sw-loading-bar-fill" style={{ width: `${(validatingStage / validateStages.length) * 100}%` }} />
+                    <h1>Connection Verified</h1>
+                    <p>{provider?.name || selectedProvider} connection established. Credentials validated successfully.</p>
+                    <div className="sw-info-table">
+                      <div className="sw-info-row"><span>Connected Database</span><span>{validationSuccess?.projectInfo?.url || provider?.name || 'Connected'}</span></div>
+                      <div className="sw-info-row"><span>Database Provider</span><span>{provider?.name || selectedProvider}</span></div>
+                      <div className="sw-info-row"><span>Database Version</span><span>{validationSuccess?.projectInfo?.version || 'Detected on schema analysis'}</span></div>
+                      <div className="sw-info-row"><span>Connection Status</span><span className="status-ok">Connected</span></div>
                     </div>
-                  </div>
-                )}
-                {!validating && !validationSuccess && summaryError && (
-                  <div className="sw-error" style={{ marginTop: 16 }}>
-                    <Icon name="alert-circle" size={16} />
-                    <span>{summaryError}</span>
-                  </div>
-                )}
-                {!validating && !validationSuccess && summaryError && (
-                  <div className="setup-wizard-actions" style={{ marginTop: 24 }}>
-                    <Button variant="secondary" onClick={goPrev}>Back</Button>
-                    <Button variant="primary" onClick={handleValidate} loading={validating} icon="shield">Retry Verification</Button>
+                    <div className="setup-wizard-actions">
+                      <Button variant="primary" onClick={goNext}>Next</Button>
+                    </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Verified */}
+            {/* Schema Analysis */}
             {step === 4 && (
-              <div className="setup-wizard-card">
-                <div className="sw-success-box">
-                  <div className="sw-success-icon">
-                    <svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
-                      <circle className="sw-success-circle" cx="26" cy="26" r="25" fill="none" />
-                      <path className="sw-success-check" d="M14 27l7 7 16-16" fill="none" />
-                    </svg>
-                  </div>
-                  <h1>Connection Verified</h1>
-                  <p>{provider?.name || selectedProvider} connection established. Credentials validated successfully.</p>
-                  <div className="sw-info-table">
-                    <div className="sw-info-row"><span>Connected Database</span><span>{validationSuccess?.projectInfo?.url || provider?.name || 'Connected'}</span></div>
-                    <div className="sw-info-row"><span>Database Provider</span><span>{provider?.name || selectedProvider}</span></div>
-                    <div className="sw-info-row"><span>Database Version</span><span>{validationSuccess?.projectInfo?.version || 'Detected on schema analysis'}</span></div>
-                    <div className="sw-info-row"><span>Connection Status</span><span className="status-ok">Connected</span></div>
-                  </div>
-                </div>
-                <div className="setup-wizard-actions">
-                  <Button variant="primary" onClick={goNext}>Next</Button>
-                </div>
-              </div>
-            )}
-
-            {/* Analysis */}
-            {step === 5 && (
               <div className="setup-wizard-card">
                 <h1>Schema Analysis</h1>
                 <p>Analyzing database structure against required schema.</p>
@@ -840,8 +839,8 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
               </div>
             )}
 
-            {/* Plan */}
-            {step === 6 && plan && (
+            {/* Installation Plan */}
+            {step === 5 && plan && (
               <div className="setup-wizard-card sw-plan-page">
                 <h1>Installation Plan</h1>
                 <p>Review the objects that will be created, updated, or skipped.</p>
@@ -887,8 +886,8 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
               </div>
             )}
 
-            {/* Execute */}
-            {step === 7 && (
+            {/* Generate & Execute SQL */}
+            {step === 6 && (
               <div className="setup-wizard-card">
                 <h1>Generate & Execute SQL</h1>
                 <p>Generate SQL from the canonical schema, preview it, and execute against the connected database.</p>
@@ -982,8 +981,8 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
               </div>
             )}
 
-            {/* Re-check */}
-            {step === 8 && (
+            {/* Verify Installation */}
+            {step === 7 && (
               <div className="setup-wizard-card">
                 <h1>Verify Installation</h1>
                 <p>Re-validate the entire database schema against the canonical manifest.</p>
@@ -1005,13 +1004,53 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
                   <Button variant="secondary" onClick={goPrev}>Back</Button>
                   {validationResult?.valid && <Button variant="primary" onClick={goNext}>Next</Button>}
                   {validationResult && !validationResult.valid && (
-                    <Button variant="primary" onClick={() => goTo(5)}>Return to Analysis</Button>
+                    <Button variant="primary" onClick={() => goTo(4)}>Return to Analysis</Button>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Done */}
+            {/* Final Validation */}
+            {step === 8 && (
+              <div className="setup-wizard-card">
+                <h1>Final Validation</h1>
+                <p>Performing final validation of the complete database schema.</p>
+                {busy && (
+                  <div className="sw-analyzing">
+                    <div className="sw-analyzing-spinner" />
+                    <span>Running final validation...</span>
+                  </div>
+                )}
+                {!busy && !validationResult && (
+                  <Button variant="primary" onClick={handleVerifyInstall} loading={busy} icon="shield">Run Final Validation</Button>
+                )}
+                {validationResult && (
+                  <div>
+                    <div className={`sw-verify ${validationResult.valid ? 'success' : 'error'}`}>
+                      <Icon name={validationResult.valid ? 'check-circle' : 'x-circle'} size={32} />
+                      <h3>{validationResult.valid ? 'All checks passed — database is fully compatible' : `${validationResult.missing} objects still missing`}</h3>
+                      {validationResult.error && <p>{validationResult.error}</p>}
+                    </div>
+                    {validationResult.valid && (
+                      <div className="sw-info-table" style={{ marginTop: 16 }}>
+                        <div className="sw-info-row"><span>Database Driver</span><span>{selectedProvider || (dbInstance?.isSupabase ? 'Supabase' : dbInstance?.provider?.constructor?.name) || (dbInstance ? 'Connected' : 'Not selected')}</span></div>
+                        <div className="sw-info-row"><span>Schema Version</span><span>{schema.version || 1}</span></div>
+                        <div className="sw-info-row"><span>Status</span><span className="status-ok">Fully Compatible</span></div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="setup-wizard-actions">
+                  <Button variant="secondary" onClick={goPrev}>Back</Button>
+                  {validationResult?.valid && <Button variant="primary" onClick={goNext}>Next</Button>}
+                  {validationResult && !validationResult.valid && (
+                    <Button variant="primary" onClick={() => goTo(4)}>Return to Schema Analysis</Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Setup Complete */}
             {step === 9 && (
               <div className="setup-wizard-card">
                 <div className="sw-done">

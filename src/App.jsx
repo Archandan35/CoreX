@@ -5,6 +5,7 @@ import { PermissionProvider } from './identity/authorization/PermissionContext.j
 import { AppProvider, useApp } from './state/AppContext.jsx';
 import MainLayout from './components/layout/MainLayout.jsx';
 import AdminSetupBanner from './components/layout/AdminSetupBanner.jsx';
+import DatabaseHealthBanner from './components/layout/DatabaseHealthBanner.jsx';
 import PermissionGate from './components/ui/PermissionGate.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
@@ -336,6 +337,11 @@ export default function App() {
               administrator exists yet. It self-hides when an admin exists or
               the DB is incompatible, so it is safe to mount unconditionally. */}
           <AdminSetupBanner />
+          {/* DatabaseHealthBanner at root level ensures the degraded-DB
+              warning is visible on login/register pages, not just inside the
+              authenticated MainLayout. It self-hides when the DB is compatible
+              or the current user lacks full_access. */}
+          <DatabaseHealthBanner />
           <AppRoutes />
         </PermissionProvider>
       </AuthProvider>
