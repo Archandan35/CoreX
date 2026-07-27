@@ -15,12 +15,19 @@ export default function Login() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [registered, setRegistered] = useState(false);
 
   useEffect(() => {
     try {
-      if (sessionStorage.getItem('email_confirmed') === 'true') {
+      const ec = sessionStorage.getItem('email_confirmed');
+      if (ec === 'true') {
         sessionStorage.removeItem('email_confirmed');
         setConfirmed(true);
+      }
+      const rc = sessionStorage.getItem('registration_complete');
+      if (rc === 'true') {
+        sessionStorage.removeItem('registration_complete');
+        setRegistered(true);
       }
     } catch {}
   }, []);
@@ -62,6 +69,7 @@ export default function Login() {
         <p className="auth-sub">Sign in with your email to continue</p>
 
         {confirmed && <div className="alert alert-success alert--mb"><Icon name="check" size={16} />Email confirmed! Your account is ready. Please sign in with your credentials.</div>}
+        {registered && <div className="alert alert-success alert--mb"><Icon name="check" size={16} />Account created successfully! Please sign in with your credentials.</div>}
         {error && <div className="alert alert-danger alert--mb"><Icon name="alert" size={16} />{error}</div>}
 
         <form onSubmit={submit}>

@@ -73,15 +73,21 @@ export default function Register({ isFirstAccount }) {
       // The first admin has still been created in the database, so refresh
       // admin status so the "no administrator" banner is gone by the time the
       // user signs in.
-      if (result.ok && isFirstAccount && typeof refreshAdminStatus === 'function') {
-        Promise.resolve(refreshAdminStatus()).catch(() => {});
-      }
-      if (result?.notice) {
-        setNotice(result.notice);
-      } else if (result?.error) {
-        setError(result.error);
-      } else if (result.ok) {
-        setNotice('Account created successfully. Please sign in with your credentials.');
+      if (result.ok) {
+        if (result.redirect) {
+          // email confirmation disabled — profile was created immediately.
+          // Wait for admin status refresh so the route guard at /login
+          // doesn't bounce the user back to /register, then redirect.
+          if (isFirstAccount && typeof refreshAdminStatus === 'function') {
+            try { await refreshAdminStatus(); } catch {}
+          }
+          try { sessionStorage.setItem('registration_complete', 'true'); } catch {}
+          navigate('/login', { replace: true });
+          return;
+        }
+        setNotice(result.notice || 'Account created. Please check your email to confirm before signing in.');
+      } else {
+        setError(result.error || 'Registration failed.');
       }
     } catch {
       setError('Registration failed.');

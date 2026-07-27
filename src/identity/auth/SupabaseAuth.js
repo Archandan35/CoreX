@@ -213,6 +213,7 @@ export async function supabaseRegister(payload) {
         user: null,
         token: null,
         notice: 'Account created successfully. Please sign in with your credentials.',
+        redirect: true,
       };
     }
 
