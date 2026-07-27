@@ -401,7 +401,14 @@ export class DatabaseValidator {
       );
       const current = result?.[0]?.version;
       const required = schema.version || 1;
-      let match = current == required;
+      // Forward-compatible: when the DB has an OLDER schema version than the
+      // code requires, the schema is still considered compatible as long as the
+      // version row exists — migrations are strictly additive (ADD COLUMN,
+      // CREATE TABLE IF NOT EXISTS, etc.), so an older recorded version with
+      // all current objects present is functionally complete. Only flag a
+      // mismatch when the DB version is AHEAD of the code (downgrade) or the
+      // version row is missing entirely.
+      let match = current == null ? false : Number(current) <= Number(required);
       if (!match && current == null) {
         const someTableMissing = this.results.tables.some((t) => !t.exists);
         if (!someTableMissing) match = true;

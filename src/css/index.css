@@ -827,6 +827,11 @@ select.form-input { cursor: pointer; appearance: auto; }
 
 /* ===== DATABASE HEALTH BANNER ===== */
 .db-health-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -835,6 +840,7 @@ select.form-input { cursor: pointer; appearance: auto; }
   background: var(--warning-light);
   color: #92400e;
   border-bottom: 1px solid var(--warning);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   font-size: 13.5px;
   line-height: 1.4;
 }

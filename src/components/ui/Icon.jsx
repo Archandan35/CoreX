@@ -126,6 +126,14 @@ const PATHS = {
   'credit-card': 'M2 5h20v14H2zM2 10h20',
   wallet: 'M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 2 4h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5M17 13h.01',
   'corner-up-left': 'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3',
+  // Sales-page + sidebar icons (lucide line paths). No duplicates of entries above.
+  'shopping-bag': 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0',
+  play: 'M6 3l14 9-14 9V3z',
+  send: 'M22 2 11 13M22 2 15 22l-4-9-9-4 20-7z',
+  'sliders-horizontal': 'M4 6h16M4 12h16M4 18h16M7 4v4M17 10v4M9 16v4',
+  'loader-circle': 'M12 2v6M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z',
+  'upload-cloud': 'M4 17a5 5 0 0 1 1-9.9A6 6 0 0 1 21 11.5M12 12v8M8 16l4-4 4 4',
+  'list-tree': 'M11 21h8a2 2 0 0 0 2-2v-2M3 5h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h2M3 11h2a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2M3 17h2',
 };
 
 const COMPLEX = {

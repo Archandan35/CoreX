@@ -543,7 +543,9 @@ CREATE TABLE IF NOT EXISTS _schema_version (
   description TEXT,
   PRIMARY KEY (version, applied_at)
 );
-INSERT INTO _schema_version (version, description) VALUES (5, 'Schema v5: audit_logs, accounting_entries, stock, customer balance');
+INSERT INTO _schema_version (version, description)
+VALUES (5, 'Schema v5: user_role_refactor (username, full_access, role_label, phone)')
+ON CONFLICT DO NOTHING;
 
 
 -- ============================================================

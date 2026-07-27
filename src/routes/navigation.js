@@ -8,6 +8,17 @@ export const NAV_GROUPS = [
       { to: '/', label: 'Dashboard', icon: 'grid', end: true },
     ],
   },
+  { type: 'heading', label: 'SALES' },
+  {
+    label: 'Sales',
+    icon: 'shopping-bag',
+    children: [
+      { to: '/sales', label: 'Invoices', icon: 'receipt', end: true, permission: PERMISSIONS.INVOICE_READ },
+      { to: '/sales/credit-notes', label: 'Credit Notes', icon: 'file-text', permission: PERMISSIONS.INVOICE_READ },
+      { to: '/sales/e-invoices', label: 'E-Invoices', icon: 'file-check', permission: PERMISSIONS.INVOICE_READ },
+      { to: '/sales/subscriptions', label: 'Subscriptions', icon: 'refresh-cw', permission: PERMISSIONS.INVOICE_READ },
+    ],
+  },
   { type: 'heading', label: 'User Management' },
   {
     label: '',

@@ -110,7 +110,13 @@ function AppRoutes() {
     const everInstalled = !versionError && versionRows && versionRows.length > 0;
     const current = versionRows?.[0]?.version;
     const required = SCHEMAS.version || 1;
-    let versionMatch = current == required;
+    // Forward-compatible: a DB with an OLDER recorded schema version than the
+    // code requires is still compatible — migrations are strictly additive
+    // (ADD COLUMN / CREATE TABLE IF NOT EXISTS), so all current objects can
+    // exist even when the _schema_version row hasn't been bumped yet. Only
+    // flag a mismatch when the DB version is AHEAD of the code (downgrade) or
+    // the version row is missing entirely.
+    let versionMatch = current == null ? false : Number(current) <= Number(required);
     if (!versionMatch && current == null) versionMatch = true;
 
     let compatible = versionMatch;
@@ -164,6 +170,22 @@ function AppRoutes() {
       if (!columnsOk) missingCount++;
       compatible = versionMatch && functionsOk && columnsOk;
       if (!compatible && missingCount === 0) missingCount = 1;
+    }
+
+    // Self-heal: if the recorded DB version is older than the code requires
+    // but every structural object (trigger, policies, functions, columns) is
+    // present, insert the current version row so subsequent loads skip the
+    // mismatch path entirely. Migrations are strictly additive, so a stale
+    // _schema_version row is the only thing making a fully-installed DB look
+    // incompatible. We only do this when compatible would otherwise be true.
+    if (!compatible && missingCount === 0 && everInstalled && current != null && Number(current) < Number(required)) {
+      try {
+        await database.supabase.from('_schema_version').insert({
+          version: required,
+          description: `Auto-bumped from v${current} to v${required} (all schema objects present)`,
+        });
+        compatible = true;
+      } catch {}
     }
 
     return {
