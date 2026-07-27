@@ -2,10 +2,6 @@ import { config } from '../../config/index.js';
 import { getSupabaseClient } from './supabaseClient.js';
 import { isMissingTableError } from '../../utils/dbErrors.js';
 
-// Snapshot URL auth params at module load time — before the Supabase client's
-// PKCE exchange cleans up the URL. This tells us whether the current page load
-// is the result of an email confirmation redirect (or magic link), so we can
-// sign the user out after the exchange completes and force a manual login.
 const AUTH_REDIRECT_TYPE = (() => {
   if (typeof window === 'undefined') return null;
   const hash = window.location.hash;
@@ -49,13 +45,52 @@ function sleep(ms) {
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PROFILE_COLUMNS = 'id, email, name, username, status, full_access, role_label, permissions';
+
+function esc(v) {
+  return (v || '').replace(/'/g, "''");
+}
+
+function buildProfilePayload(id, email, meta) {
+  return {
+    id,
+    email,
+    name: meta?.name || email.split('@')[0],
+    username: meta?.username || '',
+    phone: meta?.phone || '',
+    role_label: meta?.role_label || '',
+    full_access: meta?.full_access === true,
+    permissions: meta?.permissions || [],
+    status: 'active',
+  };
+}
+
+function buildSelectSql(userId) {
+  return `SELECT ${PROFILE_COLUMNS} FROM public.users WHERE id = '${userId}'`;
+}
+
+function buildInsertSql(p) {
+  return `INSERT INTO public.users (id, email, name, username, phone, role_label, full_access, permissions, status) VALUES ('${p.id}', '${esc(p.email)}', '${esc(p.name)}', '${esc(p.username)}', '${esc(p.phone)}', '${esc(p.role_label)}', ${p.full_access}, '${JSON.stringify(p.permissions)}'::jsonb, 'active')`;
+}
+
+function buildCountSql() {
+  return `SELECT COUNT(*) as count FROM public.users WHERE full_access = true`;
+}
+
+async function sqlQuery(client, queryText) {
+  try {
+    const { data, error } = await client.rpc('exec_sql', { query_text: queryText });
+    if (!error && data) return data;
+  } catch {}
+  return null;
+}
 
 async function fetchProfileRecord(client, userId, { retries = 5, delayMs = 400 } = {}) {
   let lastError = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
     const { data, error } = await client
       .from('users')
-      .select('id, email, name, username, status, full_access, role_label, permissions')
+      .select(PROFILE_COLUMNS)
       .eq('id', userId)
       .maybeSingle();
 
@@ -70,7 +105,17 @@ async function fetchProfileRecord(client, userId, { retries = 5, delayMs = 400 }
 
     if (attempt < retries) await sleep(delayMs);
   }
+
+  const rows = await sqlQuery(client, buildSelectSql(userId));
+  if (rows && rows.length > 0) return { record: rows[0], error: null };
+
   return { record: null, error: lastError };
+}
+
+async function insertProfile(client, payload) {
+  const { error } = await client.from('users').insert(payload);
+  if (!error) return null;
+  return await sqlQuery(client, buildInsertSql(payload));
 }
 
 export async function supabaseLogin(identifier, password) {
@@ -107,7 +152,18 @@ export async function supabaseLogin(identifier, password) {
     const { data, error } = await client.auth.signInWithPassword({ email, password });
     if (error) return { ok: false, error: describeError(error, 'Sign in failed.') };
 
-    const { record, error: profileError } = await fetchProfileRecord(client, data.user.id);
+    let { record, error: profileError } = await fetchProfileRecord(client, data.user.id);
+
+    if (!record) {
+      const insertPayload = buildProfilePayload(data.user.id, data.user.email, data.user.user_metadata);
+      const insertError = await insertProfile(client, insertPayload);
+      if (!insertError) {
+        const retry = await fetchProfileRecord(client, data.user.id);
+        record = retry.record;
+        profileError = retry.error;
+      }
+    }
+
     if (!record || profileError) {
       await client.auth.signOut();
       return { ok: false, error: 'Your account profile was not found. The database schema may be incomplete — if you are the administrator, please run the Setup Wizard from the banner above.' };
@@ -173,18 +229,13 @@ export async function supabaseRegister(payload) {
       let { record, error: profileError } = await fetchProfileRecord(client, data.user.id);
 
       if (!record || profileError) {
-        const insertPayload = {
-          id: data.user.id,
-          email: data.user.email,
-          name: payload.name || data.user.user_metadata?.name || data.user.email.split('@')[0],
-          username: payload.username || '',
-          phone: payload.phone || '',
-          role_label: payload.role_label || '',
-          full_access: payload.full_access === true,
-          permissions: payload.permissions || [],
-          status: 'active',
-        };
-        const { error: insertError } = await client.from('users').insert(insertPayload);
+        const insertPayload = buildProfilePayload(
+          data.user.id,
+          data.user.email,
+          { ...payload, ...data.user.user_metadata }
+        );
+
+        const insertError = await insertProfile(client, insertPayload);
         if (insertError) {
           await client.auth.signOut();
           return { ok: false, error: 'Account profile could not be created. The database schema may be incomplete — if you are the administrator, please run the Setup Wizard from the banner above.' };
@@ -270,8 +321,12 @@ export async function checkAdminExists() {
       .select('id', { count: 'exact', head: true })
       .eq('full_access', true)
       .limit(1);
-    if (error) return { exists: false, error: describeError(error, 'Could not check admin.') };
-    return { exists: (data?.length || 0) > 0 };
+    if (!error) return { exists: (data?.length || 0) > 0 };
+    const rows = await sqlQuery(client, buildCountSql());
+    if (rows && rows.length > 0) {
+      return { exists: parseInt(rows[0]?.count || 0, 10) > 0 };
+    }
+    return { exists: false, error: describeError(error, 'Could not check admin.') };
   } catch {
     return { exists: false };
   }
@@ -280,20 +335,12 @@ export async function checkAdminExists() {
 export async function restoreSession() {
   const client = await getSupabaseClient();
 
-  // If this page load was triggered by an email confirmation / magic-link
-  // redirect, the PKCE exchange (or implicit hash) will have created a
-  // session automatically. The spec requires the user to manually sign in
-  // after confirming, so we sign them out right away and return null so the
-  // Login page can show the "Email confirmed" banner instead.
   if (AUTH_REDIRECT_TYPE) {
-    // Wait briefly for the PKCE exchange to finish, then sign out so the
-    // user must manually sign in (per spec — no auto-login after confirm).
     await sleep(500);
     const { data: sessionData } = await client.auth.getSession();
     if (sessionData?.session) {
       await client.auth.signOut();
     }
-    // Flag for Login.jsx to show a success confirmation banner
     try { sessionStorage.setItem('email_confirmed', 'true'); } catch {}
     return null;
   }
