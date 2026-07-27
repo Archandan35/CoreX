@@ -1,6 +1,5 @@
 import { config } from '../../config/index.js';
 import { getSupabaseClient } from './supabaseClient.js';
-import { isMissingTableError } from '../../utils/dbErrors.js';
 
 const AUTH_REDIRECT_TYPE = (() => {
   if (typeof window === 'undefined') return null;
@@ -43,65 +42,16 @@ function sleep(ms) {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function esc(v) {
-  return (v || '').replace(/'/g, "''");
-}
-
-async function sqlQuery(client, queryText) {
-  try {
-    const { data, error } = await client.rpc('exec_sql', { query_text: queryText });
-    if (!error && data) return data;
-  } catch {}
-  return null;
-}
-
-function userFromRecord(record, metadata) {
+function buildUser(record, meta) {
   return {
-    id: record.id,
-    name: record.name || metadata?.name || record.email?.split('@')[0] || '',
-    username: record.username || metadata?.username || '',
+    id: record.id || '',
     email: record.email || '',
-    role_label: record.role_label || metadata?.role_label || '',
+    name: record.name || meta?.name || record.email?.split('@')[0] || '',
+    username: record.username || meta?.username || '',
+    role_label: record.role_label || meta?.role_label || '',
     full_access: record.full_access === true,
-    permissions: record.permissions || metadata?.permissions || [],
+    permissions: record.permissions || meta?.permissions || [],
   };
-}
-
-async function fetchProfileRecord(client, userId) {
-  const core = ['id', 'email', 'name', 'status', 'full_access', 'role_label', 'permissions'];
-
-  const { data, error } = await client
-    .from('users')
-    .select(core.join(', '))
-    .eq('id', userId)
-    .maybeSingle();
-
-  if (!error && data) return { record: data, error: null };
-
-  const rows = await sqlQuery(
-    client,
-    `SELECT ${core.join(', ')} FROM public.users WHERE id = '${userId}'`
-  );
-  if (rows && rows.length > 0) return { record: rows[0], error: null };
-
-  return { record: null, error };
-}
-
-function permissionsSql(arr) {
-  if (!arr || arr.length === 0) return 'ARRAY[]::text[]';
-  return `ARRAY[${arr.map((v) => `'${esc(String(v))}'`).join(', ')}]::text[]`;
-}
-
-async function insertProfileRow(client, payload) {
-  const { error } = await client.from('users').insert(payload);
-  if (!error) return null;
-
-  const result = await sqlQuery(
-    client,
-    `INSERT INTO public.users (id, email, name, phone, role_label, full_access, permissions, status) VALUES ('${payload.id}', '${esc(payload.email)}', '${esc(payload.name)}', '${esc(payload.phone)}', '${esc(payload.role_label)}', ${payload.full_access}, ${permissionsSql(payload.permissions)}, 'active')`
-  );
-
-  return result ? null : { message: 'insert failed' };
 }
 
 function buildPayload(id, email, meta) {
@@ -109,12 +59,49 @@ function buildPayload(id, email, meta) {
     id,
     email,
     name: meta?.name || email.split('@')[0],
-    phone: meta?.phone || '',
     role_label: meta?.role_label || '',
     full_access: meta?.full_access === true,
     permissions: meta?.permissions || [],
     status: 'active',
   };
+}
+
+async function fetchProfile(client, userId) {
+  const { data, error } = await client.from('users').select('*').eq('id', userId).maybeSingle();
+  if (!error && data) return data;
+  return null;
+}
+
+async function insertProfile(client, payload) {
+  const { error } = await client.from('users').insert(payload);
+  return error || null;
+}
+
+async function signIn(client, email, password) {
+  const { data, error } = await client.auth.signInWithPassword({ email, password });
+  if (error) return { ok: false, error: describeError(error, 'Sign in failed.') };
+  return { ok: true, data };
+}
+
+async function signUp(client, payload) {
+  const { data, error } = await client.auth.signUp({
+    email: payload.email,
+    password: payload.password,
+    options: {
+      data: {
+        name: payload.name,
+        username: payload.username || '',
+        phone: payload.phone || '',
+        role_label: payload.role_label || '',
+        full_access: payload.full_access === true,
+        permissions: payload.permissions || [],
+      },
+      emailRedirectTo: `${config.appUrl}/login`,
+    },
+  });
+  if (error) return { ok: false, error: describeError(error, 'Registration failed.') };
+  if (!data.user) return { ok: false, error: 'Registration failed. No user returned.' };
+  return { ok: true, data };
 }
 
 export async function supabaseLogin(identifier, password) {
@@ -127,39 +114,30 @@ export async function supabaseLogin(identifier, password) {
     let email = '';
     const isEmail = EMAIL_PATTERN.test(trimmed);
     const isPhone = /^\d{10}$/.test(trimmed);
+    const isUsername = !isEmail && !isPhone;
 
     if (isEmail) {
       email = trimmed;
     } else if (isPhone) {
-      const { data: phoneData, error: phoneError } = await client
-        .from('users')
-        .select('email')
-        .eq('phone', trimmed)
-        .maybeSingle();
-      if (phoneError || !phoneData) return { ok: false, error: 'No account found with that phone number.' };
-      email = phoneData.email;
+      const { data: d, error: e } = await client.from('users').select('email').eq('phone', trimmed).maybeSingle();
+      if (e || !d) return { ok: false, error: 'No account found with that phone number.' };
+      email = d.email;
     } else {
-      const { data: userData, error: userError } = await client
-        .from('users')
-        .select('email')
-        .eq('username', trimmed.toLowerCase())
-        .maybeSingle();
-      if (userError || !userData) return { ok: false, error: 'No account found with that username.' };
-      email = userData.email;
+      const { data: d, error: e } = await client.from('users').select('email').eq('username', trimmed.toLowerCase()).maybeSingle();
+      if (e || !d) return { ok: false, error: 'No account found with that username.' };
+      email = d.email;
     }
 
-    const { data, error } = await client.auth.signInWithPassword({ email, password });
-    if (error) return { ok: false, error: describeError(error, 'Sign in failed.') };
+    const signInResult = await signIn(client, email, password);
+    if (!signInResult.ok) return signInResult;
 
-    let { record } = await fetchProfileRecord(client, data.user.id);
+    const { data: authData } = signInResult;
+    let record = await fetchProfile(client, authData.user.id);
 
     if (!record) {
-      const payload = buildPayload(data.user.id, data.user.email, data.user.user_metadata);
-      const insertError = await insertProfileRow(client, payload);
-      if (!insertError) {
-        const retry = await fetchProfileRecord(client, data.user.id);
-        record = retry.record;
-      }
+      const payload = buildPayload(authData.user.id, authData.user.email, authData.user.user_metadata);
+      const insertError = await insertProfile(client, payload);
+      if (!insertError) record = await fetchProfile(client, authData.user.id);
     }
 
     if (!record) {
@@ -169,8 +147,8 @@ export async function supabaseLogin(identifier, password) {
 
     return {
       ok: true,
-      user: userFromRecord(record, data.user.user_metadata),
-      token: data.session.access_token,
+      user: buildUser(record, authData.user.user_metadata),
+      token: authData.session.access_token,
     };
   } catch (err) {
     return { ok: false, error: describeError(err, 'Sign in failed.') };
@@ -182,56 +160,31 @@ export async function supabaseRegister(payload) {
     const client = await getSupabaseClient();
 
     if (payload.username) {
-      const usernameLower = payload.username.trim().toLowerCase();
-      const { data: existing } = await client
-        .from('users')
-        .select('username')
-        .eq('username', usernameLower)
-        .maybeSingle();
+      payload.username = payload.username.trim().toLowerCase();
+      const { data: existing } = await client.from('users').select('username').eq('username', payload.username).maybeSingle();
       if (existing) return { ok: false, error: 'Username already exists. Please try a different username.' };
-      payload.username = usernameLower;
     }
 
-    const { data, error } = await client.auth.signUp({
-      email: payload.email,
-      password: payload.password,
-      options: {
-        data: {
-          name: payload.name,
-          username: payload.username || '',
-          phone: payload.phone || '',
-          role_label: payload.role_label || '',
-          full_access: payload.full_access === true,
-          permissions: payload.permissions || [],
-        },
-        emailRedirectTo: `${config.appUrl}/login`,
-      },
-    });
+    const signUpResult = await signUp(client, payload);
+    if (!signUpResult.ok) return signUpResult;
 
-    if (error) return { ok: false, error: describeError(error, 'Registration failed.') };
-    if (!data.user) return { ok: false, error: 'Registration failed. No user returned.' };
+    const { data } = signUpResult;
 
     if (!data.session && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
       return { ok: false, error: 'An account with this email already exists. Please sign in.' };
     }
 
     if (data.session) {
-      let { record } = await fetchProfileRecord(client, data.user.id);
+      let record = await fetchProfile(client, data.user.id);
 
       if (!record) {
-        const insertPayload = buildPayload(
-          data.user.id,
-          data.user.email,
-          { ...payload, ...data.user.user_metadata }
-        );
-
-        const insertError = await insertProfileRow(client, insertPayload);
+        const insertPayload = buildPayload(data.user.id, data.user.email, { ...payload, ...data.user.user_metadata });
+        const insertError = await insertProfile(client, insertPayload);
         if (insertError) {
           await client.auth.signOut();
           return { ok: false, error: 'Account profile could not be created. The database schema may be incomplete — if you are the administrator, please run the Setup Wizard from the banner above.' };
         }
-        const retry = await fetchProfileRecord(client, data.user.id);
-        record = retry.record;
+        record = await fetchProfile(client, data.user.id);
       }
 
       if (!record) {
@@ -239,14 +192,13 @@ export async function supabaseRegister(payload) {
         return { ok: false, error: 'Account profile could not be created. The database schema may be incomplete — if you are the administrator, please run the Setup Wizard from the banner above.' };
       }
 
-      const missing = [];
-      if (!record.id) missing.push('id');
-      if (!record.email) missing.push('email');
-      if (!record.name) missing.push('name');
-      if (!record.status) missing.push('status');
-
-      if (missing.length > 0) {
+      if (!record.id || !record.email || !record.name || !record.status) {
         await client.auth.signOut();
+        const missing = [];
+        if (!record.id) missing.push('id');
+        if (!record.email) missing.push('email');
+        if (!record.name) missing.push('name');
+        if (!record.status) missing.push('status');
         return { ok: false, error: `Profile missing required fields: ${missing.join(', ')}. Contact an administrator.` };
       }
 
@@ -256,7 +208,6 @@ export async function supabaseRegister(payload) {
       }
 
       await client.auth.signOut();
-
       return {
         ok: true,
         user: null,
@@ -287,9 +238,7 @@ export async function supabaseResendEmail(email) {
     const { data, error } = await client.auth.resend({
       type: 'signup',
       email: email,
-      options: {
-        emailRedirectTo: `${config.appUrl}/login`,
-      },
+      options: { emailRedirectTo: `${config.appUrl}/login` },
     });
     if (error) return { ok: false, error: describeError(error, 'Failed to resend confirmation email.') };
     return { ok: true, notice: 'Confirmation email resent. Please check your inbox.' };
@@ -305,16 +254,8 @@ export async function checkAdminExists() {
     if (!error) return { exists: data === true };
   } catch {}
   try {
-    const { data, error } = await client
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .eq('full_access', true)
-      .limit(1);
+    const { data, error } = await client.from('users').select('id', { count: 'exact', head: true }).eq('full_access', true).limit(1);
     if (!error) return { exists: (data?.length || 0) > 0 };
-    const rows = await sqlQuery(client, 'SELECT COUNT(*) as count FROM public.users WHERE full_access = true');
-    if (rows && rows.length > 0) {
-      return { exists: parseInt(rows[0]?.count || 0, 10) > 0 };
-    }
     return { exists: false, error: describeError(error, 'Could not check admin.') };
   } catch {
     return { exists: false };
@@ -327,9 +268,7 @@ export async function restoreSession() {
   if (AUTH_REDIRECT_TYPE) {
     await sleep(500);
     const { data: sessionData } = await client.auth.getSession();
-    if (sessionData?.session) {
-      await client.auth.signOut();
-    }
+    if (sessionData?.session) await client.auth.signOut();
     try { sessionStorage.setItem('email_confirmed', 'true'); } catch {}
     return null;
   }
@@ -340,13 +279,13 @@ export async function restoreSession() {
   const userId = sessionData.session.user.id;
   const metadata = sessionData.session.user.user_metadata || {};
 
-  const { record } = await fetchProfileRecord(client, userId);
+  const record = await fetchProfile(client, userId);
   if (!record) {
     await client.auth.signOut();
     return null;
   }
 
-  return userFromRecord(record, metadata);
+  return buildUser(record, metadata);
 }
 
 export async function checkDatabaseReady() {

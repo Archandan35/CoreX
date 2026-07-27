@@ -27,7 +27,7 @@ import Settings from './pages/Settings.jsx';
 import CreateInvoice from './pages/invoices/CreateInvoice.jsx';
 import { PERMISSIONS } from './identity/rbac/permissions.js';
 import { api } from './services/api.js';
-import { isMissingTableError, isMissingColumnError } from './utils/dbErrors.js';
+import { isMissingTableError } from './utils/dbErrors.js';
 
 function ProtectedRoute({ children, permission }) {
   const { isAuthenticated } = useAuth();
@@ -156,8 +156,8 @@ function AppRoutes() {
 
       let columnsOk = true;
       try {
-        const { error: colError } = await database.supabase.from('users').select('username').limit(1);
-        if (colError && isMissingColumnError(colError)) columnsOk = false;
+        const { error: colError } = await database.supabase.from('users').select('id').limit(1);
+        if (colError) columnsOk = false;
       } catch {}
 
       if (!functionsOk) missingCount++;
