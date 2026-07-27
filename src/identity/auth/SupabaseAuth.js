@@ -168,6 +168,23 @@ export async function supabaseLogout() {
   await client.auth.signOut();
 }
 
+export async function supabaseResendEmail(email) {
+  try {
+    const client = await getSupabaseClient();
+    const { data, error } = await client.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${config.appUrl}/login`,
+      },
+    });
+    if (error) return { ok: false, error: describeError(error, 'Failed to resend confirmation email.') };
+    return { ok: true, notice: 'Confirmation email resent. Please check your inbox.' };
+  } catch (err) {
+    return { ok: false, error: describeError(err, 'Failed to resend confirmation email.') };
+  }
+}
+
 export async function checkAdminExists() {
   const client = await getSupabaseClient();
   try {

@@ -10,7 +10,7 @@ import PasswordStrength from '../components/ui/PasswordStrength.jsx';
 
 export default function Register({ isFirstAccount }) {
   const navigate = useNavigate();
-  const { register, isAuthenticated } = useAuth();
+  const { register, resendEmail, isAuthenticated } = useAuth();
   // After this page creates the first administrator, re-run the admin
   // detection so the "no administrator" banner disappears automatically
   // across the whole app (per spec) instead of persisting on stale state.
@@ -26,6 +26,7 @@ export default function Register({ isFirstAccount }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [resending, setResending] = useState(false);
 
   if (isAuthenticated) return null;
 
@@ -82,6 +83,20 @@ export default function Register({ isFirstAccount }) {
       setError('Registration failed.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setError('');
+    setResending(true);
+    try {
+      const result = await resendEmail(email);
+      if (result.notice) setNotice(result.notice);
+      if (result.error) setError(result.error);
+    } catch {
+      setError('Failed to resend confirmation email.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -178,10 +193,24 @@ export default function Register({ isFirstAccount }) {
         </form>
 
         ) : (
-          <div className="auth-foot">
-            <span className="auth-note">Already confirmed? </span>
-            <a href="#login" className="auth-link" onClick={(e) => { e.preventDefault(); navigate('/login'); }}>Sign in</a>
-          </div>
+          <>
+            <div className="auth-foot">
+              <span className="auth-note">Already confirmed? </span>
+              <a href="#login" className="auth-link" onClick={(e) => { e.preventDefault(); navigate('/login'); }}>Sign in</a>
+            </div>
+            <div className="auth-foot" style={{ marginTop: 8 }}>
+              <span className="auth-note">Didn't receive the email? </span>
+              <button
+                type="button"
+                className="auth-link"
+                onClick={handleResend}
+                disabled={resending}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
+              >
+                {resending ? 'Sending...' : 'Resend confirmation email'}
+              </button>
+            </div>
+          </>
         )}
 
         {!isFirstAccount && (

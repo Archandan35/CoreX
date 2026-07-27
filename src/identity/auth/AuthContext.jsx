@@ -65,8 +65,13 @@ export function AuthProvider({ children }) {
     setApiToken(null);
   }, []);
 
+  const resendEmail = useCallback(async (email) => {
+    const auth = await getSupabaseAuth();
+    return await auth.supabaseResendEmail(email);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, loading, hasFullAccess, hasPermission, login, register, logout, setUser }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, loading, hasFullAccess, hasPermission, login, register, logout, resendEmail, setUser }}>
       {children}
     </AuthContext.Provider>
   );
