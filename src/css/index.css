@@ -1,8 +1,8 @@
 /* ===== DESIGN TOKENS ===== */
 :root {
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --primary-light: #eef2ff;
+  --primary: #3815F7;
+  --primary-hover: #2D0CE1;
+  --primary-light: #EDE8FF;
   --secondary: #64748b;
   --secondary-hover: #475569;
   --success: #10b981;
@@ -22,7 +22,7 @@
   --border: #e2e8f0;
   --border-light: #f1f5f9;
   --border-strong: #cbd5e1;
-  --border-focus: #6366f1;
+  --border-focus: #3815F7;
   --text: #0f172a;
   --text-secondary: #475569;
   --text-tertiary: #94a3b8;
@@ -60,14 +60,14 @@
   --sw-sidebar-text: #334155;
   --sw-sidebar-muted: #94a3b8;
   --sw-sidebar-hover: rgba(0,0,0,0.04);
-  --sw-sidebar-active: rgba(99,102,241,0.08);
+  --sw-sidebar-active: rgba(56,21,247,0.08);
   --sw-sidebar-border: #e2e8f0;
 }
 
 [data-theme="dark"] {
-  --primary: #818cf8;
-  --primary-hover: #6366f1;
-  --primary-light: #1e1b4b;
+  --primary: #7B6EF0;
+  --primary-hover: #5B4FE0;
+  --primary-light: #1A1040;
   --secondary: #94a3b8;
   --secondary-hover: #cbd5e1;
   --success: #34d399;
