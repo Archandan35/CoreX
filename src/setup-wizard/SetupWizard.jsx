@@ -759,8 +759,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             {/* Schema Analysis */}
             {step === 4 && (
               <div className="setup-wizard-card">
-                <h1>Schema Analysis</h1>
-                <p>Analyzing database structure against required schema.</p>
                 {busy && (
                   <div className="sw-analyzing">
                     <div className="sw-analyzing-spinner" />
@@ -769,6 +767,8 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
                 )}
                 {analysis && (
                   <div className="sw-analysis-results">
+                    <h1>Schema Analysis</h1>
+                    <p>Analyzing database structure against required schema.</p>
                     <div className="sw-summary-cards">
                       <div className="sw-summary-card sw-card-present">
                         <span className="sw-val">{analysis.totalPresent}</span>
@@ -828,14 +828,65 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
                         </details>
                       );
                     })}
+                    <div className="setup-wizard-actions">
+                      <Button variant="secondary" onClick={goPrev}>Back</Button>
+                      <Button variant="primary" onClick={goNext}>Next</Button>
+                      <Button variant="secondary" onClick={handleAnalyze} loading={busy}>Re-analyze</Button>
+                    </div>
                   </div>
                 )}
-                {!analysis && !busy && <Button variant="primary" onClick={handleAnalyze} icon="scan">Analyze Database</Button>}
-                <div className="setup-wizard-actions">
-                  <Button variant="secondary" onClick={goPrev}>Back</Button>
-                  {analysis && <Button variant="primary" onClick={goNext}>Next</Button>}
-                  {analysis && <Button variant="secondary" onClick={handleAnalyze} loading={busy}>Re-analyze</Button>}
-                </div>
+                {!analysis && !busy && (
+                  <div className="ss-schema-panel">
+                    <h2 className="ss-page-title">3. Database Schema</h2>
+                    <p className="ss-page-sub">We'll create all the required database objects for your application.</p>
+                    <div className="ss-schema-panel-head">
+                      <h3>Schema Installation</h3>
+                      <button className="ss-btn-customize" type="button">
+                        <Icon name="pen" size={16} /> Customize Schema
+                      </button>
+                    </div>
+                    <div className="ss-schema-grid">
+                      {[
+                        { icon: 'grid', title: 'Tables', desc: 'Create all required tables' },
+                        { icon: 'list', title: 'Indexes', desc: 'Create performance indexes' },
+                        { icon: 'share', title: 'Relationships', desc: 'Set up table relationships' },
+                        { icon: 'shield', title: 'Constraints', desc: 'Add data integrity constraints' },
+                        { icon: 'calculator', title: 'Functions', desc: 'Create helper functions' },
+                        { icon: 'bolt', title: 'Triggers', desc: 'Create database triggers' },
+                        { icon: 'lock', title: 'Extensions', desc: 'Install required extensions' },
+                        { icon: 'file-text', title: 'Views', desc: 'Create database views' },
+                      ].map((item) => (
+                        <div key={item.title} className="ss-schema-item">
+                          <div className="ss-schema-row-line">
+                            <div className="ss-schema-icon"><Icon name={item.icon} size={19} /></div>
+                            <div className="ss-schema-info">
+                              <div className="ss-schema-title">{item.title}</div>
+                              <div className="ss-schema-desc">{item.desc}</div>
+                            </div>
+                            <span className="ss-badge-ready"><Icon name="check" size={13} /> Ready</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="ss-info-banner">
+                      <Icon name="info" size={18} />
+                      <div>
+                        <div className="ss-info-main">This will create 24 tables, 38 indexes, 12 functions, 15 triggers and other database objects.</div>
+                        <div className="ss-info-sub">Estimated time: 10—20 seconds</div>
+                      </div>
+                    </div>
+                    <div className="ss-advanced-row">
+                      <div className="ss-adv-left"><Icon name="gear" size={17} /><span>Advanced Options <span className="ss-adv-optional">(Optional)</span></span></div>
+                      <Icon name="chevron-down" size={17} />
+                    </div>
+                    <div className="setup-wizard-actions" style={{ marginTop: 24 }}>
+                      <Button variant="secondary" onClick={goPrev}>Back</Button>
+                      <Button variant="primary" icon="database" onClick={handleAnalyze}>
+                        Analyze Database <Icon name="arrow-right" size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

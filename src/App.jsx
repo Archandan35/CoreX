@@ -25,7 +25,6 @@ import RoleEdit from './pages/roles/RoleEdit.jsx';
 import RoleShow from './pages/roles/RoleShow.jsx';
 import Settings from './pages/Settings.jsx';
 import CreateInvoice from './pages/invoices/CreateInvoice.jsx';
-import SetupSchema from './pages/setup/SetupSchema.jsx';
 import { PERMISSIONS } from './identity/rbac/permissions.js';
 import { api } from './services/api.js';
 import { isMissingTableError } from './utils/dbErrors.js';
@@ -210,17 +209,7 @@ function AppRoutes() {
       setDbHealth(health);
 
       if (health.compatible) {
-        // Check for email confirmation redirect (PKCE code or implicit token
-        // in the URL). When present, skip Step 10 wizard and go straight to
-        // auth so the user lands on login/dashboard after confirming.
-        const hash = typeof window !== 'undefined' ? window.location.hash : '';
-        const search = typeof window !== 'undefined' ? window.location.search : '';
-        const isAuthRedirect = hash.includes('access_token=') || search.includes('code=');
-        if (isAuthRedirect) {
-          await checkAdmin(database);
-        } else {
-          setAppState('complete');
-        }
+        await checkAdmin(database);
       } else if (health.everInstalled) {
         // Previously installed, now degraded: never force the Setup Wizard
         // again. Continue loading normally straight into the authentication
@@ -366,7 +355,6 @@ function AppRoutes() {
             : <Login />
         }
       />
-      <Route path="/setup/schema" element={<SetupSchema />} />
       <Route
         path="/register"
         element={
