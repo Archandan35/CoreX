@@ -63,14 +63,14 @@ GRANT EXECUTE ON FUNCTION public.is_admin_user() TO anon, authenticated, service
 export const SCHEMAS = {
   users: {
     table: 'users',
-    columns: ['id', 'name', 'email', 'phone', 'password_hash', 'role_label', 'full_access', 'permissions', 'status', 'created_at', 'updated_at'],
-    columnTypes: { id: 'UUID', name: 'TEXT', email: 'TEXT', phone: 'TEXT', password_hash: 'TEXT', role_label: 'TEXT', full_access: 'BOOLEAN', permissions: 'TEXT[]', status: 'TEXT', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    columns: ['id', 'name', 'username', 'email', 'phone', 'password_hash', 'role_label', 'full_access', 'permissions', 'status', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', name: 'TEXT', username: 'TEXT', email: 'TEXT', phone: 'TEXT', password_hash: 'TEXT', role_label: 'TEXT', full_access: 'BOOLEAN', permissions: 'TEXT[]', status: 'TEXT', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
     primaryKey: 'id',
-    nullable: ['phone', 'role_label', 'permissions', 'password_hash'],
+    nullable: ['phone', 'username', 'role_label', 'permissions', 'password_hash'],
     defaults: { full_access: 'false', status: "'active'", created_at: 'NOW()', updated_at: 'NOW()' },
-    unique: { email: 'email' },
+    unique: { email: 'email', username: 'username' },
     rls: true,
-    searchableFields: ['name', 'email', 'phone'],
+    searchableFields: ['name', 'username', 'email', 'phone'],
   },
   roles: {
     table: 'roles',
@@ -109,6 +109,6 @@ export const SCHEMAS = {
   },
 };
 
-SCHEMAS.version = 2;
+SCHEMAS.version = 3;
 SCHEMAS.extensions = [];
 SCHEMAS.seedData = [];

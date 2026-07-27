@@ -54,8 +54,8 @@ export default function Login() {
         {error && <div className="alert alert-danger alert--mb"><Icon name="alert" size={16} />{error}</div>}
 
         <form onSubmit={submit}>
-          <Field label="Email Address">
-            <Input type="email" autoComplete="username" value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="e.g. admin@company.com" autoFocus />
+          <Field label="Email / Username / Phone">
+            <Input type="text" autoComplete="username" value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="e.g. admin@company.com or username or 9876543210" autoFocus />
           </Field>
           <Field label="Password">
             <PasswordInput autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" />

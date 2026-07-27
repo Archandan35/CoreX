@@ -42,7 +42,7 @@ async function fetchProfileRecord(client, userId, { retries = 5, delayMs = 400 }
   for (let attempt = 0; attempt <= retries; attempt++) {
     const { data, error } = await client
       .from('users')
-      .select('id, email, name, status, full_access, role_label, permissions')
+      .select('id, email, name, username, status, full_access, role_label, permissions')
       .eq('id', userId)
       .maybeSingle();
 
@@ -61,12 +61,37 @@ async function fetchProfileRecord(client, userId, { retries = 5, delayMs = 400 }
 }
 
 export async function supabaseLogin(identifier, password) {
-  if (!EMAIL_PATTERN.test((identifier || '').trim())) {
-    return { ok: false, error: 'Please sign in with your email address.' };
-  }
+  const trimmed = (identifier || '').trim();
+  if (!trimmed) return { ok: false, error: 'Please enter your email, username, or phone number.' };
+
   try {
     const client = await getSupabaseClient();
-    const { data, error } = await client.auth.signInWithPassword({ email: identifier, password });
+
+    let email = '';
+    const isEmail = EMAIL_PATTERN.test(trimmed);
+    const isPhone = /^\d{10}$/.test(trimmed);
+
+    if (isEmail) {
+      email = trimmed;
+    } else if (isPhone) {
+      const { data: phoneData, error: phoneError } = await client
+        .from('users')
+        .select('email')
+        .eq('phone', trimmed)
+        .maybeSingle();
+      if (phoneError || !phoneData) return { ok: false, error: 'No account found with that phone number.' };
+      email = phoneData.email;
+    } else {
+      const { data: userData, error: userError } = await client
+        .from('users')
+        .select('email')
+        .eq('username', trimmed.toLowerCase())
+        .maybeSingle();
+      if (userError || !userData) return { ok: false, error: 'No account found with that username.' };
+      email = userData.email;
+    }
+
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
     if (error) return { ok: false, error: describeError(error, 'Sign in failed.') };
 
     const { record, error: profileError } = await fetchProfileRecord(client, data.user.id);
@@ -80,6 +105,7 @@ export async function supabaseLogin(identifier, password) {
       user: {
         id: data.user.id,
         name: data.user.user_metadata?.name || data.user.email,
+        username: record.username || '',
         email: data.user.email,
         role_label: record.role_label || data.user.user_metadata?.role_label || '',
         full_access: record.full_access === true,
@@ -96,12 +122,24 @@ export async function supabaseRegister(payload) {
   try {
     const client = await getSupabaseClient();
 
+    if (payload.username) {
+      const usernameLower = payload.username.trim().toLowerCase();
+      const { data: existing } = await client
+        .from('users')
+        .select('username')
+        .eq('username', usernameLower)
+        .maybeSingle();
+      if (existing) return { ok: false, error: 'Username already exists. Please try a different username.' };
+      payload.username = usernameLower;
+    }
+
     const { data, error } = await client.auth.signUp({
       email: payload.email,
       password: payload.password,
       options: {
         data: {
           name: payload.name,
+          username: payload.username || '',
           phone: payload.phone || '',
           role_label: payload.role_label || '',
           full_access: payload.full_access === true,
@@ -221,6 +259,7 @@ export async function restoreSession() {
   return {
     id: userId,
     name: metadata.name || sessionData.session.user.email,
+    username: record.username || '',
     email: sessionData.session.user.email,
     role_label: record.role_label || metadata.role_label || '',
     full_access: record.full_access === true,

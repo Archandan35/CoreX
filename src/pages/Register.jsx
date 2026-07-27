@@ -17,6 +17,7 @@ export default function Register({ isFirstAccount }) {
   const { refreshAdminStatus } = useApp();
   const [isDark, setIsDark] = useState(false);
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [roleLabel, setRoleLabel] = useState(isFirstAccount ? 'System Administrator' : '');
@@ -46,6 +47,8 @@ export default function Register({ isFirstAccount }) {
     setNotice('');
 
     if (!name.trim()) return setError('Full name is required.');
+    if (!username.trim()) return setError('Username is required.');
+    if (!/^[a-zA-Z0-9]+$/.test(username.trim())) return setError('Username can only contain letters and numbers.');
     if (!email.trim()) return setError('Email is required.');
     if (!phone.trim()) return setError('Phone number is required.');
     if (phone.length !== 10) return setError('Phone number must be exactly 10 digits.');
@@ -57,6 +60,7 @@ export default function Register({ isFirstAccount }) {
     try {
       const result = await register({
         name: name.trim(),
+        username: username.trim(),
         email: email.trim().toLowerCase(),
         phone: phone.trim(),
         role_label: roleLabel.trim(),
@@ -127,6 +131,9 @@ export default function Register({ isFirstAccount }) {
         <form onSubmit={submit}>
           <Field label="Full Name" required>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your full name" autoFocus required />
+          </Field>
+          <Field label="Username" required>
+            <Input value={username} onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9]/g, ''))} placeholder="Enter username (letters &amp; numbers only)" required />
           </Field>
           <Field label="Email Address" required>
             <Input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email address" required />
