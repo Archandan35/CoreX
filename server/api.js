@@ -38,7 +38,8 @@ export async function handleApiRequest(req, res, db) {
       if (db.isSupabase) {
         await handleSupabase(db.supabase, path, method, parsed, send, currentUser, token);
       } else {
-        await handleMemory(db, path, method, parsed, send, currentUser);
+        const handled = await handleInvoiceMemory(db, path, method, parsed, send, currentUser);
+        if (!handled) await handleMemory(db, path, method, parsed, send, currentUser);
       }
     } catch (err) {
       send(500, { error: 'Internal server error.' });
@@ -182,6 +183,112 @@ async function handleMemory(db, path, method, parsed, send, currentUser) {
   return send(404, { error: 'Not found.' });
 }
 
+// ---------------------------------------------------------------------------
+// Invoice domain — memory provider. Mirrors the Supabase handlers below so the
+// page is provider-agnostic. Each handler enforces the centralized permission
+// constants server-side (defense in depth on top of client PermissionGate).
+// ---------------------------------------------------------------------------
+async function handleInvoiceMemory(db, path, method, parsed, send, currentUser) {
+  const PERM = {
+    CUSTOMER_READ: 'customer:read', CUSTOMER_CREATE: 'customer:create', CUSTOMER_UPDATE: 'customer:update',
+    PRODUCT_READ: 'product:read', PRODUCT_CREATE: 'product:create', PRODUCT_UPDATE: 'product:update',
+    INVOICE_READ: 'invoice:read', INVOICE_CREATE: 'invoice:create', INVOICE_UPDATE: 'invoice:update', INVOICE_DELETE: 'invoice:delete',
+  };
+  const cp = (perm) => {
+    if (!currentUser) { send(401, { error: 'Authentication required.' }); return false; }
+    if (!currentUser.permissions?.includes(perm) && !currentUser.permissions?.includes('*') && !currentUser.full_access) {
+      send(403, { error: 'Forbidden.' }); return false;
+    }
+    return true;
+  };
+
+  // Does this request belong to the invoice domain at all? If not, return
+  // false so the dispatcher falls through to the generic memory handlers.
+  const isCustomer = path === '/api/customers' || path.startsWith('/api/customers/');
+  const isProduct = path === '/api/products' || path.startsWith('/api/products/');
+  const isBank = path === '/api/banks' || path.startsWith('/api/banks/');
+  const isSignature = path === '/api/signatures' || path.startsWith('/api/signatures/');
+  const isInvoice = path === '/api/invoices' || path.startsWith('/api/invoices/');
+  if (!isCustomer && !isProduct && !isBank && !isSignature && !isInvoice) return false;
+
+  // Repositories are optional in the memory provider; if the domain store
+  // isn't wired (e.g. running purely against Supabase), signal not-found
+  // rather than crashing on undefined method calls.
+  const have = db.customers && db.products && db.productCategories && db.banks && db.signatures && db.invoices;
+  if (!have) { send(404, { error: 'Invoice domain not available on this provider.' }); return true; }
+
+  if (path === '/api/customers' && method === 'GET') {
+    if (!cp(PERM.CUSTOMER_READ)) return true;
+    send(200, { customers: (await db.customers.findAll(currentUser)).filter(Boolean) });
+  } else if (path === '/api/customers' && method === 'POST') {
+    if (!cp(PERM.CUSTOMER_CREATE)) return true;
+    send(201, { customer: await db.customers.create({ ...parsed, created_by: currentUser.id }, currentUser) });
+  } else if (method === 'PUT' && path.startsWith('/api/customers/')) {
+    if (!cp(PERM.CUSTOMER_UPDATE)) return true;
+    const c = await db.customers.update(path.split('/').pop(), parsed, currentUser);
+    if (!c) send(404, { error: 'Customer not found.' }); else send(200, { customer: c });
+  } else if (path === '/api/products' && method === 'GET') {
+    if (!cp(PERM.PRODUCT_READ)) return true;
+    send(200, { products: (await db.products.findAll(currentUser)).filter(Boolean), categories: (await db.productCategories.findAll(currentUser)).filter(Boolean) });
+  } else if (path === '/api/products' && method === 'POST') {
+    if (!cp(PERM.PRODUCT_CREATE)) return true;
+    send(201, { product: await db.products.create({ ...parsed, created_by: currentUser.id }, currentUser) });
+  } else if (method === 'PUT' && path.startsWith('/api/products/')) {
+    if (!cp(PERM.PRODUCT_UPDATE)) return true;
+    const p = await db.products.update(path.split('/').pop(), parsed, currentUser);
+    if (!p) send(404, { error: 'Product not found.' }); else send(200, { product: p });
+  } else if (path === '/api/banks' && method === 'GET') {
+    if (!cp(PERM.INVOICE_READ)) return true;
+    send(200, { banks: (await db.banks.findAll(currentUser)).filter(Boolean) });
+  } else if (path === '/api/banks' && method === 'POST') {
+    if (!cp(PERM.INVOICE_CREATE)) return true;
+    send(201, { bank: await db.banks.create({ ...parsed, created_by: currentUser.id }, currentUser) });
+  } else if (method === 'PUT' && path.startsWith('/api/banks/')) {
+    if (!cp(PERM.INVOICE_UPDATE)) return true;
+    const b = await db.banks.update(path.split('/').pop(), parsed, currentUser);
+    if (!b) send(404, { error: 'Bank not found.' }); else send(200, { bank: b });
+  } else if (method === 'DELETE' && path.startsWith('/api/banks/')) {
+    if (!cp(PERM.INVOICE_DELETE)) return true;
+    await db.banks.delete(path.split('/').pop(), currentUser);
+    send(200, { ok: true });
+  } else if (path === '/api/signatures' && method === 'GET') {
+    if (!cp(PERM.INVOICE_READ)) return true;
+    send(200, { signatures: (await db.signatures.findAll(currentUser)).filter(Boolean) });
+  } else if (path === '/api/signatures' && method === 'POST') {
+    if (!cp(PERM.INVOICE_CREATE)) return true;
+    send(201, { signature: await db.signatures.create({ ...parsed, created_by: currentUser.id }, currentUser) });
+  } else if (method === 'DELETE' && path.startsWith('/api/signatures/')) {
+    if (!cp(PERM.INVOICE_DELETE)) return true;
+    await db.signatures.delete(path.split('/').pop(), currentUser);
+    send(200, { ok: true });
+  } else if (path === '/api/invoices/next-number' && method === 'GET') {
+    if (!cp(PERM.INVOICE_READ)) return true;
+    send(200, { number: await db.invoices.nextNumber(parsed.prefix, currentUser) });
+  } else if (path === '/api/invoices' && method === 'GET') {
+    if (!cp(PERM.INVOICE_READ)) return true;
+    send(200, { invoices: await db.invoices.findAll(currentUser) });
+  } else if (path === '/api/invoices' && method === 'POST') {
+    if (!cp(PERM.INVOICE_CREATE)) return true;
+    const result = await db.invoices.save({ ...parsed, created_by: currentUser.id }, currentUser);
+    if (!result.ok) send(409, { error: result.error }); else send(201, { invoice: result.invoice });
+  } else if (method === 'GET' && path.startsWith('/api/invoices/')) {
+    if (!cp(PERM.INVOICE_READ)) return true;
+    const inv = await db.invoices.findById(path.split('/').pop(), currentUser);
+    if (!inv) send(404, { error: 'Invoice not found.' }); else send(200, { invoice: inv });
+  } else if (method === 'PUT' && path.startsWith('/api/invoices/')) {
+    if (!cp(PERM.INVOICE_UPDATE)) return true;
+    const result = await db.invoices.save(parsed, currentUser);
+    if (!result.ok) send(409, { error: result.error }); else send(200, { invoice: result.invoice });
+  } else if (method === 'DELETE' && path.startsWith('/api/invoices/')) {
+    if (!cp(PERM.INVOICE_DELETE)) return true;
+    await db.invoices.delete(path.split('/').pop(), currentUser);
+    send(200, { ok: true });
+  } else {
+    send(404, { error: 'Not found.' });
+  }
+  return true;
+}
+
 async function handleSupabase(supabase, path, method, parsed, send, currentUser) {
   function cp(perm) {
     if (!currentUser) { send(401, { error: 'Authentication required.' }); return false; }
@@ -321,7 +428,185 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
     return send(200, { ok: true });
   }
 
+  // ===== Invoice domain (Supabase) =====
+  // All writes stamp created_by with the authenticated user so RLS owner
+  // policies apply. Permission checks are defense-in-depth on top of the
+  // client PermissionGate.
+  const uid = currentUser?.id;
+  const withCreator = (row) => ({ ...row, created_by: row.created_by || uid });
+  const clean = (row) => { if (!row) return row; const { items, payments, ...rest } = row; return { ...rest }; };
+
+  if (method === 'GET' && path === '/api/customers') {
+    if (!cp('customer:read')) return;
+    const { data, error } = await adminClient.from('customers').select('*').order('created_at', { ascending: false });
+    if (error) return send(500, { error: error.message });
+    return send(200, { customers: data || [] });
+  }
+  if (method === 'POST' && path === '/api/customers') {
+    if (!cp('customer:create')) return;
+    const { data, error } = await adminClient.from('customers').insert(withCreator(parsed)).select().single();
+    if (error) return send(500, { error: error.message });
+    return send(201, { customer: data });
+  }
+  if (method === 'PUT' && path.match(/^\/api\/customers\/(.+)$/)) {
+    if (!cp('customer:update')) return;
+    const id = path.match(/^\/api\/customers\/(.+)$/)[1];
+    const { data, error } = await adminClient.from('customers').update(parsed).eq('id', id).select().single();
+    if (error || !data) return send(404, { error: 'Customer not found.' });
+    return send(200, { customer: data });
+  }
+
+  if (method === 'GET' && path === '/api/products') {
+    if (!cp('product:read')) return;
+    const [pr, cr] = await Promise.all([
+      adminClient.from('products').select('*, category:product_categories(id,name)').order('created_at', { ascending: false }),
+      adminClient.from('product_categories').select('*').order('name', { ascending: true }),
+    ]);
+    if (pr.error) return send(500, { error: pr.error.message });
+    return send(200, { products: pr.data || [], categories: cr.data || [] });
+  }
+  if (method === 'POST' && path === '/api/products') {
+    if (!cp('product:create')) return;
+    const { data, error } = await adminClient.from('products').insert(withCreator(parsed)).select().single();
+    if (error) return send(500, { error: error.message });
+    return send(201, { product: data });
+  }
+  if (method === 'PUT' && path.match(/^\/api\/products\/(.+)$/)) {
+    if (!cp('product:update')) return;
+    const id = path.match(/^\/api\/products\/(.+)$/)[1];
+    const { data, error } = await adminClient.from('products').update(parsed).eq('id', id).select().single();
+    if (error || !data) return send(404, { error: 'Product not found.' });
+    return send(200, { product: data });
+  }
+
+  if (method === 'GET' && path === '/api/banks') {
+    if (!cp('invoice:read')) return;
+    const { data, error } = await adminClient.from('banks').select('*').order('created_at', { ascending: false });
+    if (error) return send(500, { error: error.message });
+    return send(200, { banks: data || [] });
+  }
+  if (method === 'POST' && path === '/api/banks') {
+    if (!cp('invoice:create')) return;
+    // Single default: clear other defaults when this one is marked default.
+    if (parsed.is_default) await adminClient.from('banks').update({ is_default: false }).neq('id', '00000000-0000-0000-0000-000000000000');
+    const { data, error } = await adminClient.from('banks').insert(withCreator(parsed)).select().single();
+    if (error) return send(500, { error: error.message });
+    return send(201, { bank: data });
+  }
+  if (method === 'PUT' && path.match(/^\/api\/banks\/(.+)$/)) {
+    if (!cp('invoice:update')) return;
+    const id = path.match(/^\/api\/banks\/(.+)$/)[1];
+    if (parsed.is_default) await adminClient.from('banks').update({ is_default: false }).neq('id', id);
+    const { data, error } = await adminClient.from('banks').update(parsed).eq('id', id).select().single();
+    if (error || !data) return send(404, { error: 'Bank not found.' });
+    return send(200, { bank: data });
+  }
+  if (method === 'DELETE' && path.match(/^\/api\/banks\/(.+)$/)) {
+    if (!cp('invoice:delete')) return;
+    const id = path.match(/^\/api\/banks\/(.+)$/)[1];
+    const { error } = await adminClient.from('banks').delete().eq('id', id);
+    if (error) return send(500, { error: error.message });
+    return send(200, { ok: true });
+  }
+
+  if (method === 'GET' && path === '/api/signatures') {
+    if (!cp('invoice:read')) return;
+    const { data, error } = await adminClient.from('signatures').select('*').order('created_at', { ascending: false });
+    if (error) return send(500, { error: error.message });
+    return send(200, { signatures: data || [] });
+  }
+  if (method === 'POST' && path === '/api/signatures') {
+    if (!cp('invoice:create')) return;
+    if (parsed.is_default) await adminClient.from('signatures').update({ is_default: false }).neq('id', '00000000-0000-0000-0000-000000000000');
+    const { data, error } = await adminClient.from('signatures').insert(withCreator(parsed)).select().single();
+    if (error) return send(500, { error: error.message });
+    return send(201, { signature: data });
+  }
+  if (method === 'DELETE' && path.match(/^\/api\/signatures\/(.+)$/)) {
+    if (!cp('invoice:delete')) return;
+    const id = path.match(/^\/api\/signatures\/(.+)$/)[1];
+    const { error } = await adminClient.from('signatures').delete().eq('id', id);
+    if (error) return send(500, { error: error.message });
+    return send(200, { ok: true });
+  }
+
+  if (method === 'GET' && path === '/api/invoices/next-number') {
+    if (!cp('invoice:read')) return;
+    const prefix = (parsed.prefix || 'INV');
+    const { data } = await adminClient.from('invoices').select('invoice_number').like('invoice_number', `${prefix}%`).order('invoice_number', { ascending: false }).limit(1);
+    const next = nextInvoiceNumber(prefix, data?.[0]?.invoice_number);
+    return send(200, { number: next });
+  }
+  if (method === 'GET' && path === '/api/invoices') {
+    if (!cp('invoice:read')) return;
+    const { data, error } = await adminClient.from('invoices').select('*, customer:customers(id,name,company)').order('created_at', { ascending: false });
+    if (error) return send(500, { error: error.message });
+    return send(200, { invoices: data || [] });
+  }
+  if (method === 'POST' && path === '/api/invoices') {
+    if (!cp('invoice:create')) return;
+    const { items, payments, ...invoiceRow } = parsed;
+    // Uniqueness check before insert (the unique constraint also protects us,
+    // but this gives a clean 409 message instead of a raw Postgres error).
+    const { data: dup } = await adminClient.from('invoices').select('id').eq('invoice_number', invoiceRow.invoice_number).limit(1);
+    if (dup && dup.length) return send(409, { error: 'Invoice number already exists.' });
+    const { data: inv, error: ie } = await adminClient.from('invoices').insert(withCreator(invoiceRow)).select().single();
+    if (ie) return send(500, { error: ie.message });
+    if (items?.length) await adminClient.from('invoice_items').insert(items.map((it, i) => ({ ...it, invoice_id: inv.id, sort_order: it.sort_order ?? i })));
+    if (payments?.length) await adminClient.from('invoice_payments').insert(payments.map((p) => ({ ...p, invoice_id: inv.id, created_by: uid })));
+    return send(201, { invoice: inv });
+  }
+  if (method === 'GET' && path.match(/^\/api\/invoices\/([0-9a-fA-F-]+)$/)) {
+    if (!cp('invoice:read')) return;
+    const id = path.match(/^\/api\/invoices\/([0-9a-fA-F-]+)$/)[1];
+    const [ir, items, pays] = await Promise.all([
+      adminClient.from('invoices').select('*, customer:customers(*)').eq('id', id).single(),
+      adminClient.from('invoice_items').select('*').eq('invoice_id', id).order('sort_order', { ascending: true }),
+      adminClient.from('invoice_payments').select('*').eq('invoice_id', id).order('created_at', { ascending: true }),
+    ]);
+    if (ir.error || !ir.data) return send(404, { error: 'Invoice not found.' });
+    return send(200, { invoice: { ...ir.data, items: items.data || [], payments: pays.data || [] } });
+  }
+  if (method === 'PUT' && path.match(/^\/api\/invoices\/([0-9a-fA-F-]+)$/)) {
+    if (!cp('invoice:update')) return;
+    const id = path.match(/^\/api\/invoices\/([0-9a-fA-F-]+)$/)[1];
+    const { items, payments, ...invoiceRow } = parsed;
+    const { data: dup } = await adminClient.from('invoices').select('id').eq('invoice_number', invoiceRow.invoice_number).neq('id', id).limit(1);
+    if (dup && dup.length) return send(409, { error: 'Invoice number already exists.' });
+    const { data: inv, error: ie } = await adminClient.from('invoices').update(clean(invoiceRow)).eq('id', id).select().single();
+    if (ie || !inv) return send(404, { error: 'Invoice not found.' });
+    if (items) {
+      await adminClient.from('invoice_items').delete().eq('invoice_id', id);
+      if (items.length) await adminClient.from('invoice_items').insert(items.map((it, i) => ({ ...it, invoice_id: id, sort_order: it.sort_order ?? i })));
+    }
+    if (payments) {
+      await adminClient.from('invoice_payments').delete().eq('invoice_id', id);
+      if (payments.length) await adminClient.from('invoice_payments').insert(payments.map((p) => ({ ...p, invoice_id: id, created_by: p.created_by || uid })));
+    }
+    return send(200, { invoice: inv });
+  }
+  if (method === 'DELETE' && path.match(/^\/api\/invoices\/([0-9a-fA-F-]+)$/)) {
+    if (!cp('invoice:delete')) return;
+    const id = path.match(/^\/api\/invoices\/([0-9a-fA-F-]+)$/)[1];
+    const { error } = await adminClient.from('invoices').delete().eq('id', id);
+    if (error) return send(500, { error: error.message });
+    return send(200, { ok: true });
+  }
+
   return send(404, { error: 'Not found.' });
+}
+
+// Shared invoice-number sequence helper. Increments the numeric tail of the
+// last invoice number that shares the same prefix (e.g. INV-0007 -> INV-0008).
+function nextInvoiceNumber(prefix, lastNumber) {
+  const PAD = 4;
+  let seq = 1;
+  if (lastNumber) {
+    const tail = String(lastNumber).replace(prefix, '');
+    const n = parseInt(tail.replace(/\D/g, ''), 10);
+    if (!Number.isNaN(n)) seq = n + 1;
+  }
+  return `${prefix}${String(seq).padStart(PAD, '0')}`;
 }
 
 let _adminSupabase = null;

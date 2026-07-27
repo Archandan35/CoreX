@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../components/ui/Icon.jsx';
 import Button from '../components/ui/Button.jsx';
@@ -14,6 +14,16 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('email_confirmed') === 'true') {
+        sessionStorage.removeItem('email_confirmed');
+        setConfirmed(true);
+      }
+    } catch {}
+  }, []);
 
   if (isAuthenticated) return null;
 
@@ -51,6 +61,7 @@ export default function Login() {
         <h1 className="auth-title">Welcome Back</h1>
         <p className="auth-sub">Sign in with your email to continue</p>
 
+        {confirmed && <div className="alert alert-success alert--mb"><Icon name="check" size={16} />Email confirmed! Your account is ready. Please sign in with your credentials.</div>}
         {error && <div className="alert alert-danger alert--mb"><Icon name="alert" size={16} />{error}</div>}
 
         <form onSubmit={submit}>

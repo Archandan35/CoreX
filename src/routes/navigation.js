@@ -16,6 +16,13 @@ export const NAV_GROUPS = [
       { to: '/roles', label: 'Roles', icon: 'shield', permission: PERMISSIONS.ROLE_READ },
     ],
   },
+  { type: 'heading', label: 'FINANCE' },
+  {
+    label: '',
+    items: [
+      { to: '/invoices/new', label: 'Create Invoice', icon: 'receipt', permission: PERMISSIONS.INVOICE_CREATE },
+    ],
+  },
   { type: 'heading', label: 'SYSTEM' },
   {
     label: '',

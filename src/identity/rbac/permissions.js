@@ -10,4 +10,16 @@ export const PERMISSIONS = Object.freeze({
   SETTINGS_READ: 'settings:read',
   SETTINGS_UPDATE: 'settings:update',
   REPORT_READ: 'report:read',
+  // Invoicing domain — authority/permission-based, centralized here so no
+  // UI component ever hardcodes a permission string.
+  INVOICE_CREATE: 'invoice:create',
+  INVOICE_READ: 'invoice:read',
+  INVOICE_UPDATE: 'invoice:update',
+  INVOICE_DELETE: 'invoice:delete',
+  CUSTOMER_CREATE: 'customer:create',
+  CUSTOMER_READ: 'customer:read',
+  CUSTOMER_UPDATE: 'customer:update',
+  PRODUCT_CREATE: 'product:create',
+  PRODUCT_READ: 'product:read',
+  PRODUCT_UPDATE: 'product:update',
 });

@@ -24,6 +24,7 @@ import RoleCreate from './pages/roles/RoleCreate.jsx';
 import RoleEdit from './pages/roles/RoleEdit.jsx';
 import RoleShow from './pages/roles/RoleShow.jsx';
 import Settings from './pages/Settings.jsx';
+import CreateInvoice from './pages/invoices/CreateInvoice.jsx';
 import { PERMISSIONS } from './identity/rbac/permissions.js';
 import { api } from './services/api.js';
 import { isMissingTableError } from './utils/dbErrors.js';
@@ -330,6 +331,7 @@ function AppRoutes() {
         <Route path="roles/:id/edit" element={<ProtectedRoute permission={PERMISSIONS.ROLE_UPDATE}><RoleEdit /></ProtectedRoute>} />
         <Route path="roles/:id" element={<ProtectedRoute permission={PERMISSIONS.ROLE_READ}><RoleShow /></ProtectedRoute>} />
         <Route path="settings" element={<Settings />} />
+        <Route path="invoices/new" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_CREATE}><CreateInvoice /></ProtectedRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

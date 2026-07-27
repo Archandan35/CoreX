@@ -107,8 +107,105 @@ export const SCHEMAS = {
     build: buildIsAdminUserFunction,
     description: 'SECURITY DEFINER helper to check admin status (bypasses RLS to prevent infinite recursion)',
   },
+
+  // -------------------------------------------------------------------------
+  // Invoice domain. All tables carry `created_by` (auth.uid()) and are RLS
+  // protected so a user only sees rows they own, while full_access admins see
+  // everything (via is_admin_user()). Detailed policies live in
+  // generate-sql.sql (the canonical source) — this model metadata drives the
+  // SqlGenerator's enable-RLS statement and table DDL.
+  // -------------------------------------------------------------------------
+
+  customers: {
+    table: 'customers',
+    columns: ['id', 'name', 'company', 'email', 'phone', 'gstin', 'billing_address', 'shipping_address', 'state', 'city', 'postal_code', 'created_by', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', name: 'TEXT', company: 'TEXT', email: 'TEXT', phone: 'TEXT', gstin: 'TEXT', billing_address: 'TEXT', shipping_address: 'TEXT', state: 'TEXT', city: 'TEXT', postal_code: 'TEXT', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    primaryKey: 'id',
+    nullable: ['company', 'email', 'phone', 'gstin', 'billing_address', 'shipping_address', 'state', 'city', 'postal_code', 'created_by'],
+    defaults: { created_at: 'NOW()', updated_at: 'NOW()' },
+    rls: true,
+    searchableFields: ['name', 'company', 'email', 'phone', 'gstin'],
+  },
+
+  product_categories: {
+    table: 'product_categories',
+    columns: ['id', 'name', 'created_by', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', name: 'TEXT', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    primaryKey: 'id',
+    nullable: ['created_by'],
+    defaults: { created_at: 'NOW()', updated_at: 'NOW()' },
+    rls: true,
+    searchableFields: ['name'],
+  },
+
+  products: {
+    table: 'products',
+    columns: ['id', 'name', 'sku', 'barcode', 'category_id', 'description', 'unit_price', 'tax_rate', 'unit', 'hsn_code', 'is_service', 'created_by', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', name: 'TEXT', sku: 'TEXT', barcode: 'TEXT', category_id: 'UUID', description: 'TEXT', unit_price: 'NUMERIC', tax_rate: 'NUMERIC', unit: 'TEXT', hsn_code: 'TEXT', is_service: 'BOOLEAN', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    primaryKey: 'id',
+    nullable: ['sku', 'barcode', 'category_id', 'description', 'unit', 'hsn_code', 'created_by'],
+    defaults: { unit_price: '0', tax_rate: '0', is_service: 'false', created_at: 'NOW()', updated_at: 'NOW()' },
+    rls: true,
+    searchableFields: ['name', 'sku', 'barcode', 'hsn_code'],
+  },
+
+  banks: {
+    table: 'banks',
+    columns: ['id', 'bank_name', 'account_name', 'account_number', 'ifsc', 'branch', 'upi_id', 'is_default', 'created_by', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', bank_name: 'TEXT', account_name: 'TEXT', account_number: 'TEXT', ifsc: 'TEXT', branch: 'TEXT', upi_id: 'TEXT', is_default: 'BOOLEAN', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    primaryKey: 'id',
+    nullable: ['account_name', 'account_number', 'ifsc', 'branch', 'upi_id', 'created_by'],
+    defaults: { is_default: 'false', created_at: 'NOW()', updated_at: 'NOW()' },
+    rls: true,
+    searchableFields: ['bank_name', 'account_name', 'account_number', 'ifsc', 'upi_id'],
+  },
+
+  signatures: {
+    table: 'signatures',
+    columns: ['id', 'label', 'image_url', 'signer_name', 'is_default', 'created_by', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', label: 'TEXT', image_url: 'TEXT', signer_name: 'TEXT', is_default: 'BOOLEAN', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    primaryKey: 'id',
+    nullable: ['label', 'image_url', 'signer_name', 'created_by'],
+    defaults: { is_default: 'false', created_at: 'NOW()', updated_at: 'NOW()' },
+    rls: true,
+    searchableFields: ['label', 'signer_name'],
+  },
+
+  invoices: {
+    table: 'invoices',
+    columns: ['id', 'invoice_number', 'prefix', 'customer_id', 'invoice_date', 'due_date', 'reference', 'custom_headers', 'notes', 'terms', 'attachments', 'reverse_charge', 'create_ewaybill', 'create_einvoice', 'tds_enabled', 'tcs_enabled', 'extra_discount_type', 'extra_discount_value', 'round_off', 'bank_id', 'signature_id', 'subtotal', 'discount_total', 'taxable_amount', 'cgst_total', 'sgst_total', 'igst_total', 'tax_total', 'additional_charges_total', 'grand_total', 'amount_paid', 'balance_due', 'status', 'created_by', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', invoice_number: 'TEXT', prefix: 'TEXT', customer_id: 'UUID', invoice_date: 'DATE', due_date: 'DATE', reference: 'TEXT', custom_headers: 'JSONB', notes: 'JSONB', terms: 'JSONB', attachments: 'JSONB', reverse_charge: 'BOOLEAN', create_ewaybill: 'BOOLEAN', create_einvoice: 'BOOLEAN', tds_enabled: 'BOOLEAN', tcs_enabled: 'BOOLEAN', extra_discount_type: 'TEXT', extra_discount_value: 'NUMERIC', round_off: 'BOOLEAN', bank_id: 'UUID', signature_id: 'UUID', subtotal: 'NUMERIC', discount_total: 'NUMERIC', taxable_amount: 'NUMERIC', cgst_total: 'NUMERIC', sgst_total: 'NUMERIC', igst_total: 'NUMERIC', tax_total: 'NUMERIC', additional_charges_total: 'NUMERIC', grand_total: 'NUMERIC', amount_paid: 'NUMERIC', balance_due: 'NUMERIC', status: 'TEXT', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    primaryKey: 'id',
+    nullable: ['reference', 'custom_headers', 'notes', 'terms', 'attachments', 'extra_discount_type', 'bank_id', 'signature_id', 'customer_id', 'created_by'],
+    defaults: { reverse_charge: 'false', create_ewaybill: 'false', create_einvoice: 'false', tds_enabled: 'false', tcs_enabled: 'false', extra_discount_value: '0', round_off: 'true', subtotal: '0', discount_total: '0', taxable_amount: '0', cgst_total: '0', sgst_total: '0', igst_total: '0', tax_total: '0', additional_charges_total: '0', grand_total: '0', amount_paid: '0', balance_due: '0', status: "'draft'", created_at: 'NOW()', updated_at: 'NOW()' },
+    unique: { invoice_number: 'invoice_number' },
+    rls: true,
+    searchableFields: ['invoice_number', 'reference'],
+  },
+
+  invoice_items: {
+    table: 'invoice_items',
+    columns: ['id', 'invoice_id', 'product_id', 'name', 'description', 'show_description', 'quantity', 'unit_price', 'tax_rate', 'discount_type', 'discount_value', 'discount_amount', 'tax_amount', 'line_total', 'sort_order', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', invoice_id: 'UUID', product_id: 'UUID', name: 'TEXT', description: 'TEXT', show_description: 'BOOLEAN', quantity: 'NUMERIC', unit_price: 'NUMERIC', tax_rate: 'NUMERIC', discount_type: 'TEXT', discount_value: 'NUMERIC', discount_amount: 'NUMERIC', tax_amount: 'NUMERIC', line_total: 'NUMERIC', sort_order: 'INTEGER', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    primaryKey: 'id',
+    nullable: ['product_id', 'description', 'discount_type', 'created_by'],
+    defaults: { show_description: 'false', quantity: '1', unit_price: '0', tax_rate: '0', discount_type: "'percent'", discount_value: '0', discount_amount: '0', tax_amount: '0', line_total: '0', sort_order: '0', created_at: 'NOW()', updated_at: 'NOW()' },
+    rls: true,
+    searchableFields: ['name'],
+  },
+
+  invoice_payments: {
+    table: 'invoice_payments',
+    columns: ['id', 'invoice_id', 'amount', 'payment_date', 'mode', 'note', 'created_by', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', invoice_id: 'UUID', amount: 'NUMERIC', payment_date: 'DATE', mode: 'TEXT', note: 'TEXT', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    primaryKey: 'id',
+    nullable: ['note', 'mode', 'created_by'],
+    defaults: { amount: '0', payment_date: 'NOW()', created_at: 'NOW()', updated_at: 'NOW()' },
+    rls: true,
+    searchableFields: ['note'],
+  },
 };
 
-SCHEMAS.version = 3;
+SCHEMAS.version = 4;
 SCHEMAS.extensions = [];
 SCHEMAS.seedData = [];

@@ -2,6 +2,19 @@ import { config } from '../../config/index.js';
 import { getSupabaseClient } from './supabaseClient.js';
 import { isMissingTableError } from '../../utils/dbErrors.js';
 
+// Snapshot URL auth params at module load time — before the Supabase client's
+// PKCE exchange cleans up the URL. This tells us whether the current page load
+// is the result of an email confirmation redirect (or magic link), so we can
+// sign the user out after the exchange completes and force a manual login.
+const AUTH_REDIRECT_TYPE = (() => {
+  if (typeof window === 'undefined') return null;
+  const hash = window.location.hash;
+  const search = window.location.search;
+  if (hash.includes('access_token=')) return 'implicit';
+  if (search.includes('code=')) return 'pkce';
+  return null;
+})();
+
 const DEBUG_AUTH =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) ||
   (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'prod');
@@ -244,6 +257,25 @@ export async function checkAdminExists() {
 
 export async function restoreSession() {
   const client = await getSupabaseClient();
+
+  // If this page load was triggered by an email confirmation / magic-link
+  // redirect, the PKCE exchange (or implicit hash) will have created a
+  // session automatically. The spec requires the user to manually sign in
+  // after confirming, so we sign them out right away and return null so the
+  // Login page can show the "Email confirmed" banner instead.
+  if (AUTH_REDIRECT_TYPE) {
+    // Wait briefly for the PKCE exchange to finish, then sign out so the
+    // user must manually sign in (per spec — no auto-login after confirm).
+    await sleep(500);
+    const { data: sessionData } = await client.auth.getSession();
+    if (sessionData?.session) {
+      await client.auth.signOut();
+    }
+    // Flag for Login.jsx to show a success confirmation banner
+    try { sessionStorage.setItem('email_confirmed', 'true'); } catch {}
+    return null;
+  }
+
   const { data: sessionData } = await client.auth.getSession();
   if (!sessionData?.session) return null;
 
