@@ -68,62 +68,37 @@ function userFromRecord(record, metadata) {
 }
 
 async function fetchProfileRecord(client, userId) {
-  const baseColumns = ['id', 'email', 'name', 'status', 'full_access', 'role_label', 'permissions'];
-  const optionalColumns = ['username'];
-  let columns = [...baseColumns, ...optionalColumns];
+  const core = ['id', 'email', 'name', 'status', 'full_access', 'role_label', 'permissions'];
 
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const colStr = columns.join(', ');
-    const { data, error } = await client
-      .from('users')
-      .select(colStr)
-      .eq('id', userId)
-      .maybeSingle();
+  const { data, error } = await client
+    .from('users')
+    .select(core.join(', '))
+    .eq('id', userId)
+    .maybeSingle();
 
-    if (!error && data) return { record: data, error: null };
+  if (!error && data) return { record: data, error: null };
 
-    if (error) {
-      if (isMissingTableError(error) || error.code === 'PGRST204') {
-        return { record: null, error };
-      }
-      const msg = (error.message || '').toLowerCase();
-      if (msg.includes('column') || msg.includes('does not exist') || error.code === '42703') {
-        columns = [...baseColumns];
-        continue;
-      }
-    }
-
-    if (attempt < 2) await sleep(400);
-  }
-
-  const rows = await sqlQuery(client, `SELECT id, email, name, status, full_access, role_label, permissions, username FROM public.users WHERE id = '${userId}'`);
+  const rows = await sqlQuery(
+    client,
+    `SELECT ${core.join(', ')} FROM public.users WHERE id = '${userId}'`
+  );
   if (rows && rows.length > 0) return { record: rows[0], error: null };
 
-  const fallbackRows = await sqlQuery(client, `SELECT id, email, name, status, full_access, role_label, permissions FROM public.users WHERE id = '${userId}'`);
-  if (fallbackRows && fallbackRows.length > 0) return { record: fallbackRows[0], error: null };
+  return { record: null, error };
+}
 
-  return { record: null, error: null };
+function permissionsSql(arr) {
+  if (!arr || arr.length === 0) return 'ARRAY[]::text[]';
+  return `ARRAY[${arr.map((v) => `'${esc(String(v))}'`).join(', ')}]::text[]`;
 }
 
 async function insertProfileRow(client, payload) {
   const { error } = await client.from('users').insert(payload);
   if (!error) return null;
 
-  const cols = ['id', 'email', 'name', 'phone', 'role_label', 'full_access', 'permissions', 'status'];
-  const vals = [
-    `'${payload.id}'`,
-    `'${esc(payload.email)}'`,
-    `'${esc(payload.name)}'`,
-    `'${esc(payload.phone)}'`,
-    `'${esc(payload.role_label)}'`,
-    `${payload.full_access}`,
-    `'${JSON.stringify(payload.permissions)}'::jsonb`,
-    `'active'`,
-  ];
-
   const result = await sqlQuery(
     client,
-    `INSERT INTO public.users (${cols.join(', ')}) VALUES (${vals.join(', ')})`
+    `INSERT INTO public.users (id, email, name, phone, role_label, full_access, permissions, status) VALUES ('${payload.id}', '${esc(payload.email)}', '${esc(payload.name)}', '${esc(payload.phone)}', '${esc(payload.role_label)}', ${payload.full_access}, ${permissionsSql(payload.permissions)}, 'active')`
   );
 
   return result ? null : { message: 'insert failed' };
