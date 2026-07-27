@@ -18,18 +18,15 @@ const DEBUG_AUTH =
 function describeError(err, fallback) {
   if (!err) return fallback;
   if (typeof err === 'string') return err.trim() || fallback;
-
   if (DEBUG_AUTH && typeof console !== 'undefined' && console.error) {
     console.error('[auth] raw error:', err);
   }
-
   if (err.status === 0 || err.name === 'AuthRetryableFetchError') {
     return 'Could not reach the authentication server. Check your connection.';
   }
   if (err.status === 429 || err.code === 'over_email_send_rate_limit') {
     return 'Signup is temporarily rate-limited. Please wait a few minutes.';
   }
-
   const msg = err.message || err.error_description || err.msg || err.hint || err.details;
   if (typeof msg === 'string' && msg.trim() && msg.trim() !== '{}' && msg.trim() !== '[object Object]') {
     return msg.trim();
@@ -45,36 +42,9 @@ function sleep(ms) {
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PROFILE_COLUMNS = 'id, email, name, username, status, full_access, role_label, permissions';
 
 function esc(v) {
   return (v || '').replace(/'/g, "''");
-}
-
-function buildProfilePayload(id, email, meta) {
-  return {
-    id,
-    email,
-    name: meta?.name || email.split('@')[0],
-    username: meta?.username || '',
-    phone: meta?.phone || '',
-    role_label: meta?.role_label || '',
-    full_access: meta?.full_access === true,
-    permissions: meta?.permissions || [],
-    status: 'active',
-  };
-}
-
-function buildSelectSql(userId) {
-  return `SELECT ${PROFILE_COLUMNS} FROM public.users WHERE id = '${userId}'`;
-}
-
-function buildInsertSql(p) {
-  return `INSERT INTO public.users (id, email, name, username, phone, role_label, full_access, permissions, status) VALUES ('${p.id}', '${esc(p.email)}', '${esc(p.name)}', '${esc(p.username)}', '${esc(p.phone)}', '${esc(p.role_label)}', ${p.full_access}, '${JSON.stringify(p.permissions)}'::jsonb, 'active')`;
-}
-
-function buildCountSql() {
-  return `SELECT COUNT(*) as count FROM public.users WHERE full_access = true`;
 }
 
 async function sqlQuery(client, queryText) {
@@ -85,37 +55,91 @@ async function sqlQuery(client, queryText) {
   return null;
 }
 
-async function fetchProfileRecord(client, userId, { retries = 5, delayMs = 400 } = {}) {
-  let lastError = null;
-  for (let attempt = 0; attempt <= retries; attempt++) {
+function userFromRecord(record, metadata) {
+  return {
+    id: record.id,
+    name: record.name || metadata?.name || record.email?.split('@')[0] || '',
+    username: record.username || metadata?.username || '',
+    email: record.email || '',
+    role_label: record.role_label || metadata?.role_label || '',
+    full_access: record.full_access === true,
+    permissions: record.permissions || metadata?.permissions || [],
+  };
+}
+
+async function fetchProfileRecord(client, userId) {
+  const baseColumns = ['id', 'email', 'name', 'status', 'full_access', 'role_label', 'permissions'];
+  const optionalColumns = ['username'];
+  let columns = [...baseColumns, ...optionalColumns];
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const colStr = columns.join(', ');
     const { data, error } = await client
       .from('users')
-      .select(PROFILE_COLUMNS)
+      .select(colStr)
       .eq('id', userId)
       .maybeSingle();
 
     if (!error && data) return { record: data, error: null };
 
     if (error) {
-      lastError = error;
       if (isMissingTableError(error) || error.code === 'PGRST204') {
         return { record: null, error };
       }
+      const msg = (error.message || '').toLowerCase();
+      if (msg.includes('column') || msg.includes('does not exist') || error.code === '42703') {
+        columns = [...baseColumns];
+        continue;
+      }
     }
 
-    if (attempt < retries) await sleep(delayMs);
+    if (attempt < 2) await sleep(400);
   }
 
-  const rows = await sqlQuery(client, buildSelectSql(userId));
+  const rows = await sqlQuery(client, `SELECT id, email, name, status, full_access, role_label, permissions, username FROM public.users WHERE id = '${userId}'`);
   if (rows && rows.length > 0) return { record: rows[0], error: null };
 
-  return { record: null, error: lastError };
+  const fallbackRows = await sqlQuery(client, `SELECT id, email, name, status, full_access, role_label, permissions FROM public.users WHERE id = '${userId}'`);
+  if (fallbackRows && fallbackRows.length > 0) return { record: fallbackRows[0], error: null };
+
+  return { record: null, error: null };
 }
 
-async function insertProfile(client, payload) {
+async function insertProfileRow(client, payload) {
   const { error } = await client.from('users').insert(payload);
   if (!error) return null;
-  return await sqlQuery(client, buildInsertSql(payload));
+
+  const cols = ['id', 'email', 'name', 'phone', 'role_label', 'full_access', 'permissions', 'status'];
+  const vals = [
+    `'${payload.id}'`,
+    `'${esc(payload.email)}'`,
+    `'${esc(payload.name)}'`,
+    `'${esc(payload.phone)}'`,
+    `'${esc(payload.role_label)}'`,
+    `${payload.full_access}`,
+    `'${JSON.stringify(payload.permissions)}'::jsonb`,
+    `'active'`,
+  ];
+
+  const result = await sqlQuery(
+    client,
+    `INSERT INTO public.users (${cols.join(', ')}) VALUES (${vals.join(', ')})`
+  );
+
+  return result ? null : { message: 'insert failed' };
+}
+
+function buildPayload(id, email, meta) {
+  return {
+    id,
+    email,
+    name: meta?.name || email.split('@')[0],
+    phone: meta?.phone || '',
+    role_label: meta?.role_label || '',
+    full_access: meta?.full_access === true,
+    permissions: meta?.permissions || [],
+    status: 'active',
+  };
 }
 
 export async function supabaseLogin(identifier, password) {
@@ -152,34 +176,25 @@ export async function supabaseLogin(identifier, password) {
     const { data, error } = await client.auth.signInWithPassword({ email, password });
     if (error) return { ok: false, error: describeError(error, 'Sign in failed.') };
 
-    let { record, error: profileError } = await fetchProfileRecord(client, data.user.id);
+    let { record } = await fetchProfileRecord(client, data.user.id);
 
     if (!record) {
-      const insertPayload = buildProfilePayload(data.user.id, data.user.email, data.user.user_metadata);
-      const insertError = await insertProfile(client, insertPayload);
+      const payload = buildPayload(data.user.id, data.user.email, data.user.user_metadata);
+      const insertError = await insertProfileRow(client, payload);
       if (!insertError) {
         const retry = await fetchProfileRecord(client, data.user.id);
         record = retry.record;
-        profileError = retry.error;
       }
     }
 
-    if (!record || profileError) {
+    if (!record) {
       await client.auth.signOut();
       return { ok: false, error: 'Your account profile was not found. The database schema may be incomplete — if you are the administrator, please run the Setup Wizard from the banner above.' };
     }
 
     return {
       ok: true,
-      user: {
-        id: data.user.id,
-        name: data.user.user_metadata?.name || data.user.email,
-        username: record.username || '',
-        email: data.user.email,
-        role_label: record.role_label || data.user.user_metadata?.role_label || '',
-        full_access: record.full_access === true,
-        permissions: record.permissions || data.user.user_metadata?.permissions || [],
-      },
+      user: userFromRecord(record, data.user.user_metadata),
       token: data.session.access_token,
     };
   } catch (err) {
@@ -226,26 +241,25 @@ export async function supabaseRegister(payload) {
     }
 
     if (data.session) {
-      let { record, error: profileError } = await fetchProfileRecord(client, data.user.id);
+      let { record } = await fetchProfileRecord(client, data.user.id);
 
-      if (!record || profileError) {
-        const insertPayload = buildProfilePayload(
+      if (!record) {
+        const insertPayload = buildPayload(
           data.user.id,
           data.user.email,
           { ...payload, ...data.user.user_metadata }
         );
 
-        const insertError = await insertProfile(client, insertPayload);
+        const insertError = await insertProfileRow(client, insertPayload);
         if (insertError) {
           await client.auth.signOut();
           return { ok: false, error: 'Account profile could not be created. The database schema may be incomplete — if you are the administrator, please run the Setup Wizard from the banner above.' };
         }
         const retry = await fetchProfileRecord(client, data.user.id);
         record = retry.record;
-        profileError = retry.error;
       }
 
-      if (!record || profileError) {
+      if (!record) {
         await client.auth.signOut();
         return { ok: false, error: 'Account profile could not be created. The database schema may be incomplete — if you are the administrator, please run the Setup Wizard from the banner above.' };
       }
@@ -322,7 +336,7 @@ export async function checkAdminExists() {
       .eq('full_access', true)
       .limit(1);
     if (!error) return { exists: (data?.length || 0) > 0 };
-    const rows = await sqlQuery(client, buildCountSql());
+    const rows = await sqlQuery(client, 'SELECT COUNT(*) as count FROM public.users WHERE full_access = true');
     if (rows && rows.length > 0) {
       return { exists: parseInt(rows[0]?.count || 0, 10) > 0 };
     }
@@ -351,21 +365,13 @@ export async function restoreSession() {
   const userId = sessionData.session.user.id;
   const metadata = sessionData.session.user.user_metadata || {};
 
-  const { record, error: profileError } = await fetchProfileRecord(client, userId);
-  if (!record || profileError) {
+  const { record } = await fetchProfileRecord(client, userId);
+  if (!record) {
     await client.auth.signOut();
     return null;
   }
 
-  return {
-    id: userId,
-    name: metadata.name || sessionData.session.user.email,
-    username: record.username || '',
-    email: sessionData.session.user.email,
-    role_label: record.role_label || metadata.role_label || '',
-    full_access: record.full_access === true,
-    permissions: record.permissions || metadata.permissions || [],
-  };
+  return userFromRecord(record, metadata);
 }
 
 export async function checkDatabaseReady() {
