@@ -11,16 +11,16 @@ import { isMissingTableError, isMissingColumnError } from '../utils/dbErrors.js'
 import { bindInline } from '../data/sqlParams.js';
 
 const STEPS = [
-  { id: 'welcome', label: 'Welcome', icon: 'home' },
-  { id: 'driver', label: 'Database Provider', icon: 'database' },
-  { id: 'connection', label: 'Connection Details', icon: 'gear' },
-  { id: 'verify', label: 'Verify Connection', icon: 'shield' },
-  { id: 'analysis', label: 'Schema Analysis', icon: 'scan' },
-  { id: 'plan', label: 'Installation Plan', icon: 'list' },
-  { id: 'execute', label: 'Generate & Execute SQL', icon: 'bolt' },
-  { id: 'verify-install', label: 'Verify Installation', icon: 'check-circle' },
-  { id: 'final-validation', label: 'Final Validation', icon: 'shield' },
-  { id: 'done', label: 'Setup Complete', icon: 'check' },
+  { id: 'welcome', label: 'Welcome', icon: 'home', desc: 'Introduction & overview' },
+  { id: 'driver', label: 'Database Provider', icon: 'database', desc: 'Choose your database' },
+  { id: 'connection', label: 'Connection Details', icon: 'gear', desc: 'Enter connection information' },
+  { id: 'verify', label: 'Verify Connection', icon: 'shield', desc: 'Test and verify database connection' },
+  { id: 'analysis', label: 'Schema Analysis', icon: 'scan', desc: 'Analyze existing schema' },
+  { id: 'plan', label: 'Installation Plan', icon: 'list', desc: 'Review installation summary' },
+  { id: 'execute', label: 'Generate & Execute SQL', icon: 'bolt', desc: 'Create and run SQL scripts' },
+  { id: 'verify-install', label: 'Verify Installation', icon: 'check-circle', desc: 'Verify installed objects' },
+  { id: 'final-validation', label: 'Final Validation', icon: 'shield', desc: 'Final system validation' },
+  { id: 'done', label: 'Setup Complete', icon: 'check', desc: 'Setup finished successfully' },
 ];
 
 const genStatus = { PENDING: 'pending', RUNNING: 'running', COMPLETED: 'completed', FAILED: 'failed' };
@@ -43,7 +43,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
   const [executing, setExecuting] = useState(false);
   const [verifyStatus, setVerifyStatus] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [errors, setErrors] = useState({});
   const [validationResult, setValidationResult] = useState(null);
   const [dbInstance, setDbInstance] = useState(db || null);
   const [sqlSearch, setSqlSearch] = useState('');
@@ -336,8 +335,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
       storeReport(report);
       setGenStepStatus(genStatus.PENDING);
       setSqlText('');
-    } catch (err) {
-      setErrors((e) => ({ ...e, analysis: err.message }));
     } finally { setBusy(false); }
   }, [dbInstance, schema, storeReport]);
 
@@ -385,7 +382,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
       notify('SQL generated successfully');
     } catch (err) {
       setGenStepStatus(genStatus.FAILED);
-      setErrors((e) => ({ ...e, generate: err.message }));
       notify(err.message || 'SQL generation failed', 'error');
     } finally { setGenerating(false); }
   }, [dbInstance, schema, plan, storeReport]);
@@ -466,7 +462,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
   const lineCount = sqlText ? sqlText.split('\n').length : 0;
 
   const provider = getProvider(selectedProvider);
-  const canContinue = !!validationSuccess;
   const progress = ((step + 1) / STEPS.length) * 100;
 
   const genSteps = [
@@ -476,80 +471,67 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
     { key: 'verify', label: 'Verify Objects', status: verifyStatus?.ok ? genStatus.COMPLETED : verifyStatus ? genStatus.FAILED : genStatus.PENDING },
   ];
 
-  const stepTitles = [
-    'Welcome',
-    'Database Provider',
-    'Connection Details',
-    'Verify Connection',
-    'Schema Analysis',
-    'Installation Plan',
-    'Generate & Execute SQL',
-    'Verify Installation',
-    'Final Validation',
-    'Setup Complete',
-  ];
-
   return (
-    <div className="setup-wizard">
-      {/* Sidebar */}
-      <div className="setup-wizard-sidebar">
-        <div className="setup-wizard-sidebar-brand">
-          <div className="setup-wizard-sidebar-logo">C</div>
-          <div>
-            <div className="setup-wizard-sidebar-title">CoreX Setup</div>
-            <div className="setup-wizard-sidebar-sub">Configuration</div>
+    <div className="ss-shell">
+      {/* HEADER */}
+      <header className="ss-header">
+        <div className="ss-header-left">
+          <div className="ss-logo"><Icon name="database" size={26} /></div>
+          <div className="ss-header-title">
+            <h1>Setup Wizard</h1>
+            <p>Guided setup for your application</p>
           </div>
         </div>
-
-        <nav className="setup-wizard-sidebar-nav">
-          {STEPS.map((s, i) => {
-            const isCompleted = completedSteps.has(i);
-            const isActive = i === step;
-            const isLocked = i > maxAccessible + 1;
-            return (
-              <button
-                key={s.id}
-                className={`setup-wizard-sidebar-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
-                onClick={() => goTo(i)}
-                disabled={isLocked}
-                type="button"
-              >
-                <span className="setup-wizard-sidebar-dot">
-                  {isCompleted ? <Icon name="check" size={11} /> : i + 1}
-                </span>
-                <span className="setup-wizard-sidebar-label">{s.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="setup-wizard-sidebar-progress">
-          <div className="setup-wizard-sidebar-progress-label">
-            <span>{step + 1} of {STEPS.length}</span>
-            <span>{Math.round(progress)}%</span>
-          </div>
-          <div className="setup-wizard-sidebar-progress-bar">
-            <div className="setup-wizard-sidebar-progress-fill" style={{ width: `${progress}%` }} />
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <ThemeToggle />
+          <button className="ss-btn-help" type="button"><Icon name="info" size={16} /> Need Help?</button>
         </div>
-      </div>
+      </header>
 
-      {/* Main */}
-      <div className="setup-wizard-main">
-        {/* Topbar */}
-        <div className="setup-wizard-topbar">
-          <div>
-            <div className="setup-wizard-topbar-title">{stepTitles[step]}</div>
-            <div className="setup-wizard-topbar-step">Step {step + 1} of {STEPS.length}</div>
+      {/* BODY: 3-col layout */}
+      <div className="ss-body">
+        {/* SIDEBAR — 10 steps with numbered circles */}
+        <aside className="ss-sidebar">
+          <div className="ss-step-list">
+            {STEPS.map((s, i) => {
+              const isCompleted = completedSteps.has(i);
+              const isActive = i === step;
+              const isLocked = i > maxAccessible + 1;
+              return (
+                <div
+                  key={s.id}
+                  className={`ss-step-row${isActive ? ' ss-step-active' : ''}`}
+                  style={{ opacity: isLocked ? 0.45 : 1 }}
+                >
+                  <div className="ss-connector" />
+                  <button
+                    type="button"
+                    className={`ss-num-circle${isCompleted ? ' ss-done' : ''}${isActive ? ' ss-current' : ''}`}
+                    onClick={() => goTo(i)}
+                    disabled={isLocked}
+                    style={{ cursor: isLocked ? 'not-allowed' : 'pointer', border: 'none', fontFamily: 'inherit', fontSize: 13, fontWeight: 700 }}
+                  >
+                    {isCompleted ? <Icon name="check" size={14} /> : i + 1}
+                  </button>
+                  <div className="ss-step-text">
+                    <div className="ss-step-title">{s.label}</div>
+                    <div className="ss-step-desc">{s.desc}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div className="setup-wizard-topbar-actions">
-            <ThemeToggle className="setup-wizard-theme-toggle" />
-          </div>
-        </div>
+        </aside>
 
-        {/* Body */}
-        <div className="setup-wizard-body">
-          <div className="setup-wizard-body-inner">
+        {/* MAIN COLUMN — per-step content */}
+        <main className="ss-main">
+          <div className="ss-main-inner">
+
+            {/* Header for current step */}
+            <div style={{ flexShrink: 0, marginBottom: 4 }}>
+              <h2 className="ss-page-title">{STEPS[step].label}</h2>
+              <p className="ss-page-sub">{STEPS[step].desc}</p>
+            </div>
 
             {/* Welcome */}
             {step === 0 && (
@@ -1136,9 +1118,46 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
               </div>
             )}
 
+          </div>{/* ss-main-inner */}
+        </main>{/* ss-main */}
+
+        {/* RIGHT COLUMN — progress ring + next step preview */}
+        <aside className="ss-right-col">
+          <div className="ss-rc-card">
+            <h3>Setup Progress</h3>
+            <div className="ss-progress-wrap">
+              <div className="ss-progress-ring">
+                <svg width="150" height="150" viewBox="0 0 150 150">
+                  <circle cx="75" cy="75" r="64" fill="none" stroke="#E7E9EE" strokeWidth="10" />
+                  <circle cx="75" cy="75" r="64" fill="none" stroke="var(--primary)" strokeWidth="10"
+                    strokeLinecap="round" strokeDasharray="402" strokeDashoffset={402 - (step / (STEPS.length - 1)) * 402} />
+                </svg>
+                <div className="ss-pct">{Math.round(progress)}%</div>
+              </div>
+              <div className="ss-progress-caption">{step + 1} of {STEPS.length} completed</div>
+            </div>
           </div>
-        </div>
-      </div>
+
+          {step < STEPS.length - 1 && (
+            <div className="ss-rc-card">
+              <div className="ss-next-head">
+                <div className="ss-next-num">{step + 2}</div>
+                <div className="ss-next-title">{STEPS[step + 1]?.label}</div>
+              </div>
+              <p className="ss-next-desc">{STEPS[step + 1]?.desc}</p>
+              <div className="ss-illustration-box">
+                <Icon name="arrow-right" size={46} />
+              </div>
+            </div>
+          )}
+        </aside>
+      </div>{/* ss-body */}
+
+      {/* FOOTER */}
+      <footer className="ss-footer-bar">
+        <div className="ss-foot-left"><Icon name="lock" size={14} /> Your data is safe with us. We use industry-standard encryption.</div>
+        <div>Setup Wizard v1.0.0</div>
+      </footer>
 
       {/* Error Modal */}
       {showErrorModal && (
