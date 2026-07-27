@@ -27,7 +27,7 @@ import Settings from './pages/Settings.jsx';
 import CreateInvoice from './pages/invoices/CreateInvoice.jsx';
 import { PERMISSIONS } from './identity/rbac/permissions.js';
 import { api } from './services/api.js';
-import { isMissingTableError } from './utils/dbErrors.js';
+import { isMissingTableError, isMissingColumnError } from './utils/dbErrors.js';
 
 function ProtectedRoute({ children, permission }) {
   const { isAuthenticated } = useAuth();
@@ -88,7 +88,6 @@ function AppRoutes() {
     // anon key — which is the real signal that schema + policies are installed.
     const failedTables = requiredTables.filter((_, i) => checks[i].error);
     if (failedTables.length > 0) {
-      // Check if _schema_version has any rows to determine "ever installed"
       let everInstalled = false;
       try {
         const { data, error } = await database.supabase
@@ -96,16 +95,12 @@ function AppRoutes() {
           .select('version')
           .order('applied_at', { ascending: false })
           .limit(1);
-        if (!error && data && data.length > 0) {
-          everInstalled = true;
-        }
-      } catch {
-        everInstalled = false;
-      }
+        if (!error && data && data.length > 0) everInstalled = true;
+      } catch {}
       return { compatible: false, missingCount: failedTables.length, everInstalled };
     }
 
-    // All tables accessible — now verify version and required functions
+    // All tables accessible — now verify version
     const { data: versionRows, error: versionError } = await database.supabase
       .from('_schema_version')
       .select('version')
@@ -118,21 +113,62 @@ function AppRoutes() {
     let versionMatch = current == required;
     if (!versionMatch && current == null) versionMatch = true;
 
-    // Probe required functions to catch partial installations where tables
-    // exist but triggers, RLS policies, or helper functions are missing.
-    let functionsOk = false;
-    try {
-      const { error: fnError } = await database.supabase.rpc('check_admin_exists');
-      functionsOk = !fnError;
-    } catch {}
+    let compatible = versionMatch;
+    let missingCount = versionMatch ? 0 : 1;
 
-    const missing = [];
-    if (!versionMatch) missing.push('schema version');
-    if (!functionsOk) missing.push('required functions');
+    // Thorough check via exec_sql (if installed). This catches missing
+    // triggers, RLS policies, and functions that the table-level check
+    // above would miss.
+    try {
+      const [triggerRows, policyRows, funcRows] = await Promise.all([
+        database.query(
+          `SELECT t.tgname::text FROM pg_catalog.pg_trigger t
+           JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid
+           JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+           WHERE NOT t.tgisinternal AND n.nspname = 'auth'
+             AND c.relname = 'users' AND t.tgname = 'on_auth_user_created'`
+        ),
+        database.query(
+          `SELECT COUNT(*) as count FROM pg_policies WHERE schemaname = 'public'`
+        ),
+        database.query(
+          `SELECT COUNT(*) as count FROM pg_catalog.pg_proc
+           WHERE pronamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'public')
+             AND prokind = 'f' AND proname IN ('exec_sql','check_admin_exists','is_admin_user')`
+        ),
+      ]);
+
+      const triggerExists = triggerRows && triggerRows.length > 0;
+      const policiesExist = parseInt(policyRows?.[0]?.count || 0, 10) > 0;
+      const functionsOk = parseInt(funcRows?.[0]?.count || 0, 10) >= 3;
+
+      if (!triggerExists) missingCount++;
+      if (!policiesExist) missingCount++;
+      if (!functionsOk) missingCount++;
+      compatible = versionMatch && triggerExists && policiesExist && functionsOk;
+    } catch {
+      // exec_sql not installed — fall back to lightweight probes
+      let functionsOk = false;
+      try {
+        const { error: fnError } = await database.supabase.rpc('check_admin_exists');
+        functionsOk = !fnError;
+      } catch {}
+
+      let columnsOk = true;
+      try {
+        const { error: colError } = await database.supabase.from('users').select('username').limit(1);
+        if (colError && isMissingColumnError(colError)) columnsOk = false;
+      } catch {}
+
+      if (!functionsOk) missingCount++;
+      if (!columnsOk) missingCount++;
+      compatible = versionMatch && functionsOk && columnsOk;
+      if (!compatible && missingCount === 0) missingCount = 1;
+    }
 
     return {
-      compatible: missing.length === 0,
-      missingCount: missing.length,
+      compatible,
+      missingCount,
       everInstalled: everInstalled || versionMatch,
     };
   }

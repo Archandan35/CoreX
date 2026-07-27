@@ -176,7 +176,7 @@ export class SqlGenerator {
       for (const [col] of Object.entries(def.unique)) {
         if (this._usedUnique.has(col)) continue;
         this._usedUnique.add(col);
-        blocks.push(`DO $$ BEGIN ALTER TABLE ${def.table} ADD CONSTRAINT ${def.table}_${col}_key UNIQUE (${col}); EXCEPTION WHEN duplicate_object THEN NULL; END $$;`);
+        blocks.push(`DO $$ BEGIN ALTER TABLE ${def.table} ADD CONSTRAINT ${def.table}_${col}_key UNIQUE (${col}); EXCEPTION WHEN SQLSTATE '42710' OR SQLSTATE '42P07' THEN NULL; END $$;`);
       }
     }
     return blocks;
@@ -193,7 +193,7 @@ export class SqlGenerator {
         this._usedUnique.add(col);
         const keyName = `${def.table}_${col}_key`;
         if (!constraints.some((c) => c.constraint === keyName) && allTableNames.has(def.table)) {
-          blocks.push(`DO $$ BEGIN ALTER TABLE ${def.table} ADD CONSTRAINT ${def.table}_${col}_key UNIQUE (${col}); EXCEPTION WHEN duplicate_object THEN NULL; END $$;`);
+          blocks.push(`DO $$ BEGIN ALTER TABLE ${def.table} ADD CONSTRAINT ${def.table}_${col}_key UNIQUE (${col}); EXCEPTION WHEN SQLSTATE '42710' OR SQLSTATE '42P07' THEN NULL; END $$;`);
         }
       }
     }
@@ -330,13 +330,15 @@ export class SqlGenerator {
   _genConstraint(item) {
     const table = item.table;
     const name = item.constraint;
+    const esc = (v) => v.replace(/'/g, "''");
+    const wrap = (sql) => `DO $$ BEGIN ${sql}; EXCEPTION WHEN SQLSTATE '42710' OR SQLSTATE '42P07' THEN NULL; END $$;`;
     if (item.type === 'PRIMARY KEY' || name?.startsWith('PK_')) {
-      return 'DO $$ BEGIN ALTER TABLE ' + table + ' ADD PRIMARY KEY (' + (item.column || 'id') + '); EXCEPTION WHEN duplicate_object THEN NULL; END $$;';
+      return wrap(`ALTER TABLE ${table} ADD PRIMARY KEY (${esc(item.column || 'id')})`);
     }
     if (item.type === 'UNIQUE' || name?.includes('_key')) {
-      return 'DO $$ BEGIN ALTER TABLE ' + table + ' ADD CONSTRAINT ' + table + '_' + (item.column || 'email') + '_key UNIQUE (' + (item.column || 'email') + '); EXCEPTION WHEN duplicate_object THEN NULL; END $$;';
+      return wrap(`ALTER TABLE ${table} ADD CONSTRAINT ${table}_${esc(item.column || 'email')}_key UNIQUE (${esc(item.column || 'email')})`);
     }
-    return 'DO $$ BEGIN ALTER TABLE ' + table + ' ADD CONSTRAINT ' + name + ' UNIQUE (' + (item.column || 'id') + '); EXCEPTION WHEN duplicate_object THEN NULL; END $$;';
+    return wrap(`ALTER TABLE ${table} ADD CONSTRAINT ${name} UNIQUE (${esc(item.column || 'id')})`);
   }
 
   _genIndex(item) {
