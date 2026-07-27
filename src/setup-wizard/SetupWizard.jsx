@@ -349,15 +349,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
     }
     if (step !== 3) validatedStep3.current = false;
   }, [step, handleValidate]);
-  const analyzedStep4 = useRef(false);
-  useEffect(() => {
-    if (step === 4 && !analyzedStep4.current && !busy && !analysis) {
-      analyzedStep4.current = true;
-      handleAnalyze();
-    }
-    if (step !== 4) analyzedStep4.current = false;
-  }, [step, handleAnalyze, busy, analysis]);
-
   const autoSkipRef = useRef(false);
   useEffect(() => {
     if (step === 5 && plan && analysis && !autoSkipRef.current) {
