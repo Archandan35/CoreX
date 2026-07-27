@@ -160,7 +160,17 @@ function AppRoutes() {
       setDbHealth(health);
 
       if (health.compatible) {
-        setAppState('complete');
+        // Check for email confirmation redirect (PKCE code or implicit token
+        // in the URL). When present, skip Step 10 wizard and go straight to
+        // auth so the user lands on login/dashboard after confirming.
+        const hash = typeof window !== 'undefined' ? window.location.hash : '';
+        const search = typeof window !== 'undefined' ? window.location.search : '';
+        const isAuthRedirect = hash.includes('access_token=') || search.includes('code=');
+        if (isAuthRedirect) {
+          await checkAdmin(database);
+        } else {
+          setAppState('complete');
+        }
       } else if (health.everInstalled) {
         // Previously installed, now degraded: never force the Setup Wizard
         // again. Continue loading normally straight into the authentication
