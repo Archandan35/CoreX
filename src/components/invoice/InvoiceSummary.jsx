@@ -1,134 +1,192 @@
-import { useState, useEffect } from 'react';
-import Card from '../ui/Card.jsx';
-import Button from '../ui/Button.jsx';
-import Select from '../ui/Select.jsx';
-import Toggle from '../ui/Toggle.jsx';
-import { Field, Input } from '../ui/Field.jsx';
-import Icon from '../ui/Icon.jsx';
 import { round2 } from '../../business/invoice/calculations.js';
-import { DISCOUNT_TYPE } from '../../constants/index.js';
+import Icon from '../ui/Icon.jsx';
 
 export default function InvoiceSummary({
-  enableTds,
-  onTds,
-  enableTcs,
-  onTcs,
-  extraDiscountType,
-  extraDiscountValue,
-  onExtraDiscountType,
-  onExtraDiscountValue,
-  taxableAmount,
-  taxTotal,
-  cgst,
-  sgst,
-  igst,
-  discountTotal,
-  additionalChargesTotal,
-  roundOff,
-  onRoundOff,
-  beforeRound,
-  grandTotal,
+  enableTds, onTds, enableTcs, onTcs,
+  extraDiscountValue, onExtraDiscountValue,
+  taxableAmount, taxTotal, discountTotal,
+  roundOff, onRoundOff, beforeRound, grandTotal,
+  selectedBank, banks, onSelectBank, onAddNewBank,
+  payments, onAddPayment, onRemovePayment, onUpdatePayment,
+  markFullyPaid, onMarkFullyPaid, balanceDue,
+  signatures, selectedSignature, onSelectSignature, onAddNewSignature,
+  sigName,
 }) {
-  const [showExtraDiscount, setShowExtraDiscount] = useState(!!extraDiscountValue && extraDiscountValue > 0);
-
-  useEffect(() => {
-    if (extraDiscountValue && Number(extraDiscountValue) > 0) setShowExtraDiscount(true);
-  }, [extraDiscountValue]);
-
   return (
-    <Card className="inv-card inv-summary-card">
-      <div className="inv-summary">
-        <div className="inv-summary-toggles">
-          <div className="inv-summary-toggle-row">
-            <Toggle checked={enableTds} onChange={onTds} label="TDS" />
-            <span className="inv-summary-toggle-label">TDS</span>
-          </div>
-          <div className="inv-summary-toggle-row">
-            <Toggle checked={enableTcs} onChange={onTcs} label="TCS" />
-            <span className="inv-summary-toggle-label">TCS</span>
-          </div>
+    <section className="inv-totals-card">
+      <div className="inv-tds-row">
+        <div className="inv-tds-item">
+          <button className={`inv-switch${enableTds ? ' inv-on' : ''}`} onClick={() => onTds(!enableTds)} aria-label="TDS" />
+          TDS
         </div>
-
-        <div className="inv-summary-discount">
-          <span className="inv-summary-discount-label">Extra Discount</span>
-          <div className="inv-summary-discount-controls">
-            <Select
-              options={[
-                { value: DISCOUNT_TYPE.PERCENT, label: '%' },
-                { value: DISCOUNT_TYPE.FIXED, label: 'Flat' },
-              ]}
-              value={extraDiscountType || DISCOUNT_TYPE.PERCENT}
-              onChange={onExtraDiscountType}
-              className="inv-summary-select"
-            />
-            <Input
-              type="number"
-              min="0"
-              step="any"
-              value={extraDiscountValue ?? ''}
-              onChange={(e) => onExtraDiscountValue(e.target.value === '' ? '' : Number(e.target.value))}
-              placeholder="0"
-              className="inv-summary-discount-input"
-            />
-          </div>
-        </div>
-
-        <div className="inv-summary-lines">
-          <div className="inv-summary-line">
-            <span>Taxable Amount</span>
-            <span>{round2(taxableAmount)}</span>
-          </div>
-          {cgst > 0 && (
-            <div className="inv-summary-line">
-              <span>CGST</span>
-              <span>{round2(cgst)}</span>
-            </div>
-          )}
-          {sgst > 0 && (
-            <div className="inv-summary-line">
-              <span>SGST</span>
-              <span>{round2(sgst)}</span>
-            </div>
-          )}
-          {igst > 0 && (
-            <div className="inv-summary-line">
-              <span>IGST</span>
-              <span>{round2(igst)}</span>
-            </div>
-          )}
-          <div className="inv-summary-line">
-            <span>Total Tax</span>
-            <span>{round2(taxTotal)}</span>
-          </div>
-          {discountTotal > 0 && (
-            <div className="inv-summary-line">
-              <span>Total Discount</span>
-              <span>-{round2(discountTotal)}</span>
-            </div>
-          )}
-          {additionalChargesTotal > 0 && (
-            <div className="inv-summary-line">
-              <span>Additional Charges</span>
-              <span>{round2(additionalChargesTotal)}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="inv-summary-roundoff">
-          <div className="inv-summary-line">
-            <span>Round Off</span>
-            <div className="inv-summary-roundoff-control">
-              <Toggle checked={roundOff} onChange={onRoundOff} label="Round Off" />
-              <span className="inv-summary-roundoff-val">{roundOff ? round2(beforeRound - Math.floor(beforeRound)) : '0.00'}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="inv-summary-total">
-          <span>Total Amount</span>
-          <span className="inv-summary-total-val">{round2(grandTotal)}</span>
+        <div className="inv-tds-item">
+          <button className={`inv-switch${enableTcs ? ' inv-on' : ''}`} onClick={() => onTcs(!enableTcs)} aria-label="TCS" />
+          TCS
         </div>
       </div>
-    </Card>
+
+      <div className="inv-extra-discount-row">
+        <div className="inv-pill-select">
+          Extra Discount <Icon name="chevron-down" size={12} />
+        </div>
+        <div className="inv-num-select">
+          {extraDiscountValue || 0} <Icon name="chevron-down" size={12} />
+        </div>
+      </div>
+
+      <div className="inv-totals-lines">
+        <div className="inv-total-line"><span>Taxable Amount</span><span>₹{round2(taxableAmount)}</span></div>
+        <div className="inv-total-line"><span>Total Tax</span><span>₹{round2(taxTotal)}</span></div>
+        <div className="inv-total-line inv-roundoff-line">
+          <span className="inv-roundoff-label">Round Off</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button className={`inv-switch${roundOff ? ' inv-on' : ''}`} onClick={() => onRoundOff(!roundOff)} aria-label="Round Off" />
+            ₹{roundOff ? round2(beforeRound - Math.floor(beforeRound)) : '0.00'}
+          </span>
+        </div>
+      </div>
+
+      <div className="inv-totals-divider" />
+
+      <div className="inv-grand-total">
+        <span className="inv-gt-label">Total Amount</span>
+        <span className="inv-gt-amount">₹ {round2(grandTotal)}</span>
+      </div>
+      <div className="inv-total-discount-line">
+        <span className="inv-label">Total Discount</span><span>₹{round2(discountTotal)}</span>
+      </div>
+
+      <div className="inv-panel-section-head">
+        <div className="inv-panel-label">Select Bank <Icon name="info" size={13} /></div>
+        <button className="inv-panel-add-link" onClick={onAddNewBank}>
+          <Icon name="plus" size={12} /> Add New Bank
+        </button>
+      </div>
+      <div className="inv-bank-select" onClick={() => {}}>
+        <div className="inv-bank-left">
+          <div className="inv-bank-icon"><Icon name="landmark" size={14} /></div>
+          {selectedBank ? `${selectedBank.bank_name} (${selectedBank.account_number?.slice(-4) || '0000'})` : 'Select a bank...'}
+        </div>
+        <Icon name="chevron-down" size={14} />
+      </div>
+
+      <div className="inv-payment-header">
+        <span className="inv-pay-label">Add payment (Payment Notes, Amount and Mode)</span>
+        <label className="inv-mark-paid">
+          <input type="checkbox" checked={markFullyPaid} onChange={(e) => onMarkFullyPaid(e.target.checked)} />
+          Mark as fully paid
+        </label>
+      </div>
+
+      {payments.map((pmt, i) => (
+        <div key={i} className="inv-payment-table" style={{ position: 'relative' }}>
+          <div className="inv-pay-headers">
+            <span>Notes</span>
+            <span>Amount</span>
+            <span>Payment Date</span>
+            <span>Payment Mode</span>
+          </div>
+          <div className="inv-pay-inputs">
+            <div className="inv-pay-cell">
+              <input
+                type="text"
+                value={pmt.notes || ''}
+                onChange={(e) => onUpdatePayment(i, { ...pmt, notes: e.target.value })}
+                placeholder="Advance received, UTR number"
+              />
+            </div>
+            <div className="inv-pay-cell">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={pmt.amount ?? ''}
+                onChange={(e) => onUpdatePayment(i, { ...pmt, amount: Number(e.target.value) || 0 })}
+                placeholder="0"
+              />
+            </div>
+            <div className="inv-pay-cell" style={{ position: 'relative' }}>
+              <span>{pmt.paymentDate || 'Select date'}</span>
+              <input
+                type="date"
+                value={pmt.paymentDate || ''}
+                onChange={(e) => onUpdatePayment(i, { ...pmt, paymentDate: e.target.value })}
+                style={{ opacity: 0, position: 'absolute', width: '100%', height: '100%', left: 0, top: 0, cursor: 'pointer' }}
+              />
+              <Icon name="calendar" size={14} />
+            </div>
+            <div className="inv-pay-cell" style={{ cursor: 'pointer' }} onClick={() => {}}>
+              <span className="inv-pay-placeholder">{pmt.mode || 'Select mode'}</span>
+              <Icon name="chevron-down" size={14} />
+            </div>
+          </div>
+          <button
+            type="button"
+            className="inv-table-remove-btn"
+            onClick={() => onRemovePayment(i)}
+            aria-label="Remove payment"
+            style={{ position: 'absolute', top: 4, right: 4 }}
+          >
+            <Icon name="x" size={12} />
+          </button>
+        </div>
+      ))}
+
+      {payments.length === 0 && (
+        <div className="inv-payment-table">
+          <div className="inv-pay-headers">
+            <span>Notes</span>
+            <span>Amount</span>
+            <span>Payment Date</span>
+            <span>Payment Mode</span>
+          </div>
+          <div className="inv-pay-inputs">
+            <div className="inv-pay-cell"><input type="text" placeholder="Advance received, UTR number" /></div>
+            <div className="inv-pay-cell"><input type="text" value="0" readOnly /></div>
+            <div className="inv-pay-cell" style={{ position: 'relative' }}>
+              <span>{new Date().toLocaleDateString('en-GB')}</span>
+              <Icon name="calendar" size={14} />
+            </div>
+            <div className="inv-pay-cell" style={{ cursor: 'pointer' }}>
+              <span className="inv-pay-placeholder">Select mode</span>
+              <Icon name="chevron-down" size={14} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedBank && (
+        <div className="inv-bank-tag-row">
+          <div className="inv-bank-tag">
+            {selectedBank.bank_name}... <Icon name="chevron-down" size={12} />
+          </div>
+        </div>
+      )}
+
+      <button className="inv-split-payment-link" onClick={onAddPayment}>
+        <Icon name="plus" size={12} /> Split Payment
+      </button>
+
+      <div className="inv-signature-head">
+        <div className="inv-sig-label">
+          Select Signature <span className="inv-sig-required-dot" />
+        </div>
+        <button className="inv-panel-add-link" onClick={onAddNewSignature}>
+          <Icon name="plus" size={12} /> Add New Signature
+        </button>
+      </div>
+      <div className="inv-signature-grid">
+        <div className="inv-sig-select" onClick={() => {}}>
+          {selectedSignature?.name || 'No Signature'}
+          <Icon name="chevron-down" size={14} />
+        </div>
+        <div className="inv-sig-preview">
+          <div className="inv-sig-cap">Signature on the document</div>
+          <div className="inv-sig-box">
+            <span>{sigName || 'Signature'}</span>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

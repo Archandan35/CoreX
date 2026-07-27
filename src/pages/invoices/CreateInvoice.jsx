@@ -3,31 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import InvoiceHeader from '../../components/invoice/InvoiceHeader.jsx';
 import InvoiceDetails from '../../components/invoice/InvoiceDetails.jsx';
 import CustomHeaders from '../../components/invoice/CustomHeaders.jsx';
-import ProductsToolbar from '../../components/invoice/ProductsToolbar.jsx';
-import CustomerModal from '../../components/invoice/CustomerModal.jsx';
-import ProductModal from '../../components/invoice/ProductModal.jsx';
+import ProductsToolbar, { InvoiceDiscount } from '../../components/invoice/ProductsToolbar.jsx';
 import InvoiceTable from '../../components/invoice/InvoiceTable.jsx';
-import InvoiceDiscount from '../../components/invoice/InvoiceDiscount.jsx';
 import InvoiceNotes from '../../components/invoice/InvoiceNotes.jsx';
-import InvoiceOptions from '../../components/invoice/InvoiceOptions.jsx';
 import InvoiceSummary from '../../components/invoice/InvoiceSummary.jsx';
-import InvoiceBank from '../../components/invoice/InvoiceBank.jsx';
-import InvoiceSignature from '../../components/invoice/InvoiceSignature.jsx';
 import InvoiceFooter from '../../components/invoice/InvoiceFooter.jsx';
+import ProductModal from '../../components/invoice/ProductModal.jsx';
+import CustomerModal from '../../components/invoice/CustomerModal.jsx';
+import Modal from '../../components/ui/Modal.jsx';
+import Button from '../../components/ui/Button.jsx';
+import { Field, Input } from '../../components/ui/Field.jsx';
 import NotificationToast from '../../components/ui/Toast.jsx';
+import Icon from '../../components/ui/Icon.jsx';
 import { invoiceService } from '../../services/invoice/index.js';
 import { computeInvoice } from '../../business/invoice/calculations.js';
 import {
-  validateInvoice, isValid, validateCustomer, validateProduct,
-  validateAttachment, withinAttachmentLimit,
+  validateInvoice, isValid, validateCustomer, validateProduct, validateBank,
 } from '../../business/invoice/validation.js';
-import { DEFAULT_CUSTOM_HEADERS, DEFAULT_DUE_DATE_OFFSET_DAYS, INVOICE_NUMBER_PAD } from '../../constants/index.js';
-import { useDebounce } from '../../hooks/useDebounce.js';
+import {
+  DEFAULT_CUSTOM_HEADERS, DEFAULT_DUE_DATE_OFFSET_DAYS, PAYMENT_MODE_OPTIONS,
+} from '../../constants/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
-
-function padNumber(num, width) {
-  return String(num).padStart(width, '0');
-}
 
 function generateKey() {
   return Math.random().toString(36).substring(2, 10);
@@ -36,30 +32,28 @@ function generateKey() {
 export default function CreateInvoice() {
   const navigate = useNavigate();
 
-  // --- Entity data ---
+  // --- Data ---
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [banks, setBanks] = useState([]);
   const [signatures, setSignatures] = useState([]);
-  const [companyName, setCompanyName] = useState('');
 
-  // --- Header state ---
+  // --- Header ---
   const [prefix, setPrefix] = useState('INV');
-  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [invoiceNumber, setInvoiceNumber] = useState('159');
   const [numberUnique, setNumberUnique] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // --- Invoice details ---
+  // --- Customer ---
   const [customerQuery, setCustomerQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState('');
   const [reference, setReference] = useState('');
 
-  // --- Custom headers ---
+  // --- Headers ---
   const [headerDefs, setHeaderDefs] = useState(DEFAULT_CUSTOM_HEADERS);
-  const [headerValues, setHeaderValues] = useState({});
   const [headerSettingsOpen, setHeaderSettingsOpen] = useState(false);
 
   // --- Products ---
@@ -67,7 +61,7 @@ export default function CreateInvoice() {
   const [productQuery, setProductQuery] = useState('');
   const [defaultQty, setDefaultQty] = useState(1);
   const [items, setItems] = useState([]);
-  const [showDescription, setShowDescription] = useState(false);
+  const [showDescription, setShowDescription] = useState(true);
   const [aiBusy, setAiBusy] = useState(false);
 
   // --- Discount ---
@@ -79,7 +73,7 @@ export default function CreateInvoice() {
   const [notes, setNotes] = useState([]);
   const [terms, setTerms] = useState([]);
 
-  // --- Options ---
+  // --- Toggles ---
   const [reverseCharge, setReverseCharge] = useState(false);
   const [eWaybill, setEWaybill] = useState(false);
   const [eInvoice, setEInvoice] = useState(false);
@@ -101,68 +95,40 @@ export default function CreateInvoice() {
   // --- Modals ---
   const [customerModal, setCustomerModal] = useState({ open: false, mode: 'create', customer: null });
   const [productModal, setProductModal] = useState({ open: false, mode: 'create', product: null });
+  const [bankModal, setBankModal] = useState(false);
+  const [signatureModal, setSignatureModal] = useState(false);
+  const [bankForm, setBankForm] = useState({ bank_name: '', account_number: '', ifsc: '', branch: '', upi_id: '' });
+  const [sigName, setSigName] = useState('Maruf');
 
   // --- Validation ---
   const [errors, setErrors] = useState({});
   const initialized = useRef(false);
 
-  // Debonce for form validation
-  const debouncedItems = useDebounce(items, 300);
-
-  // --- Load initial data ---
+  // --- Load data ---
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
-    loadData();
-  }, []);
-
-  async function loadData() {
-    try {
-      const [custData, prodData, bankData, sigData] = await Promise.all([
-        invoiceService.listCustomers(),
-        invoiceService.listProducts(),
-        invoiceService.listBanks(),
-        invoiceService.listSignatures(),
-      ]);
-      setCustomers(Array.isArray(custData) ? custData : []);
-      const pd = prodData || {};
-      setProducts(Array.isArray(pd.products) ? pd.products : []);
-      setCategories(Array.isArray(pd.categories) ? pd.categories : []);
-      setBanks(Array.isArray(bankData) ? bankData : []);
-      setSignatures(Array.isArray(sigData) ? sigData : []);
-    } catch {
-      setCustomers([]);
-      setProducts([]);
-      setCategories([]);
-      setBanks([]);
-      setSignatures([]);
-    }
-
-    try {
-      const num = await invoiceService.nextInvoiceNumber('INV');
-      if (num) setInvoiceNumber(num);
-    } catch {}
-  }
-
-  // --- Invoice number generation ---
-  const checkNumberUnique = useCallback(async () => {
-    try {
-      const num = await invoiceService.nextInvoiceNumber(prefix);
-      setNumberUnique(!num || num === invoiceNumber);
-    } catch {
-      setNumberUnique(true);
-    }
-  }, [prefix, invoiceNumber]);
-
-  const handlePrefixChange = useCallback(async (newPrefix) => {
-    setPrefix(newPrefix);
-    try {
-      const num = await invoiceService.nextInvoiceNumber(newPrefix);
-      if (num) setInvoiceNumber(num);
-    } catch {}
+    Promise.all([
+      invoiceService.listCustomers().then(d => setCustomers(Array.isArray(d) ? d : [])).catch(() => {}),
+      invoiceService.listProducts().then(d => {
+        const pd = d || {};
+        setProducts(Array.isArray(pd.products) ? pd.products : []);
+        setCategories(Array.isArray(pd.categories) ? pd.categories : []);
+      }).catch(() => {}),
+      invoiceService.listBanks().then(d => setBanks(Array.isArray(d) ? d : [])).catch(() => {}),
+      invoiceService.listSignatures().then(d => setSignatures(Array.isArray(d) ? d : [])).catch(() => {}),
+    ]);
   }, []);
 
   // --- Auto due date ---
+  useEffect(() => {
+    if (invoiceDate && !dueDate) {
+      const d = new Date(invoiceDate);
+      d.setDate(d.getDate() + DEFAULT_DUE_DATE_OFFSET_DAYS);
+      setDueDate(d.toISOString().split('T')[0]);
+    }
+  }, [invoiceDate, dueDate]);
+
   const autoDueDate = useCallback((invDate) => {
     if (!invDate) return;
     const d = new Date(invDate);
@@ -170,543 +136,369 @@ export default function CreateInvoice() {
     setDueDate(d.toISOString().split('T')[0]);
   }, []);
 
-  useEffect(() => {
-    if (invoiceDate && !dueDate) autoDueDate(invoiceDate);
-  }, [invoiceDate, dueDate, autoDueDate]);
-
   // --- Computed totals ---
   const computed = useMemo(() => {
-    const invoice = {
-      items,
-      extraDiscountType,
-      extraDiscountValue,
-      additionalCharges,
-      roundOff,
-      payments,
-      sameState: selectedCustomer?.state === 'state',
-    };
-    return computeInvoice(invoice);
-  }, [items, extraDiscountType, extraDiscountValue, additionalCharges, roundOff, payments, selectedCustomer]);
+    return computeInvoice({
+      items, extraDiscountType, extraDiscountValue, additionalCharges,
+      roundOff, payments, sameState: false,
+    });
+  }, [items, extraDiscountType, extraDiscountValue, additionalCharges, roundOff, payments]);
 
-  // --- Customer operations ---
+  // --- Customer CRUD ---
   const openCreateCustomer = () => setCustomerModal({ open: true, mode: 'create', customer: null });
-  const closeCustomerModal = () => setCustomerModal((p) => ({ ...p, open: false }));
-
+  const closeCustomerModal = () => setCustomerModal(p => ({ ...p, open: false }));
   const editCustomer = () => {
     if (selectedCustomer) setCustomerModal({ open: true, mode: 'edit', customer: selectedCustomer });
   };
-
   const submitCustomer = async (form) => {
     const errs = validateCustomer(form);
     if (Object.keys(errs).length) return;
     try {
       if (customerModal.mode === 'create') {
-        const newCust = await invoiceService.createCustomer(form);
-        setCustomers((prev) => [...prev, newCust]);
-        setSelectedCustomer(newCust);
-      } else if (customerModal.mode === 'edit' && selectedCustomer) {
-        const updated = await invoiceService.updateCustomer(selectedCustomer.id, form);
-        setCustomers((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
-        setSelectedCustomer(updated);
+        const c = await invoiceService.createCustomer(form);
+        setCustomers(p => [...p, c]);
+        setSelectedCustomer(c);
+      } else if (selectedCustomer) {
+        const c = await invoiceService.updateCustomer(selectedCustomer.id, form);
+        setCustomers(p => p.map(x => x.id === c.id ? c : x));
+        setSelectedCustomer(c);
       }
       closeCustomerModal();
-    } catch (e) {
-      notificationManager.error('Customer', e.message);
-    }
+    } catch (e) { notificationManager.error('Customer', e.message); }
   };
 
-  // --- Product operations ---
+  // --- Product ---
   const openCreateProduct = () => setProductModal({ open: true, mode: 'create', product: null });
-  const closeProductModal = () => setProductModal((p) => ({ ...p, open: false }));
-
+  const closeProductModal = () => setProductModal(p => ({ ...p, open: false }));
   const submitProduct = async (form) => {
     const errs = validateProduct(form);
     if (Object.keys(errs).length) return;
     try {
-      const newProd = await invoiceService.createProduct(form);
-      setProducts((prev) => [...prev, newProd]);
+      const p = await invoiceService.createProduct(form);
+      setProducts(prev => [...prev, p]);
       closeProductModal();
-    } catch (e) {
-      notificationManager.error('Product', e.message);
-    }
+    } catch (e) { notificationManager.error('Product', e.message); }
   };
 
-  // --- Add product to items ---
   const addProduct = useCallback((product) => {
-    setItems((prev) => [
-      ...prev,
-      {
-        _key: generateKey(),
-        name: product.name,
-        description: product.description || '',
-        quantity: Number(defaultQty) || 1,
-        unitPrice: Number(product.unit_price) || 0,
-        taxRate: Number(product.tax_rate) || 0,
-        discountType: 'percent',
-        discountValue: 0,
-      },
-    ]);
+    setItems(prev => [...prev, {
+      _key: generateKey(), name: product.name || product, description: product.description || '',
+      quantity: Number(defaultQty) || 1, unitPrice: Number(product.unit_price) || 0,
+      taxRate: Number(product.tax_rate) || 0, discountType: 'percent', discountValue: 0,
+    }]);
     setProductQuery('');
   }, [defaultQty]);
 
   const addNewProductLine = useCallback(() => {
-    setItems((prev) => [
-      ...prev,
-      {
-        _key: generateKey(),
-        name: '',
-        description: '',
-        quantity: 1,
-        unitPrice: 0,
-        taxRate: 0,
-        discountType: 'percent',
-        discountValue: 0,
-      },
-    ]);
+    setItems(prev => [...prev, {
+      _key: generateKey(), name: '', description: '',
+      quantity: 1, unitPrice: 0, taxRate: 0, discountType: 'percent', discountValue: 0,
+    }]);
   }, []);
 
-  // --- Line item editing ---
   const onChangeItem = useCallback((index, updated) => {
-    setItems((prev) => {
-      const next = [...prev];
-      next[index] = updated;
-      return next;
-    });
+    setItems(prev => { const n = [...prev]; n[index] = updated; return n; });
   }, []);
 
   const onRemoveItem = useCallback((index) => {
-    setItems((prev) => prev.filter((_, i) => i !== index));
+    setItems(prev => prev.filter((_, i) => i !== index));
   }, []);
 
   // --- Discount ---
-  const addCharge = useCallback((charge) => {
-    setAdditionalCharges((prev) => [...prev, charge]);
-  }, []);
+  const addCharge = useCallback((c) => setAdditionalCharges(p => [...p, c]), []);
+  const removeCharge = useCallback((i) => setAdditionalCharges(p => p.filter((_, j) => j !== i)), []);
+  const updateCharge = useCallback((i, c) => setAdditionalCharges(p => { const n = [...p]; n[i] = c; return n; }), []);
 
-  const removeCharge = useCallback((index) => {
-    setAdditionalCharges((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const updateCharge = useCallback((index, updated) => {
-    setAdditionalCharges((prev) => {
-      const next = [...prev];
-      next[index] = updated;
-      return next;
-    });
-  }, []);
-
-  // --- Notes & Terms ---
-  const addNote = useCallback(() => {
-    setNotes((prev) => [...prev, { id: generateKey(), text: '' }]);
-  }, []);
-
-  const removeNote = useCallback((index) => {
-    setNotes((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const updateNote = useCallback((index, updated) => {
-    setNotes((prev) => {
-      const next = [...prev];
-      next[index] = updated;
-      return next;
-    });
-  }, []);
-
-  const addTerm = useCallback(() => {
-    setTerms((prev) => [...prev, { id: generateKey(), text: '' }]);
-  }, []);
-
-  const removeTerm = useCallback((index) => {
-    setTerms((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const updateTerm = useCallback((index, updated) => {
-    setTerms((prev) => {
-      const next = [...prev];
-      next[index] = updated;
-      return next;
-    });
-  }, []);
+  // --- Notes ---
+  const addNote = useCallback(() => setNotes(p => [...p, { id: generateKey(), text: '' }]), []);
+  const removeNote = useCallback((i) => setNotes(p => p.filter((_, j) => j !== i)), []);
+  const updateNote = useCallback((i, n) => setNotes(p => { const next = [...p]; next[i] = n; return next; }), []);
+  const addTerm = useCallback(() => setTerms(p => [...p, { id: generateKey(), text: '' }]), []);
+  const removeTerm = useCallback((i) => setTerms(p => p.filter((_, j) => j !== i)), []);
+  const updateTerm = useCallback((i, t) => setTerms(p => { const next = [...p]; next[i] = t; return next; }), []);
 
   // --- AI ---
   const draftWithAI = useCallback(async () => {
     setAiBusy(true);
     try {
-      const context = `Create an invoice with ${items.length} items. ${selectedCustomer ? `Customer: ${selectedCustomer.name}` : ''}`;
-      const result = await invoiceService.draftInvoiceWithAI(context);
+      const ctx = `Create an invoice with ${items.length} items. ${selectedCustomer ? `Customer: ${selectedCustomer.name}` : ''}`;
+      const result = await invoiceService.draftInvoiceWithAI(ctx);
       if (result?.items) {
-        const mapped = result.items.map((it) => ({
-          _key: generateKey(),
-          name: it.name || '',
-          quantity: Number(it.quantity) || 1,
-          unitPrice: Number(it.unitPrice) || 0,
-          taxRate: Number(it.taxRate) || 0,
-          discountType: 'percent',
-          discountValue: 0,
-        }));
-        setItems(mapped);
+        setItems(result.items.map(it => ({
+          _key: generateKey(), name: it.name || '', quantity: Number(it.quantity) || 1,
+          unitPrice: Number(it.unitPrice) || 0, taxRate: Number(it.taxRate) || 0,
+          discountType: 'percent', discountValue: 0,
+        })));
       }
-      if (result?.notes) setNotes((prev) => [...prev, { id: generateKey(), text: result.notes }]);
-      if (result?.terms) setTerms((prev) => [...prev, { id: generateKey(), text: result.terms }]);
-      notificationManager.success('AI Draft', 'Invoice draft generated successfully.');
+      if (result?.notes) setNotes(p => [...p, { id: generateKey(), text: result.notes }]);
+      if (result?.terms) setTerms(p => [...p, { id: generateKey(), text: result.terms }]);
+      notificationManager.success('AI Draft', 'Invoice draft generated.');
     } catch (e) {
-      notificationManager.error('AI Draft', e.message || 'Failed to generate draft.');
-    } finally {
-      setAiBusy(false);
-    }
+      notificationManager.error('AI Draft', e.message || 'Failed.');
+    } finally { setAiBusy(false); }
   }, [items, selectedCustomer]);
 
   const aiSuggestNote = useCallback(async () => {
     try {
-      const intent = 'General invoice note';
-      const existing = notes.map((n) => n.text).join(' ');
-      const suggestion = await invoiceService.suggestNote(existing, intent);
-      if (suggestion) setNotes((prev) => [...prev, { id: generateKey(), text: suggestion }]);
+      const suggestion = await invoiceService.suggestNote(notes.map(n => n.text).join(' '), 'General invoice note');
+      if (suggestion) setNotes(p => [...p, { id: generateKey(), text: suggestion }]);
     } catch {}
   }, [notes]);
 
-  // --- Attachments ---
-  const addAttachment = useCallback((file) => {
-    setAttachments((prev) => [...prev, file]);
-  }, []);
-
-  const removeAttachment = useCallback((index) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
   // --- Payments ---
   const addPayment = useCallback(() => {
-    setPayments((prev) => [
-      ...prev,
-      { id: generateKey(), notes: '', amount: 0, paymentDate: new Date().toISOString().split('T')[0], mode: '' },
-    ]);
+    setPayments(p => [...p, { id: generateKey(), notes: '', amount: 0, paymentDate: new Date().toISOString().split('T')[0], mode: '' }]);
   }, []);
-
-  const removePayment = useCallback((index) => {
-    setPayments((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const updatePayment = useCallback((index, updated) => {
-    setPayments((prev) => {
-      const next = [...prev];
-      next[index] = updated;
-      return next;
-    });
-  }, []);
+  const removePayment = useCallback((i) => setPayments(p => p.filter((_, j) => j !== i)), []);
+  const updatePayment = useCallback((i, pmt) => setPayments(p => { const n = [...p]; n[i] = pmt; return n; }), []);
 
   // --- Banks ---
-  const addBank = useCallback(async (form) => {
-    const newBank = await invoiceService.createBank(form);
-    setBanks((prev) => [...prev, newBank]);
-    setSelectedBank(newBank);
-  }, []);
+  const addNewBank = useCallback(async () => {
+    const errs = validateBank(bankForm);
+    if (Object.keys(errs).length) return;
+    try {
+      const b = await invoiceService.createBank(bankForm);
+      setBanks(p => [...p, b]);
+      setSelectedBank(b);
+      setBankModal(false);
+    } catch (e) { notificationManager.error('Bank', e.message); }
+  }, [bankForm]);
 
-  const editBank = useCallback(async (id, form) => {
-    const updated = await invoiceService.updateBank(id, form);
-    setBanks((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
-    if (selectedBank?.id === updated.id) setSelectedBank(updated);
-  }, [selectedBank]);
-
-  const deleteBank = useCallback(async (id) => {
-    await invoiceService.deleteBank(id);
-    setBanks((prev) => prev.filter((b) => b.id !== id));
-    if (selectedBank?.id === id) setSelectedBank(null);
-  }, [selectedBank]);
-
-  // --- Signatures ---
-  const addSignature = useCallback(async (form) => {
-    const newSig = await invoiceService.createSignature(form);
-    setSignatures((prev) => [...prev, newSig]);
-    setSelectedSignature(newSig);
-  }, []);
-
-  const deleteSignature = useCallback(async (id) => {
-    await invoiceService.deleteSignature(id);
-    setSignatures((prev) => prev.filter((s) => s.id !== id));
-    if (selectedSignature?.id === id) setSelectedSignature(null);
-  }, [selectedSignature]);
-
-  // --- Custom headers ---
+  // --- Headers ---
   const addHeader = useCallback((label) => {
     const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-    setHeaderDefs((prev) => [...prev, { key, label }]);
+    setHeaderDefs(p => [...p, { key, label }]);
   }, []);
 
   const removeHeader = useCallback((key) => {
-    setHeaderDefs((prev) => prev.filter((h) => h.key !== key));
-    setHeaderValues((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
+    setHeaderDefs(p => p.filter(h => h.key !== key));
   }, []);
 
-  // --- Save / Draft ---
+  // --- Save ---
   const buildPayload = useCallback((status) => ({
-    prefix,
-    invoiceNumber,
-    invoiceDate,
-    dueDate,
-    reference,
-    customerId: selectedCustomer?.id,
-    customer: selectedCustomer,
-    customHeaders: headerValues,
-    items,
-    extraDiscountType,
-    extraDiscountValue,
-    additionalCharges,
-    notes,
-    terms,
-    reverseCharge,
-    eWaybill,
-    eInvoice,
-    enableTds,
-    enableTcs,
-    roundOff,
-    bankId: selectedBank?.id,
-    payments,
-    signatureId: selectedSignature?.id,
-    status,
-    ...computed,
-  }), [
     prefix, invoiceNumber, invoiceDate, dueDate, reference,
-    selectedCustomer, headerValues, items,
-    extraDiscountType, extraDiscountValue, additionalCharges,
+    customerId: selectedCustomer?.id, customer: selectedCustomer,
+    items, extraDiscountType, extraDiscountValue, additionalCharges,
     notes, terms, reverseCharge, eWaybill, eInvoice,
     enableTds, enableTcs, roundOff,
-    selectedBank, payments, selectedSignature, computed,
-  ]);
+    bankId: selectedBank?.id, payments,
+    signatureId: selectedSignature?.id, status,
+    ...computed,
+  }), [prefix, invoiceNumber, invoiceDate, dueDate, reference, selectedCustomer, items, extraDiscountType, extraDiscountValue, additionalCharges, notes, terms, reverseCharge, eWaybill, eInvoice, enableTds, enableTcs, roundOff, selectedBank, payments, selectedSignature, computed]);
 
   const validate = useCallback((strict) => {
-    const payload = buildPayload(strict ? 'pending' : 'draft');
-    const errs = validateInvoice(payload, { strict });
+    const errs = validateInvoice(buildPayload(strict ? 'pending' : 'draft'), { strict });
     setErrors(errs);
-    return isValid(errs);
+    return Object.keys(errs).length === 0;
   }, [buildPayload]);
 
   const save = useCallback(async (status) => {
-    const strict = status !== 'draft';
-    if (!validate(strict)) {
-      notificationManager.warning('Validation', 'Please fix the errors before saving.');
+    if (!validate(status !== 'draft')) {
+      notificationManager.warning('Validation', 'Please fix errors before saving.');
       return;
     }
     setSaving(true);
     try {
-      const payload = buildPayload(status);
-      await invoiceService.saveInvoice(payload);
-      notificationManager.success('Invoice', `Invoice ${status === 'draft' ? 'draft saved' : 'saved successfully'}.`);
+      await invoiceService.saveInvoice(buildPayload(status));
+      notificationManager.success('Invoice', `Invoice ${status === 'draft' ? 'draft saved' : 'saved'}.`);
       navigate('/');
     } catch (e) {
-      notificationManager.error('Invoice', e.message || 'Failed to save invoice.');
-    } finally {
-      setSaving(false);
-    }
+      notificationManager.error('Invoice', e.message || 'Failed.');
+    } finally { setSaving(false); }
   }, [buildPayload, validate, navigate]);
 
   const saveInvoice = useCallback(() => save('pending'), [save]);
   const saveDraft = useCallback(() => save('draft'), [save]);
-
-  // --- Validation messages ---
   const canSave = items.length > 0 && !!selectedCustomer;
-
-  // --- Filtered product matches for toolbar ---
-  const filteredProducts = useMemo(() => {
-    if (!categoryFilter) return products;
-    return products.filter((p) => String(p.category_id) === String(categoryFilter));
-  }, [products, categoryFilter]);
 
   return (
     <div className="inv-page">
       <InvoiceHeader
-        companyName={companyName}
-        prefix={prefix}
-        invoiceNumber={invoiceNumber}
-        onPrefixChange={handlePrefixChange}
-        onInvoiceNumberChange={setInvoiceNumber}
-        onCheckNumberUnique={checkNumberUnique}
+        prefix={prefix} invoiceNumber={invoiceNumber}
+        onPrefixChange={setPrefix} onInvoiceNumberChange={setInvoiceNumber}
         numberUnique={numberUnique}
-        onSave={saveInvoice}
-        onDraft={saveDraft}
+        onSave={saveInvoice} onDraft={saveDraft}
         onOpenHeaders={() => setHeaderSettingsOpen(true)}
         onOpenSettings={() => {}}
-        saving={saving}
-        canSave={canSave}
+        saving={saving} canSave={canSave}
       />
 
-      <div className="inv-layout">
-        <div className="inv-layout__main">
-          <InvoiceDetails
-            customers={customers}
-            customerQuery={customerQuery}
-            onCustomerQuery={setCustomerQuery}
-            selectedCustomer={selectedCustomer}
-            onSelectCustomer={setSelectedCustomer}
-            onEditCustomer={editCustomer}
-            invoiceDate={invoiceDate}
-            dueDate={dueDate}
-            onInvoiceDate={setInvoiceDate}
-            onDueDate={setDueDate}
-            reference={reference}
-            onReference={setReference}
-            dueDateOffset={DEFAULT_DUE_DATE_OFFSET_DAYS}
-            onAutoDueDate={autoDueDate}
-            customerModal={customerModal}
-            onOpenCreateCustomer={openCreateCustomer}
-            onCloseCustomerModal={closeCustomerModal}
-            onSubmitCustomer={submitCustomer}
-            errors={errors}
-          />
-
-          <CustomHeaders
-            headers={headerDefs}
-            values={headerValues}
-            onChangeValue={(key, val) => setHeaderValues((prev) => ({ ...prev, [key]: val }))}
-            onAddHeader={addHeader}
-            onRemoveHeader={removeHeader}
-            settingsOpen={headerSettingsOpen}
-            onOpenSettings={() => setHeaderSettingsOpen(true)}
-            onCloseSettings={() => setHeaderSettingsOpen(false)}
-          />
-
-          <div className="inv-products-section">
-            <ProductsToolbar
-              categories={categories}
-              category={categoryFilter}
-              onCategory={setCategoryFilter}
-              productQuery={productQuery}
-              onProductQuery={setProductQuery}
-              products={filteredProducts}
-              qty={defaultQty}
-              onQty={setDefaultQty}
-              onAddProduct={addProduct}
-              onCreateProduct={openCreateProduct}
-              onOpenProductSettings={() => {}}
-              showDescription={showDescription}
-              onToggleShowDescription={setShowDescription}
-              onDraftWithAI={draftWithAI}
-              aiBusy={aiBusy}
-              disabledAdd={!productQuery.trim()}
-            />
-
-            <InvoiceTable
-              items={items}
-              onChangeItem={onChangeItem}
-              onRemoveItem={onRemoveItem}
-              showDescription={showDescription}
-              onAddNewProduct={addNewProductLine}
-              errors={errors}
-            />
+      {/* Subbar */}
+      <div className="inv-subbar">
+        <div className="inv-subbar-left">
+          <span className="inv-label">Type</span>
+          <div className="inv-type-select">
+            Regular <Icon name="chevron-down" size={14} />
           </div>
-
-          <InvoiceDiscount
-            extraDiscountType={extraDiscountType}
-            extraDiscountValue={extraDiscountValue}
-            onExtraDiscountType={setExtraDiscountType}
-            onExtraDiscountValue={setExtraDiscountValue}
-            additionalCharges={additionalCharges}
-            onAddCharge={addCharge}
-            onRemoveCharge={removeCharge}
-            onUpdateCharge={updateCharge}
-            subtotal={computed.subtotal}
-            lineDiscountTotal={computed.lineDiscountTotal}
-            invoiceDiscount={computed.invoiceDiscount}
-            discountTotal={computed.discountTotal}
-          />
-
-          <InvoiceNotes
-            notes={notes}
-            terms={terms}
-            onAddNote={addNote}
-            onRemoveNote={removeNote}
-            onUpdateNote={updateNote}
-            onAddTerm={addTerm}
-            onRemoveTerm={removeTerm}
-            onUpdateTerm={updateTerm}
-            onAiSuggest={aiSuggestNote}
-          />
-
-          <InvoiceOptions
-            reverseCharge={reverseCharge}
-            onReverseCharge={setReverseCharge}
-            eWaybill={eWaybill}
-            onEWaybill={setEWaybill}
-            eInvoice={eInvoice}
-            onEInvoice={setEInvoice}
-            attachments={attachments}
-            onAddAttachment={addAttachment}
-            onRemoveAttachment={removeAttachment}
-          />
-
-          <InvoiceBank
-            banks={banks}
-            selectedBank={selectedBank}
-            onSelectBank={setSelectedBank}
-            onAddBank={addBank}
-            onEditBank={editBank}
-            onDeleteBank={deleteBank}
-            payments={payments}
-            onAddPayment={addPayment}
-            onRemovePayment={removePayment}
-            onUpdatePayment={updatePayment}
-            markFullyPaid={markFullyPaid}
-            onMarkFullyPaid={setMarkFullyPaid}
-            grandTotal={computed.grandTotal}
-            balanceDue={computed.balanceDue}
-          />
-
-          <InvoiceSignature
-            signatures={signatures}
-            selectedSignature={selectedSignature}
-            onSelectSignature={setSelectedSignature}
-            onAddSignature={addSignature}
-            onDeleteSignature={deleteSignature}
-          />
         </div>
-
-        <div className="inv-layout__sidebar">
-          <InvoiceSummary
-            enableTds={enableTds}
-            onTds={setEnableTds}
-            enableTcs={enableTcs}
-            onTcs={setEnableTcs}
-            extraDiscountType={extraDiscountType}
-            extraDiscountValue={extraDiscountValue}
-            onExtraDiscountType={setExtraDiscountType}
-            onExtraDiscountValue={setExtraDiscountValue}
-            taxableAmount={computed.taxableAmount}
-            taxTotal={computed.taxTotal}
-            cgst={computed.cgst}
-            sgst={computed.sgst}
-            igst={computed.igst}
-            discountTotal={computed.discountTotal}
-            additionalChargesTotal={computed.additionalChargesTotal}
-            roundOff={roundOff}
-            onRoundOff={setRoundOff}
-            beforeRound={computed.beforeRound}
-            grandTotal={computed.grandTotal}
-          />
+        <div className="inv-subbar-right">
+          <button className="inv-link-action" onClick={() => setHeaderSettingsOpen(true)}>
+            <Icon name="info" size={14} /> Custom Headers
+          </button>
+          <button className="inv-link-action" onClick={() => {}}>
+            <Icon name="settings" size={14} /> Settings
+          </button>
         </div>
+      </div>
+
+      <InvoiceDetails
+        customers={customers} customerQuery={customerQuery}
+        onCustomerQuery={setCustomerQuery} selectedCustomer={selectedCustomer}
+        onSelectCustomer={setSelectedCustomer} onEditCustomer={editCustomer}
+        invoiceDate={invoiceDate} dueDate={dueDate}
+        onInvoiceDate={setInvoiceDate} onDueDate={setDueDate}
+        reference={reference} onReference={setReference}
+        dueDateOffset={DEFAULT_DUE_DATE_OFFSET_DAYS} onAutoDueDate={autoDueDate}
+        customerModal={customerModal}
+        onOpenCreateCustomer={openCreateCustomer}
+        onCloseCustomerModal={closeCustomerModal}
+        onSubmitCustomer={submitCustomer}
+        errors={errors}
+      />
+
+      <CustomHeaders
+        headers={headerDefs}
+        settingsOpen={headerSettingsOpen}
+        onOpenSettings={() => setHeaderSettingsOpen(true)}
+        onCloseSettings={() => setHeaderSettingsOpen(false)}
+        onAddHeader={addHeader}
+        onRemoveHeader={removeHeader}
+      />
+
+      {/* Products & Services */}
+      <section className="inv-card">
+        <ProductsToolbar
+          category={categoryFilter} onCategory={setCategoryFilter}
+          categories={categories} productQuery={productQuery}
+          onProductQuery={setProductQuery} products={products}
+          qty={defaultQty} onQty={setDefaultQty}
+          onAddProduct={addProduct} onCreateProduct={openCreateProduct}
+          showDescription={showDescription}
+          onToggleShowDescription={setShowDescription}
+          onDraftWithAI={draftWithAI} aiBusy={aiBusy}
+          disabledAdd={!productQuery.trim()}
+        />
+
+        <InvoiceTable
+          items={items} onChangeItem={onChangeItem}
+          onRemoveItem={onRemoveItem} showDescription={showDescription}
+          onAddNewProduct={addNewProductLine}
+        />
+
+        <InvoiceDiscount
+          items={items}
+          extraDiscountType={extraDiscountType}
+          extraDiscountValue={extraDiscountValue}
+          onExtraDiscountType={setExtraDiscountType}
+          onExtraDiscountValue={setExtraDiscountValue}
+          additionalCharges={additionalCharges}
+          onAddCharge={addCharge}
+          onRemoveCharge={removeCharge}
+          onUpdateCharge={updateCharge}
+          subtotal={computed.subtotal}
+          lineDiscountTotal={computed.lineDiscountTotal}
+          invoiceDiscount={computed.invoiceDiscount}
+        />
+      </section>
+
+      {/* Bottom Grid */}
+      <div className="inv-bottom-grid">
+        <InvoiceNotes
+          notes={notes} onAddNote={addNote} onRemoveNote={removeNote} onUpdateNote={updateNote}
+          terms={terms} onAddTerm={addTerm} onRemoveTerm={removeTerm} onUpdateTerm={updateTerm}
+          onAiSuggest={aiSuggestNote}
+          reverseCharge={reverseCharge} onReverseCharge={setReverseCharge}
+          eWaybill={eWaybill} onEWaybill={setEWaybill}
+          eInvoice={eInvoice} onEInvoice={setEInvoice}
+          attachments={attachments} onAddAttachment={setAttachments} onRemoveAttachment={(i) => setAttachments(p => p.filter((_, j) => j !== i))}
+        />
+
+        <InvoiceSummary
+          enableTds={enableTds} onTds={setEnableTds}
+          enableTcs={enableTcs} onTcs={setEnableTcs}
+          extraDiscountValue={extraDiscountValue} onExtraDiscountValue={setExtraDiscountValue}
+          taxableAmount={computed.taxableAmount}
+          taxTotal={computed.taxTotal}
+          discountTotal={computed.discountTotal}
+          roundOff={roundOff} onRoundOff={setRoundOff}
+          beforeRound={computed.beforeRound} grandTotal={computed.grandTotal}
+          selectedBank={selectedBank} banks={banks}
+          onSelectBank={setSelectedBank}
+          onAddNewBank={() => setBankModal(true)}
+          payments={payments} onAddPayment={addPayment}
+          onRemovePayment={removePayment} onUpdatePayment={updatePayment}
+          markFullyPaid={markFullyPaid} onMarkFullyPaid={setMarkFullyPaid}
+          balanceDue={computed.balanceDue}
+          signatures={signatures} selectedSignature={selectedSignature}
+          onSelectSignature={setSelectedSignature}
+          onAddNewSignature={() => setSignatureModal(true)}
+          sigName={sigName}
+        />
       </div>
 
       <InvoiceFooter />
 
       {/* Modals */}
-      <CustomerModal
-        open={customerModal.open}
-        mode={customerModal.mode}
-        initial={customerModal.customer}
-        onClose={closeCustomerModal}
-        onSubmit={submitCustomer}
-      />
+      <CustomerModal open={customerModal.open} mode={customerModal.mode}
+        initial={customerModal.customer} onClose={closeCustomerModal}
+        onSubmit={submitCustomer} />
 
-      <ProductModal
-        open={productModal.open}
-        mode={productModal.mode}
-        initial={productModal.product}
-        categories={categories}
-        onClose={closeProductModal}
-        onSubmit={submitProduct}
-      />
+      <ProductModal open={productModal.open} mode={productModal.mode}
+        initial={productModal.product} categories={categories}
+        onClose={closeProductModal} onSubmit={submitProduct} />
+
+      <Modal open={bankModal} onClose={() => setBankModal(false)}
+        title="Add New Bank" size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setBankModal(false)}>Cancel</Button>
+            <Button icon="building" onClick={addNewBank}>Add Bank</Button>
+          </>
+        }>
+        <form className="inv-modal-form" onSubmit={e => { e.preventDefault(); addNewBank(); }}>
+          <Field label="Bank Name" required>
+            <Input value={bankForm.bank_name} onChange={e => setBankForm(p => ({ ...p, bank_name: e.target.value }))} placeholder="Bank name" />
+          </Field>
+          <div className="inv-modal-row">
+            <Field label="Account Number">
+              <Input value={bankForm.account_number} onChange={e => setBankForm(p => ({ ...p, account_number: e.target.value }))} placeholder="Account number" />
+            </Field>
+            <Field label="IFSC">
+              <Input value={bankForm.ifsc} onChange={e => setBankForm(p => ({ ...p, ifsc: e.target.value }))} placeholder="IFSC code" />
+            </Field>
+          </div>
+          <div className="inv-modal-row">
+            <Field label="Branch">
+              <Input value={bankForm.branch} onChange={e => setBankForm(p => ({ ...p, branch: e.target.value }))} placeholder="Branch" />
+            </Field>
+            <Field label="UPI ID">
+              <Input value={bankForm.upi_id} onChange={e => setBankForm(p => ({ ...p, upi_id: e.target.value }))} placeholder="UPI ID" />
+            </Field>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={signatureModal} onClose={() => setSignatureModal(false)}
+        title="Add New Signature" size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setSignatureModal(false)}>Cancel</Button>
+            <Button icon="pen-tool" onClick={async () => {
+              try {
+                const s = await invoiceService.createSignature({ name: sigName });
+                setSignatures(p => [...p, s]);
+                setSelectedSignature(s);
+                setSignatureModal(false);
+              } catch (e) { notificationManager.error('Signature', e.message); }
+            }}>Add Signature</Button>
+          </>
+        }>
+        <form className="inv-modal-form" onSubmit={e => e.preventDefault()}>
+          <Field label="Signature Name" required>
+            <Input value={sigName} onChange={e => setSigName(e.target.value)} placeholder="e.g. Authorised Signatory" />
+          </Field>
+        </form>
+      </Modal>
 
       <NotificationToast />
     </div>

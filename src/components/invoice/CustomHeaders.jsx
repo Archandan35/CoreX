@@ -1,16 +1,12 @@
 import { useState } from 'react';
-import Card from '../ui/Card.jsx';
+import Icon from '../ui/Icon.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import { Field, Input } from '../ui/Field.jsx';
-import Icon from '../ui/Icon.jsx';
 import PermissionGate from '../ui/PermissionGate.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 
-// Admin-defined custom header chips. Values are editable; admins can add or
-// remove header definitions. The persisted set lives in the invoice's
-// custom_headers jsonb column.
-export default function CustomHeaders({ headers, values, onChangeValue, onAddHeader, onRemoveHeader, settingsOpen, onOpenSettings, onCloseSettings }) {
+export default function CustomHeaders({ headers, settingsOpen, onOpenSettings, onCloseSettings, onAddHeader, onRemoveHeader }) {
   const [newLabel, setNewLabel] = useState('');
 
   const addHeader = (e) => {
@@ -22,38 +18,21 @@ export default function CustomHeaders({ headers, values, onChangeValue, onAddHea
   };
 
   return (
-    <Card className="inv-card" padding={false}>
-      <div className="inv-chips">
-        <div className="inv-chips__list">
+    <section className="inv-card">
+      <div className="inv-custom-headers">
+        <h3>Custom Headers</h3>
+        <div className="inv-chip-row">
           {headers.map((h) => (
             <div className="inv-chip" key={h.key}>
-              <span className="inv-chip__label">{h.label}</span>
-              <input
-                className="inv-chip__input"
-                value={values[h.key] ?? ''}
-                onChange={(e) => onChangeValue(h.key, e.target.value)}
-                placeholder={h.label}
-                aria-label={h.label}
-              />
-              <PermissionGate permission={PERMISSIONS.SETTINGS_UPDATE}>
-                <button
-                  type="button"
-                  className="inv-chip__remove"
-                  onClick={() => onRemoveHeader(h.key)}
-                  aria-label={`Remove ${h.label}`}
-                >
-                  <Icon name="x" size={12} />
-                </button>
-              </PermissionGate>
+              <Icon name="plus" size={12} /> {h.label}
             </div>
           ))}
           {headers.length === 0 && (
-            <span className="inv-chips__empty">No custom headers configured.</span>
+            <span style={{ fontSize: 13, color: 'var(--inv-text-sub)', fontStyle: 'italic' }}>
+              No custom headers configured.
+            </span>
           )}
         </div>
-        <PermissionGate permission={PERMISSIONS.SETTINGS_UPDATE}>
-          <Button variant="secondary" icon="plus" onClick={onOpenSettings}>Manage</Button>
-        </PermissionGate>
       </div>
 
       <Modal
@@ -65,18 +44,22 @@ export default function CustomHeaders({ headers, values, onChangeValue, onAddHea
       >
         <form className="inv-modal-form" onSubmit={addHeader}>
           <Field label="Add header label">
-            <div className="inv-inline-add">
+            <div style={{ display: 'flex', gap: 8 }}>
               <Input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="e.g. Vehicle No" />
               <Button type="submit" icon="plus">Add</Button>
             </div>
           </Field>
         </form>
-        <div className="inv-chips__manage">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 16 }}>
           {headers.map((h) => (
-            <div className="inv-chips__manage-row" key={h.key}>
+            <div key={h.key} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '8px 12px', border: '1px solid var(--inv-border)',
+              borderRadius: 'var(--inv-radius-sm)', fontSize: 13
+            }}>
               <span>{h.label}</span>
               <PermissionGate permission={PERMISSIONS.SETTINGS_UPDATE}>
-                <button type="button" className="inv-chip__remove" onClick={() => onRemoveHeader(h.key)} aria-label={`Remove ${h.label}`}>
+                <button type="button" className="inv-table-remove-btn" onClick={() => onRemoveHeader(h.key)} aria-label={`Remove ${h.label}`}>
                   <Icon name="trash" size={14} />
                 </button>
               </PermissionGate>
@@ -84,6 +67,6 @@ export default function CustomHeaders({ headers, values, onChangeValue, onAddHea
           ))}
         </div>
       </Modal>
-    </Card>
+    </section>
   );
 }

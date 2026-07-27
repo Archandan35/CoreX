@@ -1,16 +1,22 @@
-import { useMemo, useCallback } from 'react';
-import Button from '../ui/Button.jsx';
-import Select from '../ui/Select.jsx';
+import { useMemo, useCallback, memo } from 'react';
 import Icon from '../ui/Icon.jsx';
-import EmptyState from '../ui/EmptyState.jsx';
+import Badge from '../ui/Badge.jsx';
 import { computeLine, round2 } from '../../business/invoice/calculations.js';
 import { TAX_RATE_OPTIONS, DISCOUNT_TYPE } from '../../constants/index.js';
 
-function LineRow({ line, index, onChange, onRemove, showDescription, errors }) {
-  const computed = useMemo(() => computeLine(line), [line]);
-  const lineError = errors?.[index];
+const EMPTY_SVG = (
+  <svg width="90" height="70" viewBox="0 0 90 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="18" width="70" height="45" rx="6" stroke="currentColor" strokeWidth="2.5" fill="#F6F5FE"/>
+    <path d="M10 24 L45 48 L80 24" stroke="currentColor" strokeWidth="2.5" fill="none"/>
+    <circle cx="70" cy="16" r="12" fill="#F6F5FE" stroke="currentColor" strokeWidth="2.5"/>
+    <path d="M65 16 h10 M70 11 v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
 
-  const set = useCallback((field) => (e) => {
+const LineRow = memo(function LineRow({ line, index, onChange, onRemove }) {
+  const computed = useMemo(() => computeLine(line), [line]);
+
+  const setField = useCallback((field) => (e) => {
     let val = e.target.value;
     if (field === 'quantity' || field === 'unitPrice' || field === 'discountValue') {
       val = val === '' ? '' : Number(val);
@@ -18,136 +24,131 @@ function LineRow({ line, index, onChange, onRemove, showDescription, errors }) {
     onChange(index, { ...line, [field]: val });
   }, [onChange, index, line]);
 
-  const setDiscountType = useCallback((val) => {
-    onChange(index, { ...line, discountType: val, discountValue: val === DISCOUNT_TYPE.PERCENT ? '' : '' });
-  }, [onChange, index, line]);
-
   const setTaxRate = useCallback((val) => {
     onChange(index, { ...line, taxRate: Number(val) });
   }, [onChange, index, line]);
 
+  const setDiscountType = useCallback((e) => {
+    const val = e.target.value;
+    onChange(index, { ...line, discountType: val, discountValue: val === DISCOUNT_TYPE.PERCENT ? 0 : 0 });
+  }, [onChange, index, line]);
+
   return (
-    <tr className="inv-table-row">
-      <td className="inv-table__num">{index + 1}</td>
-      <td className="inv-table__product">
-        <div className="inv-table-product-cell">
-          <input
-            className={`form-input inv-table-input${lineError?.name ? ' form-input--error' : ''}`}
-            value={line.name || ''}
-            onChange={(e) => onChange(index, { ...line, name: e.target.value })}
-            placeholder="Product name"
-          />
-          {lineError?.name && <span className="inv-field-error-sm">{lineError.name}</span>}
-          {showDescription && (
-            <input
-              className="form-input inv-table-input inv-table-input--desc"
-              value={line.description || ''}
-              onChange={(e) => onChange(index, { ...line, description: e.target.value })}
-              placeholder="Description"
-            />
-          )}
-        </div>
+    <tr>
+      <td style={{ textAlign: 'center', color: 'var(--inv-text-sub)', fontSize: 12, fontWeight: 500 }}>{index + 1}</td>
+      <td className="inv-table-product-name">
+        <input
+          value={line.name || ''}
+          onChange={(e) => onChange(index, { ...line, name: e.target.value })}
+          placeholder="Product name"
+        />
       </td>
-      <td className="inv-table__qty">
+      <td>
         <input
           type="number"
           min="0"
           step="any"
-          className={`form-input inv-table-input inv-table-input--sm${lineError?.quantity ? ' form-input--error' : ''}`}
+          className="inv-table-input"
           value={line.quantity ?? ''}
-          onChange={(e) => {
-            const val = e.target.value;
-            onChange(index, { ...line, quantity: val === '' ? '' : Number(val) });
-          }}
+          onChange={setField('quantity')}
+          placeholder="0"
         />
-        {lineError?.quantity && <span className="inv-field-error-sm">{lineError.quantity}</span>}
       </td>
-      <td className="inv-table__price">
+      <td>
         <input
           type="number"
           min="0"
           step="0.01"
-          className={`form-input inv-table-input inv-table-input--sm${lineError?.unitPrice ? ' form-input--error' : ''}`}
+          className="inv-table-input"
           value={line.unitPrice ?? ''}
-          onChange={(e) => {
-            const val = e.target.value;
-            onChange(index, { ...line, unitPrice: val === '' ? '' : Number(val) });
-          }}
-        />
-        {lineError?.unitPrice && <span className="inv-field-error-sm">{lineError.unitPrice}</span>}
-      </td>
-      <td className="inv-table__tax">
-        <Select
-          options={TAX_RATE_OPTIONS.map((r) => ({ value: String(r), label: `${r}%` }))}
-          value={String(line.taxRate ?? 0)}
-          onChange={setTaxRate}
-          className="inv-table-select"
+          onChange={setField('unitPrice')}
+          placeholder="0.00"
         />
       </td>
-      <td className="inv-table__discount">
-        <div className="inv-table-discount-cell">
-          <Select
-            options={[
-              { value: DISCOUNT_TYPE.PERCENT, label: '%' },
-              { value: DISCOUNT_TYPE.FIXED, label: 'Fixed' },
-            ]}
+      <td>
+        <select className="inv-table-select" value={String(line.taxRate ?? 0)} onChange={(e) => setTaxRate(e.target.value)}>
+          {TAX_RATE_OPTIONS.map((r) => (
+            <option key={r} value={String(r)}>{r}%</option>
+          ))}
+        </select>
+      </td>
+      <td>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <select
+            className="inv-table-select"
+            style={{ width: 'auto', minWidth: 50 }}
             value={line.discountType || DISCOUNT_TYPE.PERCENT}
             onChange={setDiscountType}
-            className="inv-table-select inv-table-select--sm"
-          />
+          >
+            <option value={DISCOUNT_TYPE.PERCENT}>%</option>
+            <option value={DISCOUNT_TYPE.FIXED}>₹</option>
+          </select>
           <input
             type="number"
             min="0"
             step="any"
-            className={`form-input inv-table-input inv-table-input--xs${lineError?.discountValue ? ' form-input--error' : ''}`}
+            className="inv-table-input"
+            style={{ width: 50, textAlign: 'right' }}
             value={line.discountValue ?? ''}
-            onChange={(e) => {
-              const val = e.target.value;
-              onChange(index, { ...line, discountValue: val === '' ? '' : Number(val) });
-            }}
+            onChange={setField('discountValue')}
+            placeholder="0"
           />
         </div>
-        {lineError?.discountValue && <span className="inv-field-error-sm">{lineError.discountValue}</span>}
       </td>
-      <td className="inv-table__line-total">
+      <td style={{ textAlign: 'right' }}>
         <span className="inv-table-amount">{round2(computed.lineTotal)}</span>
       </td>
-      <td className="inv-table__actions">
-        <button type="button" className="inv-table-remove" onClick={() => onRemove(index)} aria-label="Remove line">
+      <td style={{ textAlign: 'center' }}>
+        <button type="button" className="inv-table-remove-btn" onClick={() => onRemove(index)} aria-label="Remove">
           <Icon name="trash" size={14} />
         </button>
       </td>
     </tr>
   );
-}
+});
 
-export default function InvoiceTable({ items, onChangeItem, onRemoveItem, showDescription, onAddNewProduct, errors }) {
+export default function InvoiceTable({ items, onChangeItem, onRemoveItem, showDescription, onAddNewProduct }) {
   if (!items || items.length === 0) {
     return (
-      <EmptyState
-        icon="package"
-        title="No products added"
-        message="Search and add products to this invoice"
-        action={
-          <Button variant="primary" icon="plus" onClick={onAddNewProduct}>Add New Product</Button>
-        }
-      />
+      <div className="inv-ps-table">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Product Name</th>
+              <th>Quantity</th>
+              <th>Unit Price</th>
+              <th>Price with Tax</th>
+              <th>Discount</th>
+              <th>Total Amount</th>
+              <th className="total-col">Total<small className="inv-total-small">(Net Amount + Tax)</small></th>
+            </tr>
+          </thead>
+        </table>
+        <div className="inv-empty-state">
+          <div className="inv-empty-icon">{EMPTY_SVG}</div>
+          <p>Search existing products to add to this list or add new product to get started! 🚀</p>
+          <button className="inv-btn-add-product" onClick={onAddNewProduct}>
+            <Icon name="plus" size={14} /> Add New Product
+          </button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="inv-table-wrap">
-      <table className="inv-table">
+    <div className="inv-ps-table">
+      <table>
         <thead>
           <tr>
-            <th className="inv-table__th--num">#</th>
-            <th className="inv-table__th--product">Product Name</th>
-            <th className="inv-table__th--qty">Quantity</th>
-            <th className="inv-table__th--price">Unit Price</th>
-            <th className="inv-table__th--tax">Tax</th>
-            <th className="inv-table__th--discount">Discount</th>
-            <th className="inv-table__th--total">Total Amount</th>
-            <th className="inv-table__th--actions"></th>
+            <th>#</th>
+            <th>Product Name</th>
+            <th>Quantity</th>
+            <th>Unit Price</th>
+            <th>Tax</th>
+            <th>Discount</th>
+            <th>Total Amount</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -158,8 +159,6 @@ export default function InvoiceTable({ items, onChangeItem, onRemoveItem, showDe
               index={i}
               onChange={onChangeItem}
               onRemove={onRemoveItem}
-              showDescription={showDescription}
-              errors={errors?.lines}
             />
           ))}
         </tbody>

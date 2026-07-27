@@ -1,37 +1,19 @@
 import { useMemo } from 'react';
-import Card from '../ui/Card.jsx';
-import Button from '../ui/Button.jsx';
+import Icon from '../ui/Icon.jsx';
 import Search from '../ui/Search.jsx';
 import Dropdown, { DropdownItem } from '../ui/Dropdown.jsx';
-import { Field, Input } from '../ui/Field.jsx';
 import PermissionGate from '../ui/PermissionGate.jsx';
-import Icon from '../ui/Icon.jsx';
 import CustomerModal from './CustomerModal.jsx';
 import { useDebounce } from '../../hooks/useDebounce.js';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
+import Button from '../ui/Button.jsx';
 
-// Invoice details: customer live search + select + auto-fill, create/edit
-// customer modal, invoice date, due date (auto from offset), reference.
 export default function InvoiceDetails({
-  customers,
-  customerQuery,
-  onCustomerQuery,
-  selectedCustomer,
-  onSelectCustomer,
-  onEditCustomer,
-  invoiceDate,
-  dueDate,
-  onInvoiceDate,
-  onDueDate,
-  reference,
-  onReference,
-  dueDateOffset,
-  onAutoDueDate,
-  customerModal,
-  onOpenCreateCustomer,
-  onCloseCustomerModal,
-  onSubmitCustomer,
-  errors,
+  customers, customerQuery, onCustomerQuery, selectedCustomer,
+  onSelectCustomer, onEditCustomer, invoiceDate, dueDate,
+  onInvoiceDate, onDueDate, reference, onReference, dueDateOffset,
+  onAutoDueDate, customerModal, onOpenCreateCustomer, onCloseCustomerModal,
+  onSubmitCustomer, errors,
 }) {
   const debounced = useDebounce(customerQuery, 300);
   const filtered = useMemo(() => {
@@ -43,95 +25,102 @@ export default function InvoiceDetails({
   }, [customers, debounced]);
 
   return (
-    <Card className="inv-card">
-      <div className="inv-grid-2">
-        <Field label="Customer" required>
-          <div className="inv-customer-row">
-            <Dropdown
-              trigger={
-                <div className="inv-customer-trigger">
-                  <Search
-                    value={customerQuery}
-                    onChange={onCustomerQuery}
-                    placeholder="Search customer by name, phone, GSTIN..."
-                    className="inv-customer-search"
-                  />
-                  <Icon name="chevron-down" size={16} className="inv-customer-caret" />
-                </div>
-              }
-            >
-              {(close) => (
-                <div className="inv-customer-menu">
-                  {filtered.length === 0 && (
-                    <div className="inv-customer-empty">No customers found</div>
-                  )}
-                  {filtered.map((c) => (
-                    <DropdownItem key={c.id} onClick={() => { close(); onSelectCustomer(c); }}>
-                      <div className="inv-customer-option">
-                        <span className="inv-customer-option__name">{c.name}</span>
-                        <span className="inv-customer-option__meta">
-                          {[c.company, c.phone, c.gstin].filter(Boolean).join(' · ')}
-                        </span>
-                      </div>
-                    </DropdownItem>
-                  ))}
+    <section className="inv-card inv-customer-card-layout">
+      <div className="inv-customer-left">
+        <div className="inv-row-head">
+          <h2>Select Customer</h2>
+          <PermissionGate permission={PERMISSIONS.CUSTOMER_CREATE}>
+            <button className="inv-btn-outline" onClick={onOpenCreateCustomer}>
+              <Icon name="plus" size={14} /> Create Customer
+            </button>
+          </PermissionGate>
+        </div>
+
+        <Dropdown
+          trigger={
+            <div className="inv-search-input-wrap">
+              <Icon name="search" size={14} />
+              <input
+                type="text"
+                value={customerQuery}
+                onChange={(e) => onCustomerQuery(e.target.value)}
+                placeholder="Search customers by name, company, GSTIN, tags..."
+              />
+            </div>
+          }
+        >
+          {(close) => (
+            <div style={{ minWidth: 280, maxHeight: 260, overflowY: 'auto' }}>
+              {filtered.length === 0 && (
+                <div style={{ padding: 16, textAlign: 'center', fontSize: 13, color: 'var(--inv-text-sub)' }}>
+                  No customers found
                 </div>
               )}
-            </Dropdown>
-            <PermissionGate permission={PERMISSIONS.CUSTOMER_CREATE}>
-              <Button variant="secondary" icon="user-plus" onClick={onOpenCreateCustomer}>
-                Create
-              </Button>
-            </PermissionGate>
-          </div>
-
-          {selectedCustomer && (
-            <div className="inv-customer-card">
-              <div className="inv-customer-card__head">
-                <strong>{selectedCustomer.name}</strong>
-                <PermissionGate permission={PERMISSIONS.CUSTOMER_UPDATE}>
-                  <button type="button" className="inv-link" onClick={onEditCustomer}>
-                    <Icon name="edit" size={14} /> Edit
-                  </button>
-                </PermissionGate>
-              </div>
-              <div className="inv-customer-card__body">
-                {selectedCustomer.company && <span>{selectedCustomer.company}</span>}
-                {selectedCustomer.email && <span>{selectedCustomer.email}</span>}
-                {selectedCustomer.phone && <span>{selectedCustomer.phone}</span>}
-                {selectedCustomer.gstin && <span>GSTIN: {selectedCustomer.gstin}</span>}
-                {selectedCustomer.billing_address && <span>{selectedCustomer.billing_address}</span>}
-              </div>
+              {filtered.map((c) => (
+                <DropdownItem key={c.id} onClick={() => { close(); onSelectCustomer(c); }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--inv-text-main)' }}>{c.name}</span>
+                    <span style={{ fontSize: 11, color: 'var(--inv-text-sub)' }}>
+                      {[c.company, c.phone, c.gstin].filter(Boolean).join(' · ')}
+                    </span>
+                  </div>
+                </DropdownItem>
+              ))}
             </div>
           )}
-          {errors?.customer && <span className="inv-field-error">{errors.customer}</span>}
-        </Field>
+        </Dropdown>
 
-        <div className="inv-grid-3">
-          <Field label="Invoice Date" required>
-            <Input
+        {selectedCustomer && (
+          <div className="inv-selected-customer">
+            <span className="inv-cust-name">{selectedCustomer.name}</span>
+            <PermissionGate permission={PERMISSIONS.CUSTOMER_UPDATE}>
+              <button className="inv-cust-edit" onClick={onEditCustomer}>
+                <Icon name="edit" size={12} /> Edit
+              </button>
+            </PermissionGate>
+          </div>
+        )}
+        {errors?.customer && <span className="inv-field-error">{errors.customer}</span>}
+      </div>
+
+      <div className="inv-customer-right">
+        <div className="inv-field-block">
+          <span className="inv-label">Invoice Date</span>
+          <div className="inv-date-input">
+            <span>{invoiceDate || 'Select date'}</span>
+            <input
               type="date"
-              value={invoiceDate}
+              value={invoiceDate || ''}
               onChange={(e) => { onInvoiceDate(e.target.value); onAutoDueDate(e.target.value); }}
+              style={{ opacity: 0, position: 'absolute', width: '100%', height: '100%', left: 0, top: 0, cursor: 'pointer' }}
             />
-          </Field>
-          <Field label={`Due Date${dueDateOffset ? ` (auto +${dueDateOffset}d)` : ''}`}>
-            <Input
+            <Icon name="calendar" size={14} />
+          </div>
+        </div>
+        <div className="inv-field-block">
+          <span className="inv-label">Due Date</span>
+          <div className="inv-date-input" style={{ position: 'relative' }}>
+            <span>{dueDate || 'Select date'}</span>
+            <input
               type="date"
-              value={dueDate}
+              value={dueDate || ''}
               onChange={(e) => onDueDate(e.target.value)}
-              aria-invalid={!!errors?.dueDate}
-              className={errors?.dueDate ? 'form-input--error' : ''}
+              style={{ opacity: 0, position: 'absolute', width: '100%', height: '100%', left: 0, top: 0, cursor: 'pointer' }}
             />
-            {errors?.dueDate && <span className="inv-field-error">{errors.dueDate}</span>}
-          </Field>
-          <Field label="Reference">
-            <Input
-              value={reference}
+            <Icon name="calendar" size={14} />
+          </div>
+          {errors?.dueDate && <span className="inv-field-error">{errors.dueDate}</span>}
+        </div>
+        <div className="inv-field-block">
+          <span className="inv-label">Reference <span className="inv-opt">(Optional)</span></span>
+          <div className="inv-text-field">
+            <input
+              type="text"
+              value={reference || ''}
               onChange={(e) => onReference(e.target.value)}
-              placeholder="PO / reference no."
+              placeholder="Reference, e.g. PO Number, Sales Person names, Shipment Number etc..."
             />
-          </Field>
+          </div>
         </div>
       </div>
 
@@ -142,6 +131,6 @@ export default function InvoiceDetails({
         onClose={onCloseCustomerModal}
         onSubmit={onSubmitCustomer}
       />
-    </Card>
+    </section>
   );
 }

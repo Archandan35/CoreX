@@ -1,20 +1,17 @@
 import Icon from '../ui/Icon.jsx';
-import { APP_NAME } from '../../constants/index.js';
 
 export default function InvoiceFooter() {
   return (
-    <div className="inv-footer">
-      <span className="inv-footer-brand">
-        <Icon name="shield-check" size={14} strokeWidth={2} />
-        {APP_NAME}
-      </span>
-      <span className="inv-footer-copyright">
-        &copy; {new Date().getFullYear()} {APP_NAME}. All rights reserved.
-      </span>
-      <span className="inv-footer-security">
-        <Icon name="lock" size={12} strokeWidth={2} />
-        Secured with end-to-end encryption
-      </span>
-    </div>
+    <footer className="inv-footer">
+      <div className="inv-footer-brand">
+        <Icon name="zap" size={18} /> swipe
+      </div>
+      <div className="inv-footer-right">
+        <span>&copy; 2026 NextSpeed Technologies Private Limited. All rights reserved.</span>
+        <span className="inv-secure">
+          <Icon name="shield-check" size={13} /> Data is secured via bank-grade security
+        </span>
+      </div>
+    </footer>
   );
 }
