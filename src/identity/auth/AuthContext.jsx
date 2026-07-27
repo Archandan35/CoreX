@@ -51,10 +51,6 @@ export function AuthProvider({ children }) {
   const register = useCallback(async (payload) => {
     const auth = await getSupabaseAuth();
     const result = await auth.supabaseRegister(payload);
-    if (result.ok) {
-      setUser(result.user);
-      setApiToken(result.token);
-    }
     return { ok: result.ok, error: result.error, notice: result.notice, user: result.user, token: result.token };
   }, []);
 

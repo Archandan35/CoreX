@@ -21,13 +21,13 @@ export default function Login() {
     try {
       const ec = sessionStorage.getItem('email_confirmed');
       if (ec === 'true') {
-        sessionStorage.removeItem('email_confirmed');
         setConfirmed(true);
+        sessionStorage.removeItem('email_confirmed');
       }
       const rc = sessionStorage.getItem('registration_complete');
       if (rc === 'true') {
-        sessionStorage.removeItem('registration_complete');
         setRegistered(true);
+        sessionStorage.removeItem('registration_complete');
       }
     } catch {}
   }, []);

@@ -312,14 +312,6 @@ function AppRoutes() {
     }
   }
 
-  // Reached when the wizard was opened directly on Step 9 because the
-  // database was ALREADY fully compatible — nothing was installed, so no
-  // metadata is written. Simply continue to the Administrator Authority check.
-  async function handleAlreadyCompleteContinue(database) {
-    closeSetupWizard();
-    await checkAdmin(database || db);
-  }
-
   if (showWizard) {
     return <SetupWizard schema={SCHEMAS} onComplete={handleSetupComplete} db={db} />;
   }
@@ -337,12 +329,6 @@ function AppRoutes() {
   // Step 1. No Login/Register/Dashboard access is permitted while this is true.
   if (appState === 'setup') {
     return <SetupWizard schema={SCHEMAS} onComplete={handleSetupComplete} db={db} initialStep={0} />;
-  }
-
-  // Database fully compatible — skip Steps 1–9 and open directly on
-  // Step 10 (Setup Complete), then continue straight to the auth decision.
-  if (appState === 'complete') {
-    return <SetupWizard schema={SCHEMAS} onComplete={handleAlreadyCompleteContinue} db={db} initialStep={9} />;
   }
 
   return (

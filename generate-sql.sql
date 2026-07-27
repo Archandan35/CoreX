@@ -6,7 +6,7 @@
 -- When adding new database objects, update BOTH this file AND
 -- src/setup-wizard/SqlGenerator.js and src/schema/models/index.js
 -- to keep them synchronized.
--- Generated: 2026-07-27
+-- Generated: 2026-07-28
 -- Schema Version: 4
 -- ============================================================
 
