@@ -170,7 +170,29 @@ export async function supabaseRegister(payload) {
     }
 
     if (data.session) {
-      const { record, error: profileError } = await fetchProfileRecord(client, data.user.id);
+      let { record, error: profileError } = await fetchProfileRecord(client, data.user.id);
+
+      if (!record || profileError) {
+        const insertPayload = {
+          id: data.user.id,
+          email: data.user.email,
+          name: payload.name || data.user.user_metadata?.name || data.user.email.split('@')[0],
+          username: payload.username || '',
+          phone: payload.phone || '',
+          role_label: payload.role_label || '',
+          full_access: payload.full_access === true,
+          permissions: payload.permissions || [],
+          status: 'active',
+        };
+        const { error: insertError } = await client.from('users').insert(insertPayload);
+        if (insertError) {
+          await client.auth.signOut();
+          return { ok: false, error: 'Account profile could not be created. Contact an administrator.' };
+        }
+        const retry = await fetchProfileRecord(client, data.user.id);
+        record = retry.record;
+        profileError = retry.error;
+      }
 
       if (!record || profileError) {
         await client.auth.signOut();

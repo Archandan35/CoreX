@@ -58,6 +58,7 @@ GRANT EXECUTE ON FUNCTION public.is_admin_user() TO anon, authenticated, service
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
+  username TEXT,
   email TEXT NOT NULL,
   phone TEXT,
   password_hash TEXT,
@@ -67,7 +68,8 @@ CREATE TABLE IF NOT EXISTS users (
   status TEXT NOT NULL DEFAULT 'active',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (email)
+  UNIQUE (email),
+  UNIQUE (username)
 );
 CREATE TABLE IF NOT EXISTS roles (
   id UUID PRIMARY KEY NOT NULL,
@@ -91,6 +93,7 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE INDEX IF NOT EXISTS idx_users_name ON users (name);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 CREATE INDEX IF NOT EXISTS idx_users_phone ON users (phone);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
 
 
 -- ===== Row Level Security =====
@@ -162,12 +165,13 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
 BEGIN
   INSERT INTO public.users (
-    id, email, name, phone, role_label, full_access, permissions,
+    id, email, name, username, phone, role_label, full_access, permissions,
     status, created_at, updated_at
   ) VALUES (
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
+    LOWER(NEW.raw_user_meta_data->>'username'),
     COALESCE(NEW.raw_user_meta_data->>'phone', NULL),
     COALESCE(NEW.raw_user_meta_data->>'role_label', NULL),
     CASE
