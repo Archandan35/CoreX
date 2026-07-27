@@ -16,6 +16,8 @@ import Button from '../../components/ui/Button.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
 import NotificationToast from '../../components/ui/Toast.jsx';
 import Icon from '../../components/ui/Icon.jsx';
+import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx';
+import useUnsavedChanges from '../../hooks/useUnsavedChanges.js';
 import { invoiceService } from '../../services/invoice/index.js';
 import { computeInvoice } from '../../business/invoice/calculations.js';
 import {
@@ -186,6 +188,8 @@ export default function CreateInvoice() {
       _key: generateKey(), name: product.name || product, description: product.description || '',
       quantity: Number(defaultQty) || 1, unitPrice: Number(product.unit_price) || 0,
       taxRate: Number(product.tax_rate) || 0, discountType: 'percent', discountValue: 0,
+      product_id: product.id || null,
+      stock_quantity: Number(product.stock_quantity) || 0,
     }]);
     setProductQuery('');
   }, [defaultQty]);
@@ -194,6 +198,7 @@ export default function CreateInvoice() {
     setItems(prev => [...prev, {
       _key: generateKey(), name: '', description: '',
       quantity: 1, unitPrice: 0, taxRate: 0, discountType: 'percent', discountValue: 0,
+      product_id: null, stock_quantity: 0,
     }]);
   }, []);
 
@@ -275,6 +280,17 @@ export default function CreateInvoice() {
     setHeaderDefs(p => p.filter(h => h.key !== key));
   }, []);
 
+  // --- Unsaved changes ---
+  const isFormDirty = useMemo(() => {
+    if (!initialized.current) return false;
+    return items.length > 0 || !!selectedCustomer || notes.length > 0 || terms.length > 0;
+  }, [items, selectedCustomer, notes, terms]);
+  const { showConfirm, confirmNavigation, proceed: confirmProceed, cancel: confirmCancel } = useUnsavedChanges(isFormDirty);
+
+  const safeNavigate = useCallback((path) => {
+    confirmNavigation(() => navigate(path));
+  }, [confirmNavigation, navigate]);
+
   // --- Save ---
   const buildPayload = useCallback((status) => ({
     prefix, invoiceNumber, invoiceDate, dueDate, reference,
@@ -302,7 +318,7 @@ export default function CreateInvoice() {
     try {
       await invoiceService.saveInvoice(buildPayload(status));
       notificationManager.success('Invoice', `Invoice ${status === 'draft' ? 'draft saved' : 'saved'}.`);
-      navigate('/');
+      safeNavigate('/');
     } catch (e) {
       notificationManager.error('Invoice', e.message || 'Failed.');
     } finally { setSaving(false); }
@@ -499,6 +515,17 @@ export default function CreateInvoice() {
       </Modal>
 
       <DocumentSettings open={docSettingsOpen} onClose={() => setDocSettingsOpen(false)} />
+
+      <ConfirmDialog
+        open={showConfirm}
+        onClose={confirmCancel}
+        onConfirm={confirmProceed}
+        title="Unsaved Changes"
+        message="You have unsaved changes. Are you sure you want to leave this page?"
+        confirmText="Leave"
+        cancelText="Stay"
+        variant="danger"
+      />
 
       <NotificationToast />
     </div>

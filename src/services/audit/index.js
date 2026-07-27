@@ -3,23 +3,24 @@ export class AuditService {
     this.db = db;
   }
 
-  async record({ action, entity, entityId, userId, changes, ipAddress }) {
+  async record({ tableName, recordId, action, oldValues, newValues, changedBy, ipAddress }) {
     try {
       await this.db.query(
-        `INSERT INTO audit_log (action, entity, entity_id, user_id, changes, ip_address, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-        [action, entity, entityId, userId, changes ? JSON.stringify(changes) : null, ipAddress || null]
+        `INSERT INTO audit_logs (table_name, record_id, action, old_values, new_values, changed_by, ip_address, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+        [tableName, recordId, action, oldValues ? JSON.stringify(oldValues) : null, newValues ? JSON.stringify(newValues) : null, changedBy || null, ipAddress || null]
       );
     } catch {
     }
   }
 
-  async findByEntity(entity, entityId) {
+  async findByEntity(tableName, recordId) {
     try {
-      return await this.db.query(
-        `SELECT * FROM audit_log WHERE entity = $1 AND entity_id = $2 ORDER BY created_at DESC`,
-        [entity, entityId]
+      const result = await this.db.query(
+        `SELECT * FROM audit_logs WHERE table_name = $1 AND record_id = $2 ORDER BY created_at DESC`,
+        [tableName, recordId]
       );
+      return result || [];
     } catch {
       return [];
     }
@@ -27,10 +28,11 @@ export class AuditService {
 
   async findAll(limit = 100) {
     try {
-      return await this.db.query(
-        `SELECT * FROM audit_log ORDER BY created_at DESC LIMIT $1`,
+      const result = await this.db.query(
+        `SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1`,
         [limit]
       );
+      return result || [];
     } catch {
       return [];
     }

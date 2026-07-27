@@ -2,7 +2,7 @@ import BaseRepository from './BaseRepository.js';
 
 export default class UserRepository extends BaseRepository {
   constructor(db) {
-    super({ table: 'users', columns: ['id', 'name', 'email', 'phone', 'password_hash', 'role', 'permissions', 'status', 'created_at', 'updated_at'], primaryKey: 'id', rls: true, rlsPolicy: (user) => {
+    super({ table: 'users', columns: ['id', 'name', 'username', 'email', 'phone', 'password_hash', 'role_label', 'full_access', 'permissions', 'status', 'created_at', 'updated_at'], primaryKey: 'id', rls: true, rlsPolicy: (user) => {
       if (user?.permissions?.includes('*')) return {};
       const canReadAll = user?.permissions?.includes('user:read');
       if (canReadAll) return {};

@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 export async function handleApiRequest(req, res, db) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const path = url.pathname;
@@ -530,6 +532,85 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
     return send(200, { ok: true });
   }
 
+  // ===== Invoice domain business logic helpers =====
+  async function createAuditLog(tableName, recordId, action, oldValues, newValues, changedBy) {
+    try {
+      await adminClient.from('audit_logs').insert({
+        id: crypto.randomUUID(), table_name: tableName, record_id: String(recordId),
+        action, old_values: oldValues ? JSON.stringify(oldValues) : null,
+        new_values: newValues ? JSON.stringify(newValues) : null,
+        changed_by: changedBy || uid, ip_address: req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '',
+        created_at: new Date().toISOString(),
+      });
+    } catch {}
+  }
+
+  async function createAccountingEntries(invoiceId, payload) {
+    const entries = [];
+    // Debit: Accounts Receivable
+    entries.push({ id: crypto.randomUUID(), invoice_id: invoiceId, entry_type: 'debit', account_name: 'Accounts Receivable', amount: payload.grand_total || 0, description: `Invoice ${payload.invoice_number}`, created_at: new Date().toISOString() });
+    // Credit: Sales / Income
+    entries.push({ id: crypto.randomUUID(), invoice_id: invoiceId, entry_type: 'credit', account_name: 'Sales Income', amount: payload.subtotal || 0, description: `Invoice ${payload.invoice_number} - Subtotal`, created_at: new Date().toISOString() });
+    // Credit: Tax (CGST+SGST or IGST)
+    if (payload.cgst_total > 0) {
+      entries.push({ id: crypto.randomUUID(), invoice_id: invoiceId, entry_type: 'credit', account_name: 'CGST Payable', amount: payload.cgst_total, description: `Invoice ${payload.invoice_number}`, created_at: new Date().toISOString() });
+    }
+    if (payload.sgst_total > 0) {
+      entries.push({ id: crypto.randomUUID(), invoice_id: invoiceId, entry_type: 'credit', account_name: 'SGST Payable', amount: payload.sgst_total, description: `Invoice ${payload.invoice_number}`, created_at: new Date().toISOString() });
+    }
+    if (payload.igst_total > 0) {
+      entries.push({ id: crypto.randomUUID(), invoice_id: invoiceId, entry_type: 'credit', account_name: 'IGST Payable', amount: payload.igst_total, description: `Invoice ${payload.invoice_number}`, created_at: new Date().toISOString() });
+    }
+    // Credit: Additional Charges
+    if (payload.additional_charges_total > 0) {
+      entries.push({ id: crypto.randomUUID(), invoice_id: invoiceId, entry_type: 'credit', account_name: 'Other Charges', amount: payload.additional_charges_total, description: `Invoice ${payload.invoice_number}`, created_at: new Date().toISOString() });
+    }
+    if (entries.length) await adminClient.from('accounting_entries').insert(entries);
+  }
+
+  async function deleteAccountingEntries(invoiceId) {
+    await adminClient.from('accounting_entries').delete().eq('invoice_id', invoiceId);
+  }
+
+  async function updateProductStock(items, sign) {
+    // sign: -1 to reduce stock (reserve), +1 to restore
+    for (const item of items) {
+      if (!item.product_id) continue;
+      const qty = Number(item.quantity) || 0;
+      if (qty <= 0) continue;
+      await adminClient.rpc('exec_sql', {
+        query_text: `UPDATE products SET stock_quantity = GREATEST(0, stock_quantity ${sign < 0 ? '-' : '+'} ${qty}) WHERE id = '${item.product_id}'`,
+      }).catch(() => {});
+    }
+  }
+
+  async function updateCustomerBalance(customerId, deltaGrandTotal, deltaPaid) {
+    if (!customerId) return;
+    const g = Number(deltaGrandTotal) || 0;
+    const p = Number(deltaPaid) || 0;
+    const balDelta = g - p;
+    if (balDelta === 0 && g === 0) return;
+    await adminClient.rpc('exec_sql', {
+      query_text: `UPDATE customers SET outstanding_balance = GREATEST(0, outstanding_balance ${balDelta >= 0 ? '+' : '-'} ${Math.abs(balDelta)}), total_purchases = GREATEST(0, total_purchases ${g >= 0 ? '+' : '-'} ${Math.abs(g)}) WHERE id = '${customerId}'`,
+    }).catch(() => {});
+  }
+
+  function computeInvoiceStatus(invoice) {
+    const total = Number(invoice.grand_total) || 0;
+    const paid = Number(invoice.amount_paid) || 0;
+    const due = invoice.due_date ? new Date(invoice.due_date) : null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (invoice.status === 'cancelled' || invoice.status === 'refunded' || invoice.status === 'void') return invoice.status;
+    if (paid >= total && total > 0) return 'paid';
+    if (paid > 0 && paid < total) return 'partially_paid';
+    if (invoice.status === 'sent' && due && due < today) return 'overdue';
+    if (invoice.status === 'pending' && due && due < today) return 'overdue';
+    if (invoice.status === 'partially_paid' && due && due < today) return 'overdue';
+    return invoice.status || 'draft';
+  }
+
   if (method === 'GET' && path === '/api/invoices/next-number') {
     if (!cp('invoice:read')) return;
     const prefix = (parsed.prefix || 'INV');
@@ -546,15 +627,35 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
   if (method === 'POST' && path === '/api/invoices') {
     if (!cp('invoice:create')) return;
     const { items, payments, ...invoiceRow } = parsed;
-    // Uniqueness check before insert (the unique constraint also protects us,
-    // but this gives a clean 409 message instead of a raw Postgres error).
+    // Uniqueness check before insert
     const { data: dup } = await adminClient.from('invoices').select('id').eq('invoice_number', invoiceRow.invoice_number).limit(1);
     if (dup && dup.length) return send(409, { error: 'Invoice number already exists.' });
+
+    // Auto-compute status: draft stays draft, others check payments
+    const totalPaid = (payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    let status = invoiceRow.status || 'draft';
+    if (status !== 'draft' && totalPaid > 0) {
+      const total = Number(invoiceRow.grand_total) || 0;
+      status = totalPaid >= total ? 'paid' : 'partially_paid';
+    }
+    invoiceRow.status = status;
+    invoiceRow.amount_paid = totalPaid;
+    invoiceRow.balance_due = Math.max(0, (Number(invoiceRow.grand_total) || 0) - totalPaid);
+
     const { data: inv, error: ie } = await adminClient.from('invoices').insert(withCreator(invoiceRow)).select().single();
     if (ie) return send(500, { error: ie.message });
     if (items?.length) await adminClient.from('invoice_items').insert(items.map((it, i) => ({ ...it, invoice_id: inv.id, sort_order: it.sort_order ?? i })));
     if (payments?.length) await adminClient.from('invoice_payments').insert(payments.map((p) => ({ ...p, invoice_id: inv.id, created_by: uid })));
-    return send(201, { invoice: inv });
+
+    // Business logic side effects
+    await Promise.all([
+      updateProductStock(items || [], -1),
+      updateCustomerBalance(invoiceRow.customer_id, invoiceRow.grand_total, totalPaid),
+      createAccountingEntries(inv.id, invoiceRow),
+      createAuditLog('invoices', inv.id, 'created', null, invoiceRow, uid),
+    ]);
+
+    return send(201, { invoice: inv, status });
   }
   if (method === 'GET' && path.match(/^\/api\/invoices\/([0-9a-fA-F-]+)$/)) {
     if (!cp('invoice:read')) return;
@@ -565,7 +666,9 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
       adminClient.from('invoice_payments').select('*').eq('invoice_id', id).order('created_at', { ascending: true }),
     ]);
     if (ir.error || !ir.data) return send(404, { error: 'Invoice not found.' });
-    return send(200, { invoice: { ...ir.data, items: items.data || [], payments: pays.data || [] } });
+    const invoice = { ...ir.data, items: items.data || [], payments: pays.data || [] };
+    invoice.status = computeInvoiceStatus(invoice);
+    return send(200, { invoice });
   }
   if (method === 'PUT' && path.match(/^\/api\/invoices\/([0-9a-fA-F-]+)$/)) {
     if (!cp('invoice:update')) return;
@@ -573,6 +676,25 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
     const { items, payments, ...invoiceRow } = parsed;
     const { data: dup } = await adminClient.from('invoices').select('id').eq('invoice_number', invoiceRow.invoice_number).neq('id', id).limit(1);
     if (dup && dup.length) return send(409, { error: 'Invoice number already exists.' });
+
+    // Fetch old invoice for side-effect reversal
+    const { data: oldInv } = await adminClient.from('invoices').select('*, items:invoice_items(*)').eq('id', id).single();
+    if (!oldInv) return send(404, { error: 'Invoice not found.' });
+    const oldItems = oldInv.items || [];
+    const oldGrandTotal = Number(oldInv.grand_total) || 0;
+    const oldAmountPaid = Number(oldInv.amount_paid) || 0;
+
+    // Auto-compute status
+    const totalPaid = (payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    let status = invoiceRow.status || oldInv.status || 'draft';
+    if (status !== 'draft' && status !== 'cancelled') {
+      const total = Number(invoiceRow.grand_total) || 0;
+      status = totalPaid >= total ? 'paid' : (totalPaid > 0 ? 'partially_paid' : status);
+    }
+    invoiceRow.status = status;
+    invoiceRow.amount_paid = totalPaid;
+    invoiceRow.balance_due = Math.max(0, (Number(invoiceRow.grand_total) || 0) - totalPaid);
+
     const { data: inv, error: ie } = await adminClient.from('invoices').update(clean(invoiceRow)).eq('id', id).select().single();
     if (ie || !inv) return send(404, { error: 'Invoice not found.' });
     if (items) {
@@ -583,14 +705,42 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
       await adminClient.from('invoice_payments').delete().eq('invoice_id', id);
       if (payments.length) await adminClient.from('invoice_payments').insert(payments.map((p) => ({ ...p, invoice_id: id, created_by: p.created_by || uid })));
     }
-    return send(200, { invoice: inv });
+
+    // Business logic: reverse old effects, apply new effects
+    await Promise.all([
+      updateProductStock(oldItems, 1),      // restore old stock
+      updateProductStock(items || [], -1),  // reserve new stock
+      updateCustomerBalance(invoiceRow.customer_id, invoiceRow.grand_total, totalPaid),
+      deleteAccountingEntries(id),
+      createAccountingEntries(id, invoiceRow),
+      createAuditLog('invoices', id, 'updated', oldInv, invoiceRow, uid),
+    ]);
+
+    return send(200, { invoice: inv, status });
   }
   if (method === 'DELETE' && path.match(/^\/api\/invoices\/([0-9a-fA-F-]+)$/)) {
     if (!cp('invoice:delete')) return;
     const id = path.match(/^\/api\/invoices\/([0-9a-fA-F-]+)$/)[1];
-    const { error } = await adminClient.from('invoices').delete().eq('id', id);
+
+    // Fetch invoice with items for side-effect reversal
+    const { data: oldInv } = await adminClient.from('invoices').select('*, items:invoice_items(*)').eq('id', id).single();
+    if (!oldInv) return send(404, { error: 'Invoice not found.' });
+    if (oldInv.status === 'paid') return send(409, { error: 'Cannot delete a paid invoice. Cancel or refund instead.' });
+    if (oldInv.status === 'refunded' || oldInv.status === 'void') return send(409, { error: 'Invoice already finalized.' });
+    const oldItems = oldInv.items || [];
+
+    const { error } = await adminClient.from('invoices').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', id);
     if (error) return send(500, { error: error.message });
-    return send(200, { ok: true });
+
+    // Soft-delete: restore stock, reverse customer balance, void accounting
+    await Promise.all([
+      updateProductStock(oldItems, 1),
+      updateCustomerBalance(oldInv.customer_id, -oldInv.grand_total, -oldInv.amount_paid),
+      deleteAccountingEntries(id),
+      createAuditLog('invoices', id, 'cancelled', oldInv, { status: 'cancelled' }, uid),
+    ]);
+
+    return send(200, { ok: true, status: 'cancelled' });
   }
 
   return send(404, { error: 'Not found.' });

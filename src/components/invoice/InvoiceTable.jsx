@@ -15,6 +15,7 @@ const EMPTY_SVG = (
 
 const LineRow = memo(function LineRow({ line, index, onChange, onRemove }) {
   const computed = useMemo(() => computeLine(line), [line]);
+  const stockWarning = line.product_id && line.stock_quantity > 0 && (Number(line.quantity) || 0) > line.stock_quantity;
 
   const setField = useCallback((field) => (e) => {
     let val = e.target.value;
@@ -42,6 +43,11 @@ const LineRow = memo(function LineRow({ line, index, onChange, onRemove }) {
           onChange={(e) => onChange(index, { ...line, name: e.target.value })}
           placeholder="Product name"
         />
+        {stockWarning && (
+          <div style={{ fontSize: 10, color: 'var(--inv-red-dot)', marginTop: 2 }}>
+            Only {line.stock_quantity} in stock
+          </div>
+        )}
       </td>
       <td>
         <input

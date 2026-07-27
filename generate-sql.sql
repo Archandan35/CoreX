@@ -7,7 +7,7 @@
 -- src/setup-wizard/SqlGenerator.js and src/schema/models/index.js
 -- to keep them synchronized.
 -- Generated: 2026-07-28
--- Schema Version: 4
+-- Schema Version: 5
 -- ============================================================
 
 
@@ -104,6 +104,9 @@ CREATE TABLE IF NOT EXISTS customers (
   state TEXT,
   city TEXT,
   postal_code TEXT,
+  outstanding_balance NUMERIC NOT NULL DEFAULT 0,
+  total_purchases NUMERIC NOT NULL DEFAULT 0,
+  credit_limit NUMERIC NOT NULL DEFAULT 0,
   created_by UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -127,6 +130,8 @@ CREATE TABLE IF NOT EXISTS products (
   unit TEXT,
   hsn_code TEXT,
   is_service BOOLEAN NOT NULL DEFAULT false,
+  stock_quantity NUMERIC NOT NULL DEFAULT 0,
+  stock_alert NUMERIC NOT NULL DEFAULT 0,
   created_by UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -220,9 +225,30 @@ CREATE TABLE IF NOT EXISTS invoice_payments (
   mode TEXT,
   note TEXT,
   created_by UUID,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY NOT NULL,
+  table_name TEXT NOT NULL,
+  record_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  old_values JSONB,
+  new_values JSONB,
+  changed_by UUID,
+  ip_address TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS accounting_entries (
+  id UUID PRIMARY KEY NOT NULL,
+  invoice_id UUID NOT NULL,
+  entry_type TEXT NOT NULL,
+  account_name TEXT NOT NULL,
+  amount NUMERIC NOT NULL DEFAULT 0,
+  description TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 
 
 -- ===== Indexes =====
@@ -259,6 +285,9 @@ CREATE INDEX IF NOT EXISTS idx_invoice_items_name ON invoice_items (name);
 CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice_id ON invoice_items (invoice_id);
 CREATE INDEX IF NOT EXISTS idx_invoice_payments_note ON invoice_payments (note);
 CREATE INDEX IF NOT EXISTS idx_invoice_payments_invoice_id ON invoice_payments (invoice_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_table_record ON audit_logs (table_name, record_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs (created_at);
+CREATE INDEX IF NOT EXISTS idx_accounting_entries_invoice ON accounting_entries (invoice_id);
 
 
 -- ===== Row Level Security =====
@@ -514,7 +543,7 @@ CREATE TABLE IF NOT EXISTS _schema_version (
   description TEXT,
   PRIMARY KEY (version, applied_at)
 );
-INSERT INTO _schema_version (version, description) VALUES (4, 'Schema installation via Setup Wizard');
+INSERT INTO _schema_version (version, description) VALUES (5, 'Schema v5: audit_logs, accounting_entries, stock, customer balance');
 
 
 -- ============================================================

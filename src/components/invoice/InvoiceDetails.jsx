@@ -24,6 +24,9 @@ export default function InvoiceDetails({
     ).slice(0, 8);
   }, [customers, debounced]);
 
+  const bal = Number(selectedCustomer?.outstanding_balance) || 0;
+  const limit = Number(selectedCustomer?.credit_limit) || 0;
+
   return (
     <section className="inv-card inv-customer-card-layout">
       <div className="inv-customer-left">
@@ -78,6 +81,15 @@ export default function InvoiceDetails({
                 <Icon name="edit" size={12} /> Edit
               </button>
             </PermissionGate>
+          </div>
+        )}
+        {selectedCustomer && (
+          <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 11, color: 'var(--inv-text-sub)' }}>
+            {bal > 0 && <span style={{ color: 'var(--inv-red-dot)' }}>Due: ₹{bal.toFixed(2)}</span>}
+            {!!limit && <span>Limit: ₹{limit.toFixed(2)}</span>}
+            {limit > 0 && bal >= limit && (
+              <span style={{ color: 'var(--inv-red-dot)', fontWeight: 600 }}>Credit limit reached!</span>
+            )}
           </div>
         )}
         {errors?.customer && <span className="inv-field-error">{errors.customer}</span>}

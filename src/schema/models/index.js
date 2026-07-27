@@ -118,11 +118,11 @@ export const SCHEMAS = {
 
   customers: {
     table: 'customers',
-    columns: ['id', 'name', 'company', 'email', 'phone', 'gstin', 'billing_address', 'shipping_address', 'state', 'city', 'postal_code', 'created_by', 'created_at', 'updated_at'],
-    columnTypes: { id: 'UUID', name: 'TEXT', company: 'TEXT', email: 'TEXT', phone: 'TEXT', gstin: 'TEXT', billing_address: 'TEXT', shipping_address: 'TEXT', state: 'TEXT', city: 'TEXT', postal_code: 'TEXT', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    columns: ['id', 'name', 'company', 'email', 'phone', 'gstin', 'billing_address', 'shipping_address', 'state', 'city', 'postal_code', 'outstanding_balance', 'total_purchases', 'credit_limit', 'created_by', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', name: 'TEXT', company: 'TEXT', email: 'TEXT', phone: 'TEXT', gstin: 'TEXT', billing_address: 'TEXT', shipping_address: 'TEXT', state: 'TEXT', city: 'TEXT', postal_code: 'TEXT', outstanding_balance: 'NUMERIC', total_purchases: 'NUMERIC', credit_limit: 'NUMERIC', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
     primaryKey: 'id',
     nullable: ['company', 'email', 'phone', 'gstin', 'billing_address', 'shipping_address', 'state', 'city', 'postal_code', 'created_by'],
-    defaults: { created_at: 'NOW()', updated_at: 'NOW()' },
+    defaults: { outstanding_balance: '0', total_purchases: '0', credit_limit: '0', created_at: 'NOW()', updated_at: 'NOW()' },
     rls: true,
     searchableFields: ['name', 'company', 'email', 'phone', 'gstin'],
     indexes: ['created_by'],
@@ -141,11 +141,11 @@ export const SCHEMAS = {
 
   products: {
     table: 'products',
-    columns: ['id', 'name', 'sku', 'barcode', 'category_id', 'description', 'unit_price', 'tax_rate', 'unit', 'hsn_code', 'is_service', 'created_by', 'created_at', 'updated_at'],
-    columnTypes: { id: 'UUID', name: 'TEXT', sku: 'TEXT', barcode: 'TEXT', category_id: 'UUID', description: 'TEXT', unit_price: 'NUMERIC', tax_rate: 'NUMERIC', unit: 'TEXT', hsn_code: 'TEXT', is_service: 'BOOLEAN', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    columns: ['id', 'name', 'sku', 'barcode', 'category_id', 'description', 'unit_price', 'tax_rate', 'unit', 'hsn_code', 'is_service', 'stock_quantity', 'stock_alert', 'created_by', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', name: 'TEXT', sku: 'TEXT', barcode: 'TEXT', category_id: 'UUID', description: 'TEXT', unit_price: 'NUMERIC', tax_rate: 'NUMERIC', unit: 'TEXT', hsn_code: 'TEXT', is_service: 'BOOLEAN', stock_quantity: 'NUMERIC', stock_alert: 'NUMERIC', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
     primaryKey: 'id',
     nullable: ['sku', 'barcode', 'category_id', 'description', 'unit', 'hsn_code', 'created_by'],
-    defaults: { unit_price: '0', tax_rate: '0', is_service: 'false', created_at: 'NOW()', updated_at: 'NOW()' },
+    defaults: { unit_price: '0', tax_rate: '0', is_service: 'false', stock_quantity: '0', stock_alert: '0', created_at: 'NOW()', updated_at: 'NOW()' },
     rls: true,
     searchableFields: ['name', 'sku', 'barcode', 'hsn_code'],
     indexes: ['created_by'],
@@ -209,8 +209,30 @@ export const SCHEMAS = {
     searchableFields: ['note'],
     indexes: ['invoice_id'],
   },
+
+  audit_logs: {
+    table: 'audit_logs',
+    columns: ['id', 'table_name', 'record_id', 'action', 'old_values', 'new_values', 'changed_by', 'ip_address', 'created_at'],
+    columnTypes: { id: 'UUID', table_name: 'TEXT', record_id: 'TEXT', action: 'TEXT', old_values: 'JSONB', new_values: 'JSONB', changed_by: 'UUID', ip_address: 'TEXT', created_at: 'TIMESTAMPTZ' },
+    primaryKey: 'id',
+    nullable: ['old_values', 'new_values', 'changed_by', 'ip_address'],
+    defaults: { created_at: 'NOW()' },
+    rls: false,
+    indexes: ['table_name', 'record_id', 'created_at'],
+  },
+
+  accounting_entries: {
+    table: 'accounting_entries',
+    columns: ['id', 'invoice_id', 'entry_type', 'account_name', 'amount', 'description', 'created_at'],
+    columnTypes: { id: 'UUID', invoice_id: 'UUID', entry_type: 'TEXT', account_name: 'TEXT', amount: 'NUMERIC', description: 'TEXT', created_at: 'TIMESTAMPTZ' },
+    primaryKey: 'id',
+    nullable: ['description'],
+    defaults: { amount: '0', created_at: 'NOW()' },
+    rls: false,
+    indexes: ['invoice_id'],
+  },
 };
 
-SCHEMAS.version = 4;
+SCHEMAS.version = 5;
 SCHEMAS.extensions = [];
 SCHEMAS.seedData = [];
