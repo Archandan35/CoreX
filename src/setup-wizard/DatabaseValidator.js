@@ -178,14 +178,42 @@ export class DatabaseValidator {
   async _checkFunctions() {
     const existingNames = new Set();
 
+    const probeRpc = async (fnName) => {
+      if (!this.db._raw || typeof this.db._raw.rpc !== 'function') return false;
+      const supabase = this.db._raw;
+      const params = fnName === 'exec_sql' ? { query_text: 'SELECT 1' } : {};
+      try {
+        const { error } = await supabase.rpc(fnName, params);
+        if (!error) return true;
+        const code = (error.code || '').toString();
+        const msg = (error.message || '').toLowerCase();
+        if (code === '404' || msg.includes('404') || msg.includes('does not exist') || msg.includes('not found')) return false;
+        return true;
+      } catch (err) {
+        const code = (err.code || '').toString();
+        const msg = (err.message || '').toLowerCase();
+        if (code === '404' || msg.includes('404') || msg.includes('does not exist') || msg.includes('not found')) return false;
+        return true;
+      }
+    };
+
+    for (const fnName of REQUIRED_FUNCTIONS) {
+      if (await probeRpc(fnName)) {
+        this.results.functions.push({ name: fnName, exists: true, status: 'existing', type: 'function' });
+        existingNames.add(fnName);
+      }
+    }
+
     try {
       const result = await this.db.query(
         `SELECT routine_name FROM information_schema.routines WHERE routine_schema = 'public' AND routine_type = 'FUNCTION'`
       );
       if (result && result.length > 0) {
         for (const row of result) {
-          existingNames.add(row.routine_name);
-          this.results.functions.push({ name: row.routine_name, exists: true, status: 'existing', type: 'function' });
+          if (!existingNames.has(row.routine_name)) {
+            existingNames.add(row.routine_name);
+            this.results.functions.push({ name: row.routine_name, exists: true, status: 'existing', type: 'function' });
+          }
         }
       }
     } catch {}
@@ -200,41 +228,13 @@ export class DatabaseValidator {
       );
       if (result && result.length > 0) {
         for (const row of result) {
-          existingNames.add(row.proname);
-          this.results.functions.push({ name: row.proname, exists: true, status: 'existing', type: 'function' });
+          if (!existingNames.has(row.proname)) {
+            existingNames.add(row.proname);
+            this.results.functions.push({ name: row.proname, exists: true, status: 'existing', type: 'function' });
+          }
         }
       }
     } catch {}
-
-    if (existingNames.size > 0) return;
-
-    if (this.db._raw && typeof this.db._raw.rpc === 'function') {
-      const supabase = this.db._raw;
-      for (const fnName of REQUIRED_FUNCTIONS) {
-        try {
-          const params = fnName === 'exec_sql' ? { query_text: 'SELECT 1' } : {};
-          const { error } = await supabase.rpc(fnName, params);
-          if (!error) {
-            this.results.functions.push({ name: fnName, exists: true, status: 'existing', type: 'function' });
-            existingNames.add(fnName);
-          }
-        } catch (err) {
-          const is404 = err && (
-            err.code === '404'
-            || err.status === 404
-            || (typeof err.message === 'string' && (
-              err.message.includes('404')
-              || err.message.includes('does not exist')
-              || err.message.toLowerCase().includes('not found')
-            ))
-          );
-          if (!is404) {
-            this.results.functions.push({ name: fnName, exists: true, status: 'existing', type: 'function' });
-            existingNames.add(fnName);
-          }
-        }
-      }
-    }
   }
 
   async _checkTriggers() {
