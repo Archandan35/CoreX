@@ -110,7 +110,7 @@ export async function supabaseLogin(identifier, password) {
     const { record, error: profileError } = await fetchProfileRecord(client, data.user.id);
     if (!record || profileError) {
       await client.auth.signOut();
-      return { ok: false, error: 'Your account profile was not found. Contact an administrator.' };
+      return { ok: false, error: 'Your account profile was not found. The database schema may be incomplete — if you are the administrator, please run the Setup Wizard from the banner above.' };
     }
 
     return {
@@ -187,7 +187,7 @@ export async function supabaseRegister(payload) {
         const { error: insertError } = await client.from('users').insert(insertPayload);
         if (insertError) {
           await client.auth.signOut();
-          return { ok: false, error: 'Account profile could not be created. Contact an administrator.' };
+          return { ok: false, error: 'Account profile could not be created. The database schema may be incomplete — if you are the administrator, please run the Setup Wizard from the banner above.' };
         }
         const retry = await fetchProfileRecord(client, data.user.id);
         record = retry.record;
@@ -196,7 +196,7 @@ export async function supabaseRegister(payload) {
 
       if (!record || profileError) {
         await client.auth.signOut();
-        return { ok: false, error: 'Account profile could not be created. Contact an administrator.' };
+        return { ok: false, error: 'Account profile could not be created. The database schema may be incomplete — if you are the administrator, please run the Setup Wizard from the banner above.' };
       }
 
       const missing = [];
