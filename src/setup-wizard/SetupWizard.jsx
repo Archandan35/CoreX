@@ -20,7 +20,7 @@ const STEPS = [
   { id: 'plan', label: 'Plan', icon: 'list' },
   { id: 'execute', label: 'Execute', icon: 'bolt' },
   { id: 'recheck', label: 'Re-check', icon: 'check-circle' },
-  { id: 'complete', label: 'Done', icon: 'check' },
+  { id: 'done', label: 'Done', icon: 'check' },
 ];
 
 const genStatus = { PENDING: 'pending', RUNNING: 'running', COMPLETED: 'completed', FAILED: 'failed' };
@@ -485,579 +485,604 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
     { key: 'verify', label: 'Verify Objects', status: verifyStatus?.ok ? genStatus.COMPLETED : verifyStatus ? genStatus.FAILED : genStatus.PENDING },
   ];
 
+  const stepTitles = [
+    'Welcome',
+    'Select Driver',
+    'Connection Details',
+    'Verify Connection',
+    'Connection Verified',
+    'Schema Analysis',
+    'Installation Plan',
+    'Generate & Execute SQL',
+    'Verify Installation',
+    'Setup Complete',
+  ];
+
   return (
     <div className="setup-wizard">
-      {/* Header Bar */}
-      <div className="setup-wizard-header">
-        <div className="setup-wizard-header-brand">
-          <div className="setup-wizard-header-logo">C</div>
+      {/* Sidebar */}
+      <div className="setup-wizard-sidebar">
+        <div className="setup-wizard-sidebar-brand">
+          <div className="setup-wizard-sidebar-logo">C</div>
           <div>
-            <div className="setup-wizard-header-title">CoreX Setup</div>
-            <div className="setup-wizard-header-sub">Database Configuration</div>
+            <div className="setup-wizard-sidebar-title">CoreX Setup</div>
+            <div className="setup-wizard-sidebar-sub">Configuration</div>
           </div>
         </div>
-        <div className="setup-wizard-header-actions">
-          <ThemeToggle className="setup-wizard-theme-toggle" />
-        </div>
-      </div>
 
-      {/* Horizontal Stepper */}
-      <div className="setup-wizard-stepper">
-        {STEPS.map((s, i) => {
-          const isCompleted = completedSteps.has(i);
-          const isActive = i === step;
-          const isLocked = i > maxAccessible + 1;
-          return (
-            <div className="setup-wizard-step" key={s.id}>
+        <nav className="setup-wizard-sidebar-nav">
+          {STEPS.map((s, i) => {
+            const isCompleted = completedSteps.has(i);
+            const isActive = i === step;
+            const isLocked = i > maxAccessible + 1;
+            return (
               <button
-                className={`setup-wizard-step-button ${isActive ? 'setup-wizard-step--active' : ''} ${isCompleted ? 'setup-wizard-step--completed' : ''}`}
+                key={s.id}
+                className={`setup-wizard-sidebar-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
                 onClick={() => goTo(i)}
                 disabled={isLocked}
                 type="button"
               >
-                <span className="setup-wizard-step-circle">
+                <span className="setup-wizard-sidebar-dot">
                   {isCompleted ? <Icon name="check" size={11} /> : i + 1}
                 </span>
-                <span className="setup-wizard-step-label">{s.label}</span>
+                <span className="setup-wizard-sidebar-label">{s.label}</span>
               </button>
-              {i < STEPS.length - 1 && (
-                <div className={`setup-wizard-step-connector ${isCompleted || (completedSteps.has(i + 1)) ? 'setup-wizard-step-connector--completed' : ''}`} />
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </nav>
+
+        <div className="setup-wizard-sidebar-progress">
+          <div className="setup-wizard-sidebar-progress-label">
+            <span>{step + 1} of {STEPS.length}</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <div className="setup-wizard-sidebar-progress-bar">
+            <div className="setup-wizard-sidebar-progress-fill" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
       </div>
 
-      {/* Body */}
-      <div className="setup-wizard-body">
-        <div className="setup-wizard-body-inner">
+      {/* Main */}
+      <div className="setup-wizard-main">
+        {/* Topbar */}
+        <div className="setup-wizard-topbar">
+          <div>
+            <div className="setup-wizard-topbar-title">{stepTitles[step]}</div>
+            <div className="setup-wizard-topbar-step">Step {step + 1} of {STEPS.length}</div>
+          </div>
+          <div className="setup-wizard-topbar-actions">
+            <ThemeToggle className="setup-wizard-theme-toggle" />
+          </div>
+        </div>
 
-          {/* Step 0 — Welcome */}
-          {step === 0 && (
-            <div className="setup-wizard-panel">
-              <h1>Welcome to CoreX Setup</h1>
-              <p>This wizard will help you initialize and configure your database.</p>
-              <div className="setup-wizard-features">
-                <div className="setup-feature">
-                  <span className="setup-feature-icon"><Icon name="database" size={18} /></span>
-                  <span>Database Configuration</span>
-                </div>
-                <div className="setup-feature">
-                  <span className="setup-feature-icon"><Icon name="scan" size={18} /></span>
-                  <span>Schema Analysis</span>
-                </div>
-                <div className="setup-feature">
-                  <span className="setup-feature-icon"><Icon name="bolt" size={18} /></span>
-                  <span>SQL Generation</span>
-                </div>
-                <div className="setup-feature">
-                  <span className="setup-feature-icon"><Icon name="shield" size={18} /></span>
-                  <span>Verification</span>
-                </div>
-              </div>
-              <div className="setup-wizard-actions"><Button variant="primary" onClick={goNext}>Get Started</Button></div>
-            </div>
-          )}
+        {/* Body */}
+        <div className="setup-wizard-body">
+          <div className="setup-wizard-body-inner">
 
-          {/* Step 1 — Driver */}
-          {step === 1 && (
-            <div className="setup-wizard-panel">
-              <h1>Database Driver</h1>
-              <p>Select your database provider to get started.</p>
-              <div className="setup-provider-section">
-                <h2 className="setup-section-title">Select Database Provider</h2>
-                <div className="setup-provider-grid">
-                  {PROVIDERS.map((p) => (
-                    <button
-                      key={p.id}
-                      className={`setup-provider-card ${selectedProvider === p.id ? 'selected' : ''}`}
-                      onClick={() => selectProvider(p.id)}
-                      type="button"
-                    >
-                      <div className="setup-provider-card-header">
-                        <div className="setup-provider-card-logo" style={{ backgroundColor: p.color }}>
-                          {p.logo}
-                        </div>
-                        <div className="setup-provider-card-body">
-                          <div className="setup-provider-card-name">{p.name}</div>
-                          <div className="setup-provider-card-desc">{p.description}</div>
-                        </div>
-                      </div>
-                      <div className="setup-provider-card-footer">
-                        {validationSuccess && selectedProvider === p.id ? (
-                          <span className="provider-status-validated"><Icon name="check-circle" size={12} /> Validated</span>
-                        ) : (
-                          <span className="provider-status-not-configured">Not Configured</span>
-                        )}
-                      </div>
-                    </button>
-                  ))}
+            {/* Welcome */}
+            {step === 0 && (
+              <div className="setup-wizard-card">
+                <h1>Welcome to CoreX Setup</h1>
+                <p>This wizard will help you initialize and configure your database.</p>
+                <div className="setup-wizard-features">
+                  <div className="setup-feature">
+                    <span className="setup-feature-icon"><Icon name="database" size={18} /></span>
+                    <span>Database Configuration</span>
+                  </div>
+                  <div className="setup-feature">
+                    <span className="setup-feature-icon"><Icon name="scan" size={18} /></span>
+                    <span>Schema Analysis</span>
+                  </div>
+                  <div className="setup-feature">
+                    <span className="setup-feature-icon"><Icon name="bolt" size={18} /></span>
+                    <span>SQL Generation</span>
+                  </div>
+                  <div className="setup-feature">
+                    <span className="setup-feature-icon"><Icon name="shield" size={18} /></span>
+                    <span>Verification</span>
+                  </div>
                 </div>
+                <div className="setup-wizard-actions"><Button variant="primary" onClick={goNext}>Get Started</Button></div>
               </div>
-              <div className="setup-wizard-actions">
-                <Button variant="secondary" onClick={goPrev}>Back</Button>
-                <Button variant="primary" onClick={() => { if (selectedProvider) goNext(); }} disabled={!selectedProvider}>Next</Button>
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* Step 2 — Connection */}
-          {step === 2 && (
-            <div className="setup-wizard-panel">
-              <h1>Connection Details</h1>
-              <p>Configure the connection for your selected provider.</p>
-              {provider && (
-                <div className="setup-provider-config-section">
-                  <h2 className="setup-section-title">{provider.name} Configuration</h2>
-                  <div className="setup-provider-config-card">
-                    <div className="setup-provider-config-header">
-                      <div className="setup-provider-config-logo" style={{ backgroundColor: provider.color }}>{provider.logo}</div>
-                      <span className="setup-provider-config-name">{provider.name}</span>
-                    </div>
-                    <div className="setup-provider-config-fields">
-                      {provider.fields.map((field) => (
-                        <div key={field.key} className="setup-provider-field">
-                          <label className="setup-field-label">{field.label}</label>
-                          <div className={`setup-field-input-wrapper ${fieldErrors[field.key] ? 'has-error' : ''}`}>
-                            {field.type === 'password' ? (
-                              <>
-                                <input
-                                  type={visibleFields[field.key] ? 'text' : 'password'}
-                                  value={fieldValues[field.key] || ''}
-                                  onChange={(e) => setField(field.key, e.target.value)}
-                                  placeholder={field.placeholder}
-                                  autoComplete="off"
-                                />
-                                <button type="button" className="setup-field-visibility-toggle" onClick={() => toggleFieldVisibility(field.key)}
-                                  aria-label={visibleFields[field.key] ? 'Hide' : 'Show'} tabIndex={-1}>
-                                  <Icon name={visibleFields[field.key] ? 'eye-off' : 'eye'} size={14} />
-                                </button>
-                                <button type="button" className="setup-field-copy-btn" onClick={() => copyField(fieldValues[field.key])}
-                                  aria-label="Copy to clipboard" tabIndex={-1}>
-                                  <Icon name="copy" size={12} />
-                                </button>
-                              </>
-                            ) : (
-                              <input type={field.type || 'text'} value={fieldValues[field.key] || ''}
-                                onChange={(e) => setField(field.key, e.target.value)} placeholder={field.placeholder} autoComplete="off" />
-                            )}
+            {/* Driver */}
+            {step === 1 && (
+              <div className="setup-wizard-card">
+                <h1>Database Driver</h1>
+                <p>Select your database provider to get started.</p>
+                <div className="setup-provider-section">
+                  <h2 className="setup-section-title">Select Database Provider</h2>
+                  <div className="setup-provider-grid">
+                    {PROVIDERS.map((p) => (
+                      <button
+                        key={p.id}
+                        className={`setup-provider-card ${selectedProvider === p.id ? 'selected' : ''}`}
+                        onClick={() => selectProvider(p.id)}
+                        type="button"
+                      >
+                        <div className="setup-provider-card-header">
+                          <div className="setup-provider-card-logo" style={{ backgroundColor: p.color }}>
+                            {p.logo}
                           </div>
-                          {field.description && <p className="setup-field-desc">{field.description}</p>}
-                          {fieldErrors[field.key] && <p className="setup-field-error">{fieldErrors[field.key]}</p>}
+                          <div className="setup-provider-card-body">
+                            <div className="setup-provider-card-name">{p.name}</div>
+                            <div className="setup-provider-card-desc">{p.description}</div>
+                          </div>
+                        </div>
+                        <div className="setup-provider-card-footer">
+                          {validationSuccess && selectedProvider === p.id ? (
+                            <span className="provider-status-validated"><Icon name="check-circle" size={12} /> Validated</span>
+                          ) : (
+                            <span className="provider-status-not-configured">Not Configured</span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="setup-wizard-actions">
+                  <Button variant="secondary" onClick={goPrev}>Back</Button>
+                  <Button variant="primary" onClick={() => { if (selectedProvider) goNext(); }} disabled={!selectedProvider}>Next</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Connection */}
+            {step === 2 && (
+              <div className="setup-wizard-card">
+                <h1>Connection Details</h1>
+                <p>Configure the connection for your selected provider.</p>
+                {provider && (
+                  <div className="setup-provider-config-section">
+                    <h2 className="setup-section-title">{provider.name} Configuration</h2>
+                    <div className="setup-provider-config-card">
+                      <div className="setup-provider-config-header">
+                        <div className="setup-provider-config-logo" style={{ backgroundColor: provider.color }}>{provider.logo}</div>
+                        <span className="setup-provider-config-name">{provider.name}</span>
+                      </div>
+                      <div className="setup-provider-config-fields">
+                        {provider.fields.map((field) => (
+                          <div key={field.key} className="setup-provider-field">
+                            <label className="setup-field-label">{field.label}</label>
+                            <div className={`setup-field-input-wrapper ${fieldErrors[field.key] ? 'has-error' : ''}`}>
+                              {field.type === 'password' ? (
+                                <>
+                                  <input
+                                    type={visibleFields[field.key] ? 'text' : 'password'}
+                                    value={fieldValues[field.key] || ''}
+                                    onChange={(e) => setField(field.key, e.target.value)}
+                                    placeholder={field.placeholder}
+                                    autoComplete="off"
+                                  />
+                                  <button type="button" className="setup-field-visibility-toggle" onClick={() => toggleFieldVisibility(field.key)}
+                                    aria-label={visibleFields[field.key] ? 'Hide' : 'Show'} tabIndex={-1}>
+                                    <Icon name={visibleFields[field.key] ? 'eye-off' : 'eye'} size={14} />
+                                  </button>
+                                  <button type="button" className="setup-field-copy-btn" onClick={() => copyField(fieldValues[field.key])}
+                                    aria-label="Copy to clipboard" tabIndex={-1}>
+                                    <Icon name="copy" size={12} />
+                                  </button>
+                                </>
+                              ) : (
+                                <input type={field.type || 'text'} value={fieldValues[field.key] || ''}
+                                  onChange={(e) => setField(field.key, e.target.value)} placeholder={field.placeholder} autoComplete="off" />
+                              )}
+                            </div>
+                            {field.description && <p className="setup-field-desc">{field.description}</p>}
+                            {fieldErrors[field.key] && <p className="setup-field-error">{fieldErrors[field.key]}</p>}
+                          </div>
+                        ))}
+                      </div>
+                      {summaryError && (
+                        <div className="sw-error" style={{ marginTop: 16 }}>
+                          <Icon name="alert-circle" size={16} />
+                          <span>{summaryError}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <div className="setup-wizard-actions">
+                  <Button variant="secondary" onClick={goPrev}>Back</Button>
+                  <Button variant="primary" onClick={goNext} disabled={!selectedProvider}>Next</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Verify */}
+            {step === 3 && (
+              <div className="setup-wizard-card">
+                <h1>Verify Connection</h1>
+                <p>Your database connection will now be tested.</p>
+                {validating && (
+                  <div className="sw-loading">
+                    <div className="sw-loading-spinner" />
+                    <h2>Validating Connection...</h2>
+                    <div className="sw-loading-stages">
+                      {validateStages.map((label, i) => (
+                        <div key={i} className={`sw-loading-stage ${i < validatingStage ? 'done' : i === validatingStage ? 'active' : ''}`}>
+                          <span className="sw-loading-stage-icon">
+                            {i < validatingStage ? <Icon name="check-circle" size={16} /> :
+                              i === validatingStage ? <Icon name="loader" size={16} /> :
+                                <Icon name="circle" size={16} />}
+                          </span>
+                          <span>{label}</span>
                         </div>
                       ))}
                     </div>
-                    {summaryError && (
-                      <div className="setup-validation-summary-error">
-                        <Icon name="alert-circle" size={16} />
-                        <span>{summaryError}</span>
-                      </div>
-                    )}
+                    <div className="sw-loading-bar">
+                      <div className="sw-loading-bar-fill" style={{ width: `${(validatingStage / validateStages.length) * 100}%` }} />
+                    </div>
                   </div>
-                </div>
-              )}
-              <div className="setup-wizard-actions">
-                <Button variant="secondary" onClick={goPrev}>Back</Button>
-                <Button variant="primary" onClick={goNext} disabled={!selectedProvider}>Next</Button>
+                )}
+                {!validating && !validationSuccess && summaryError && (
+                  <div className="sw-error" style={{ marginTop: 16 }}>
+                    <Icon name="alert-circle" size={16} />
+                    <span>{summaryError}</span>
+                  </div>
+                )}
+                {!validating && !validationSuccess && summaryError && (
+                  <div className="setup-wizard-actions" style={{ marginTop: 24 }}>
+                    <Button variant="secondary" onClick={goPrev}>Back</Button>
+                    <Button variant="primary" onClick={handleValidate} loading={validating} icon="shield">Retry Verification</Button>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Step 3 — Verify */}
-          {step === 3 && (
-            <div className="setup-wizard-panel">
-              <h1>Verify Connection</h1>
-              <p>Your database connection will now be tested.</p>
-              {validating && (
-                <div className="setup-loading-overlay">
-                  <div className="setup-loading-spinner" />
-                  <h2>Validating Connection...</h2>
-                  <div className="setup-loading-stages">
-                    {validateStages.map((label, i) => (
-                      <div key={i} className={`setup-loading-stage ${i < validatingStage ? 'done' : i === validatingStage ? 'active' : ''}`}>
-                        <span className="setup-loading-stage-icon">
-                          {i < validatingStage ? <Icon name="check-circle" size={16} /> :
-                            i === validatingStage ? <Icon name="loader" size={16} /> :
-                              <Icon name="circle" size={16} />}
-                        </span>
-                        <span className="setup-loading-stage-label">{label}</span>
-                      </div>
-                    ))}
+            {/* Verified */}
+            {step === 4 && (
+              <div className="setup-wizard-card">
+                <div className="sw-success-box">
+                  <div className="sw-success-icon">
+                    <svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+                      <circle className="sw-success-circle" cx="26" cy="26" r="25" fill="none" />
+                      <path className="sw-success-check" d="M14 27l7 7 16-16" fill="none" />
+                    </svg>
                   </div>
-                  <div className="setup-loading-progress">
-                    <div className="setup-loading-progress-fill" style={{ width: `${(validatingStage / validateStages.length) * 100}%` }} />
+                  <h1>Connection Verified</h1>
+                  <p>{provider?.name || selectedProvider} connection established. Credentials validated successfully.</p>
+                  <div className="sw-info-table">
+                    <div className="sw-info-row"><span>Connected Database</span><span>{validationSuccess?.projectInfo?.url || provider?.name || 'Connected'}</span></div>
+                    <div className="sw-info-row"><span>Database Provider</span><span>{provider?.name || selectedProvider}</span></div>
+                    <div className="sw-info-row"><span>Database Version</span><span>{validationSuccess?.projectInfo?.version || 'Detected on schema analysis'}</span></div>
+                    <div className="sw-info-row"><span>Connection Status</span><span className="status-ok">Connected</span></div>
                   </div>
                 </div>
-              )}
-              {!validating && !validationSuccess && summaryError && (
-                <div className="setup-validation-summary-error" style={{ marginTop: 16 }}>
-                  <Icon name="alert-circle" size={16} />
-                  <span>{summaryError}</span>
-                </div>
-              )}
-              {!validating && !validationSuccess && summaryError && (
-                <div className="setup-wizard-actions" style={{ marginTop: 24 }}>
-                  <Button variant="secondary" onClick={goPrev}>Back</Button>
-                  <Button variant="primary" onClick={handleValidate} loading={validating} icon="shield">Retry Verification</Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 4 — Verified */}
-          {step === 4 && (
-            <div className="setup-wizard-panel">
-              <div className="setup-connection-result">
-                <div className="setup-success-icon-container">
-                  <svg className="setup-success-checkmark" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
-                    <circle className="setup-success-circle" cx="26" cy="26" r="25" fill="none" />
-                    <path className="setup-success-check" d="M14 27l7 7 16-16" fill="none" />
-                  </svg>
-                </div>
-                <h1>Connection Verified</h1>
-                <p>{provider?.name || selectedProvider} connection established. Credentials validated successfully.</p>
-                <div className="setup-complete-info">
-                  <div className="complete-row"><span>Connected Database</span><span>{validationSuccess?.projectInfo?.url || provider?.name || 'Connected'}</span></div>
-                  <div className="complete-row"><span>Database Provider</span><span>{provider?.name || selectedProvider}</span></div>
-                  <div className="complete-row"><span>Database Version</span><span>{validationSuccess?.projectInfo?.version || 'Detected on schema analysis'}</span></div>
-                  <div className="complete-row"><span>Connection Status</span><span className="status-ok">Connected</span></div>
+                <div className="setup-wizard-actions">
+                  <Button variant="primary" onClick={goNext}>Next</Button>
                 </div>
               </div>
-              <div className="setup-wizard-actions">
-                <Button variant="primary" onClick={goNext}>Next</Button>
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* Step 5 — Analysis */}
-          {step === 5 && (
-            <div className="setup-wizard-panel">
-              <h1>Schema Analysis</h1>
-              <p>Analyzing database structure against required schema.</p>
-              {busy && (
-                <div className="setup-analyzing">
-                  <div className="setup-analyzing-spinner" />
-                  <span>Validating database schema...</span>
-                </div>
-              )}
-              {analysis && (
-                <div className="setup-analysis-results">
-                  <div className="setup-summary-cards">
-                    <div className="setup-summary-card card-present">
-                      <span className="summary-card-value">{analysis.totalPresent}</span>
-                      <span className="summary-card-label">Objects Present</span>
-                    </div>
-                    <div className="setup-summary-card card-missing">
-                      <span className="summary-card-value">{analysis.totalMissing}</span>
-                      <span className="summary-card-label">Objects Missing</span>
-                    </div>
-                    {analysis.totalIssues > 0 && (
-                      <div className="setup-summary-card card-issues">
-                        <span className="summary-card-value">{analysis.totalIssues}</span>
-                        <span className="summary-card-label">Issues Found</span>
-                      </div>
-                    )}
-                    <div className={`setup-summary-card card-overall ${analysis.isComplete ? 'complete' : analysis.totalMissing > 0 ? 'incomplete' : 'card-issues'}`}>
-                      <span className={`summary-card-value ${analysis.isComplete ? 'text-success' : analysis.totalMissing > 0 ? 'text-danger' : 'text-warning'}`}>
-                        {analysis.isComplete ? 'Complete' : analysis.totalMissing > 0 ? 'Incomplete' : 'Issues'}
-                      </span>
-                      <span className="summary-card-label">Overall</span>
-                    </div>
-                    <div className={`setup-summary-card ${analysis.dependencyStatus === 'complete' ? 'complete' : analysis.dependencyStatus === 'missing' ? 'incomplete' : 'card-issues'}`}>
-                      <span className={`summary-card-value ${analysis.dependencyStatus === 'complete' ? 'text-success' : analysis.dependencyStatus === 'missing' ? 'text-danger' : 'text-warning'}`}>
-                        {analysis.dependencyStatus === 'complete' ? 'Resolved' : analysis.dependencyStatus === 'missing' ? 'Missing' : 'Issues'}
-                      </span>
-                      <span className="summary-card-label">Dependencies</span>
-                    </div>
+            {/* Analysis */}
+            {step === 5 && (
+              <div className="setup-wizard-card">
+                <h1>Schema Analysis</h1>
+                <p>Analyzing database structure against required schema.</p>
+                {busy && (
+                  <div className="sw-analyzing">
+                    <div className="sw-analyzing-spinner" />
+                    <span>Validating database schema...</span>
                   </div>
-                  {Object.entries(analysis.categories).map(([key, cat]) => {
-                    const badgeClass = cat.status === 'complete' ? 'badge-complete' :
-                      cat.status === 'missing' ? 'badge-missing' :
-                        cat.status === 'issues' ? 'badge-issues' :
-                          cat.status === 'validating' ? 'badge-validating' : 'badge-pending';
-                    const badgeLabel = cat.status === 'complete' ? 'Complete' :
-                      cat.status === 'missing' ? 'Missing' :
-                        cat.status === 'issues' ? 'Issues' :
-                          cat.status === 'validating' ? 'Validating' : 'Pending';
-                    const showBlink = cat.status !== 'complete';
-                    return (
-                      <details key={key} className="setup-analysis-category" open={cat.status !== 'complete'}>
-                        <summary>
-                          <span className={`setup-category-badge ${badgeClass}`}>
-                            <span className={`badge-dot ${showBlink ? 'blink' : ''}`} />
-                            {badgeLabel}
-                          </span>
-                          {cat.label}
-                        </summary>
-                        <div className="setup-category-items">
-                          {cat.items.map((item, i) => {
-                            const itemIcon = item.status === 'present' ? 'check' : item.status === 'missing' ? 'x' : 'alert';
-                            return (
-                              <div key={i} className={`setup-category-item item-${item.status}`}>
-                                <Icon name={itemIcon} size={14} />
-                                <span>{item.column || item.name || item.table || item.constraint || item.index || item.detail || '—'}</span>
-                              </div>
-                            );
-                          })}
+                )}
+                {analysis && (
+                  <div className="sw-analysis-results">
+                    <div className="sw-summary-cards">
+                      <div className="sw-summary-card sw-card-present">
+                        <span className="sw-val">{analysis.totalPresent}</span>
+                        <span className="sw-lbl">Present</span>
+                      </div>
+                      <div className="sw-summary-card sw-card-missing">
+                        <span className="sw-val">{analysis.totalMissing}</span>
+                        <span className="sw-lbl">Missing</span>
+                      </div>
+                      {analysis.totalIssues > 0 && (
+                        <div className="sw-summary-card sw-card-issues">
+                          <span className="sw-val">{analysis.totalIssues}</span>
+                          <span className="sw-lbl">Issues</span>
                         </div>
+                      )}
+                      <div className={`sw-summary-card sw-card-overall ${analysis.isComplete ? 'complete' : analysis.totalMissing > 0 ? 'incomplete' : 'issues'}`}>
+                        <span className={`sw-val ${analysis.isComplete ? 'text-success' : analysis.totalMissing > 0 ? 'text-danger' : 'text-warning'}`}>
+                          {analysis.isComplete ? 'Complete' : analysis.totalMissing > 0 ? 'Incomplete' : 'Issues'}
+                        </span>
+                        <span className="sw-lbl">Overall</span>
+                      </div>
+                      <div className={`sw-summary-card sw-card-overall ${analysis.dependencyStatus === 'complete' ? 'complete' : analysis.dependencyStatus === 'missing' ? 'incomplete' : 'issues'}`}>
+                        <span className={`sw-val ${analysis.dependencyStatus === 'complete' ? 'text-success' : analysis.dependencyStatus === 'missing' ? 'text-danger' : 'text-warning'}`}>
+                          {analysis.dependencyStatus === 'complete' ? 'Resolved' : analysis.dependencyStatus === 'missing' ? 'Missing' : 'Issues'}
+                        </span>
+                        <span className="sw-lbl">Dependencies</span>
+                      </div>
+                    </div>
+                    {Object.entries(analysis.categories).map(([key, cat]) => {
+                      const badgeClass = cat.status === 'complete' ? 'sw-badge-complete' :
+                        cat.status === 'missing' ? 'sw-badge-missing' :
+                          cat.status === 'issues' ? 'sw-badge-issues' : 'sw-badge-pending';
+                      const badgeLabel = cat.status === 'complete' ? 'Complete' :
+                        cat.status === 'missing' ? 'Missing' :
+                          cat.status === 'issues' ? 'Issues' : 'Pending';
+                      const showBlink = cat.status !== 'complete';
+                      return (
+                        <details key={key} className="sw-cat" open={cat.status !== 'complete'}>
+                          <summary>
+                            <span className={`sw-cat-badge ${badgeClass}`}>
+                              <span className={`sw-cat-dot ${showBlink ? 'blink' : ''}`} />
+                              {badgeLabel}
+                            </span>
+                            {cat.label}
+                          </summary>
+                          <div className="sw-cat-items">
+                            {cat.items.map((item, i) => {
+                              const itemIcon = item.status === 'present' ? 'check' : item.status === 'missing' ? 'x' : 'alert';
+                              return (
+                                <div key={i} className={`sw-cat-item item-${item.status}`}>
+                                  <Icon name={itemIcon} size={14} />
+                                  <span>{item.column || item.name || item.table || item.constraint || item.index || item.detail || '—'}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </details>
+                      );
+                    })}
+                  </div>
+                )}
+                {!analysis && !busy && <Button variant="primary" onClick={handleAnalyze} icon="scan">Analyze Database</Button>}
+                <div className="setup-wizard-actions">
+                  <Button variant="secondary" onClick={goPrev}>Back</Button>
+                  {analysis && <Button variant="primary" onClick={goNext}>Next</Button>}
+                  {analysis && <Button variant="secondary" onClick={handleAnalyze} loading={busy}>Re-analyze</Button>}
+                </div>
+              </div>
+            )}
+
+            {/* Plan */}
+            {step === 6 && plan && (
+              <div className="setup-wizard-card sw-plan-page">
+                <h1>Installation Plan</h1>
+                <p>Review the objects that will be created, updated, or skipped.</p>
+                <div className="sw-plan-scroll">
+                  <div className="sw-plan-grid">
+                    <div className="sw-plan-card"><span className="sw-plan-val">{plan.existing.length}</span><span className="sw-plan-lbl">Existing</span></div>
+                    <div className="sw-plan-card create"><span className="sw-plan-val">{plan.toCreate.length}</span><span className="sw-plan-lbl">To Create</span></div>
+                    <div className="sw-plan-card update"><span className="sw-plan-val">{plan.toUpdate.length}</span><span className="sw-plan-lbl">To Update</span></div>
+                    <div className="sw-plan-card skip"><span className="sw-plan-val">{plan.toSkip.length}</span><span className="sw-plan-lbl">To Skip</span></div>
+                  </div>
+                  {(() => {
+                    const groups = {};
+                    for (const item of plan.toCreate) {
+                      const type = item.type === 'table' ? 'Tables' :
+                        item.column ? 'Columns' :
+                          item.constraint ? 'Constraints' :
+                            item.index ? 'Indexes' :
+                              item.type === 'extension' ? 'Extensions' :
+                                item.type === 'function' ? 'Functions' :
+                                  item.type === 'trigger' ? 'Triggers' :
+                                    item.type === 'policy' || item.type === 'rls' ? 'Policies' :
+                                      item.type === 'version' ? 'Schema Version' :
+                                        item.type === 'seed' ? 'Seed Data' : 'Other';
+                      if (!groups[type]) groups[type] = [];
+                      const label = item.column ? `${item.table}.${item.column}` :
+                        item.name || item.table || item.constraint || item.index || item.detail || item.type;
+                      if (label && label !== '—') groups[type].push(label);
+                    }
+                    return Object.entries(groups).filter(([, items]) => items.length > 0).map(([type, items]) => (
+                      <details key={type} className="sw-plan-group" open>
+                        <summary><span className="sw-plan-group-title">{type}</span><span className="sw-plan-group-count">{items.length}</span></summary>
+                        <ul className="sw-plan-list">
+                          {items.map((label, i) => <li key={i}>{label}</li>)}
+                        </ul>
                       </details>
+                    ));
+                  })()}
+                </div>
+                <div className="setup-wizard-actions">
+                  <Button variant="secondary" onClick={goPrev}>Back</Button>
+                  <Button variant="primary" onClick={goNext}>Next</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Execute */}
+            {step === 7 && (
+              <div className="setup-wizard-card">
+                <h1>Generate & Execute SQL</h1>
+                <p>Generate SQL from the canonical schema, preview it, and execute against the connected database.</p>
+
+                <div className="sw-gen-steps">
+                  {genSteps.map((gs) => {
+                    const statusIcon = gs.status === 'completed' ? 'check-circle' :
+                      gs.status === 'running' ? 'loader' :
+                        gs.status === 'failed' ? 'alert-circle' : 'circle';
+                    return (
+                      <div key={gs.key} className={`sw-gen-step sw-gen-step--${gs.status}`}>
+                        <span className="sw-gen-step-icon"><Icon name={statusIcon} size={16} /></span>
+                        <span>{gs.label}</span>
+                        <span className={`sw-gen-step-badge badge-${gs.status}`}>{gs.status}</span>
+                      </div>
                     );
                   })}
                 </div>
-              )}
-              {!analysis && !busy && <Button variant="primary" onClick={handleAnalyze} icon="scan">Analyze Database</Button>}
-              <div className="setup-wizard-actions">
-                <Button variant="secondary" onClick={goPrev}>Back</Button>
-                {analysis && <Button variant="primary" onClick={goNext}>Next</Button>}
-                {analysis && <Button variant="secondary" onClick={handleAnalyze} loading={busy}>Re-analyze</Button>}
-              </div>
-            </div>
-          )}
 
-          {/* Step 6 — Plan */}
-          {step === 6 && plan && (
-            <div className="setup-wizard-panel setup-plan-page">
-              <h1>Installation Plan</h1>
-              <p>Review the objects that will be created, updated, or skipped.</p>
-              <div className="setup-plan-scroll">
-                <div className="setup-plan-stats-grid">
-                  <div className="plan-stat-card"><span className="plan-stat-value">{plan.existing.length}</span><span className="plan-stat-label">Existing</span></div>
-                  <div className="plan-stat-card accent-create"><span className="plan-stat-value">{plan.toCreate.length}</span><span className="plan-stat-label">To Create</span></div>
-                  <div className="plan-stat-card accent-update"><span className="plan-stat-value">{plan.toUpdate.length}</span><span className="plan-stat-label">To Update</span></div>
-                  <div className="plan-stat-card accent-skip"><span className="plan-stat-value">{plan.toSkip.length}</span><span className="plan-stat-label">To Skip</span></div>
-                </div>
-                {(() => {
-                  const groups = {};
-                  for (const item of plan.toCreate) {
-                    const type = item.type === 'table' ? 'Tables' :
-                      item.column ? 'Columns' :
-                        item.constraint ? 'Constraints' :
-                          item.index ? 'Indexes' :
-                            item.type === 'extension' ? 'Extensions' :
-                              item.type === 'function' ? 'Functions' :
-                                item.type === 'trigger' ? 'Triggers' :
-                                  item.type === 'policy' || item.type === 'rls' ? 'Policies' :
-                                    item.type === 'version' ? 'Schema Version' :
-                                      item.type === 'seed' ? 'Seed Data' : 'Other';
-                    if (!groups[type]) groups[type] = [];
-                    const label = item.column ? `${item.table}.${item.column}` :
-                      item.name || item.table || item.constraint || item.index || item.detail || item.type;
-                    if (label && label !== '—') groups[type].push(label);
-                  }
-                  return Object.entries(groups).filter(([, items]) => items.length > 0).map(([type, items]) => (
-                    <details key={type} className="setup-plan-group" open>
-                      <summary><span className="plan-group-title">{type}</span><span className="plan-group-count">{items.length}</span></summary>
-                      <ul className="plan-group-list">
-                        {items.map((label, i) => <li key={i}>{label}</li>)}
-                      </ul>
-                    </details>
-                  ));
-                })()}
-              </div>
-              <div className="setup-wizard-actions">
-                <Button variant="secondary" onClick={goPrev}>Back</Button>
-                <Button variant="primary" onClick={goNext}>Next</Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 7 — Execute */}
-          {step === 7 && (
-            <div className="setup-wizard-panel">
-              <h1>Generate & Execute SQL</h1>
-              <p>Generate SQL from the canonical schema, preview it, and execute against the connected database.</p>
-
-              <div className="setup-gen-steps">
-                {genSteps.map((gs) => {
-                  const statusIcon = gs.status === 'completed' ? 'check-circle' :
-                    gs.status === 'running' ? 'loader' :
-                      gs.status === 'failed' ? 'alert-circle' : 'circle';
-                  return (
-                    <div key={gs.key} className={`setup-gen-step setup-gen-step--${gs.status}`}>
-                      <span className="setup-gen-step-icon">
-                        <Icon name={statusIcon} size={16} />
-                      </span>
-                      <span className="setup-gen-step-label">{gs.label}</span>
-                      <span className={`setup-gen-step-badge badge-${gs.status}`}>{gs.status}</span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="setup-sql-toolbar">
-                <Button variant="primary" onClick={handleGenerateSql} loading={generating} icon="refresh-cw">
-                  {sqlText ? 'Regenerate SQL' : 'Generate SQL'}
-                </Button>
-                {sqlText && (
-                  <>
-                    <Button variant="secondary" onClick={handleCopySql} icon="copy">Copy</Button>
-                    <Button variant="secondary" onClick={handleDownloadSql} icon="download">Download</Button>
-                    <Button variant="secondary" onClick={() => setSqlFullscreen(!sqlFullscreen)}
-                      icon={sqlFullscreen ? 'minimize' : 'maximize'}>
-                      {sqlFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                    </Button>
-                  </>
-                )}
-              </div>
-
-              {sqlText && (
-                <div className={`setup-sql-preview ${sqlFullscreen ? 'setup-sql-preview--fullscreen' : ''}`}>
-                  <div className="setup-sql-preview-header">
-                    {sqlFullscreen && (
-                      <button type="button" className="setup-sql-preview-close" onClick={() => setSqlFullscreen(false)} aria-label="Close fullscreen">
-                        <Icon name="x" size={18} />
-                      </button>
-                    )}
-                    <span className="setup-sql-preview-count">{lineCount} lines</span>
-                    <div className="setup-sql-preview-search">
-                      <Icon name="search" size={14} />
-                      <input type="text" placeholder="Search SQL..." value={sqlSearch}
-                        onChange={(e) => setSqlSearch(e.target.value)} />
-                    </div>
-                  </div>
-                  <div className="setup-sql-preview-body">
-                    <div className="setup-sql-line-numbers">
-                      {sqlText.split('\n').map((_, i) => (
-                        <span key={i} className="setup-sql-line-num">{i + 1}</span>
-                      ))}
-                    </div>
-                    <pre className="setup-sql-output"><code dangerouslySetInnerHTML={{ __html: highlightSql(filteredSql) }} /></pre>
-                  </div>
-                </div>
-              )}
-
-              {sqlText && (
-                <div className="setup-sql-execute">
-                  <Button variant="primary" onClick={handleExecuteSql} loading={executing} icon="bolt">
-                    Already Executed in Database & Verify
+                <div className="sw-sql-bar">
+                  <Button variant="primary" onClick={handleGenerateSql} loading={generating} icon="refresh-cw">
+                    {sqlText ? 'Regenerate SQL' : 'Generate SQL'}
                   </Button>
-                  {verifyStatus && verifyStatus.ok && (
-                    <div className="setup-connection-status success">
-                      <Icon name="check-circle" size={16} />
-                      <span>{verifyStatus.message}</span>
-                    </div>
+                  {sqlText && (
+                    <>
+                      <Button variant="secondary" onClick={handleCopySql} icon="copy">Copy</Button>
+                      <Button variant="secondary" onClick={handleDownloadSql} icon="download">Download</Button>
+                      <Button variant="secondary" onClick={() => setSqlFullscreen(!sqlFullscreen)}
+                        icon={sqlFullscreen ? 'minimize' : 'maximize'}>
+                        {sqlFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                      </Button>
+                    </>
                   )}
-                  {verifyStatus && !verifyStatus.ok && (
-                    <div className="setup-connection-status error">
-                      <Icon name="alert-circle" size={16} />
-                      <span>{verifyStatus.message}</span>
-                      {verifyStatus.missing && verifyStatus.missing.length > 0 && (
-                        <Button variant="secondary" size="small" onClick={() => setShowVerifyModal(verifyStatus)} style={{ marginTop: 8 }}>
-                          View Missing Objects
-                        </Button>
+                </div>
+
+                {sqlText && (
+                  <div className={`sw-sql-box ${sqlFullscreen ? 'sw-sql-box--fullscreen' : ''}`}>
+                    <div className="sw-sql-header">
+                      {sqlFullscreen && (
+                        <button type="button" className="sw-sql-close" onClick={() => setSqlFullscreen(false)} aria-label="Close fullscreen">
+                          <Icon name="x" size={18} />
+                        </button>
                       )}
+                      <span className="sw-sql-count">{lineCount} lines</span>
+                      <div className="sw-sql-search">
+                        <Icon name="search" size={14} />
+                        <input type="text" placeholder="Search SQL..." value={sqlSearch}
+                          onChange={(e) => setSqlSearch(e.target.value)} />
+                      </div>
                     </div>
+                    <div className="sw-sql-body">
+                      <div className="sw-sql-lines">
+                        {sqlText.split('\n').map((_, i) => (
+                          <span key={i} className="sw-sql-num">{i + 1}</span>
+                        ))}
+                      </div>
+                      <pre className="sw-sql-code"><code dangerouslySetInnerHTML={{ __html: highlightSql(filteredSql) }} /></pre>
+                    </div>
+                  </div>
+                )}
+
+                {sqlText && (
+                  <div className="sw-execute">
+                    <Button variant="primary" onClick={handleExecuteSql} loading={executing} icon="bolt">
+                      Already Executed in Database & Verify
+                    </Button>
+                    {verifyStatus && verifyStatus.ok && (
+                      <div className="sw-status success">
+                        <Icon name="check-circle" size={16} />
+                        <span>{verifyStatus.message}</span>
+                      </div>
+                    )}
+                    {verifyStatus && !verifyStatus.ok && (
+                      <div className="sw-status error">
+                        <Icon name="alert-circle" size={16} />
+                        <span>{verifyStatus.message}</span>
+                        {verifyStatus.missing && verifyStatus.missing.length > 0 && (
+                          <Button variant="secondary" size="small" onClick={() => setShowVerifyModal(verifyStatus)} style={{ marginTop: 8 }}>
+                            View Missing Objects
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="setup-wizard-actions">
+                  <Button variant="secondary" onClick={goPrev}>Back</Button>
+                  {verifyStatus?.ok && <Button variant="primary" onClick={goNext}>Next</Button>}
+                </div>
+              </div>
+            )}
+
+            {/* Re-check */}
+            {step === 8 && (
+              <div className="setup-wizard-card">
+                <h1>Verify Installation</h1>
+                <p>Re-validate the entire database schema against the canonical manifest.</p>
+                {conflictError && (
+                  <div className="sw-error" style={{ marginBottom: 16 }}>
+                    <Icon name="alert-circle" size={16} />
+                    <span>{conflictError}</span>
+                  </div>
+                )}
+                {!validationResult && !conflictError && <Button variant="primary" onClick={handleVerifyInstall} loading={busy}>Verify Installation</Button>}
+                {validationResult && (
+                  <div className={`sw-verify ${validationResult.valid ? 'success' : 'error'}`}>
+                    <Icon name={validationResult.valid ? 'check-circle' : 'x-circle'} size={32} />
+                    <h3>{validationResult.valid ? 'All checks passed' : `${validationResult.missing} objects still missing`}</h3>
+                    {validationResult.error && <p>{validationResult.error}</p>}
+                  </div>
+                )}
+                <div className="setup-wizard-actions">
+                  <Button variant="secondary" onClick={goPrev}>Back</Button>
+                  {validationResult?.valid && <Button variant="primary" onClick={goNext}>Next</Button>}
+                  {validationResult && !validationResult.valid && (
+                    <Button variant="primary" onClick={() => goTo(5)}>Return to Analysis</Button>
                   )}
                 </div>
-              )}
-
-              <div className="setup-wizard-actions">
-                <Button variant="secondary" onClick={goPrev}>Back</Button>
-                {verifyStatus?.ok && <Button variant="primary" onClick={goNext}>Next</Button>}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Step 8 — Re-check */}
-          {step === 8 && (
-            <div className="setup-wizard-panel">
-              <h1>Verify Installation</h1>
-              <p>Re-validate the entire database schema against the canonical manifest.</p>
-              {conflictError && (
-                <div className="setup-validation-summary-error" style={{ marginBottom: 16 }}>
-                  <Icon name="alert-circle" size={16} />
-                  <span>{conflictError}</span>
+            {/* Done */}
+            {step === 9 && (
+              <div className="setup-wizard-card">
+                <div className="sw-done">
+                  <div className="sw-done-icon">
+                    <Icon name="check-circle" size={56} />
+                  </div>
+                  <h1>Installation Successful</h1>
+                  {(initialStep === 9 || installSkipped) ? (
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>The database is fully compatible. No installation was required.</p>
+                  ) : (
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>Database has been configured and verified successfully.</p>
+                  )}
+                  <div className="sw-info-table">
+                    <div className="sw-info-row"><span>Database Driver</span><span>{selectedProvider || (dbInstance?.isSupabase ? 'Supabase' : dbInstance?.provider?.constructor?.name) || (dbInstance ? 'Connected' : 'Not selected')}</span></div>
+                    <div className="sw-info-row"><span>Connected Database</span><span>{dbInstance?._databaseName || (dbInstance?.isSupabase ? 'Supabase' : 'Default')}</span></div>
+                    <div className="sw-info-row"><span>Schema Version</span><span>{schema.version || 1}</span></div>
+                    <div className="sw-info-row"><span>Migration Version</span><span>{validationReport?.details?.version?.current ?? (schema.version || 1)}</span></div>
+                    <div className="sw-info-row"><span>Installation Date</span><span>{new Date().toLocaleString()}</span></div>
+                    <div className="sw-info-row"><span>Database Status</span><span className="status-ok">Connected</span></div>
+                    <div className="sw-info-row"><span>Compatibility</span><span className="status-ok">Fully Compatible</span></div>
+                  </div>
+                  <Button
+                    variant="primary"
+                    loading={completing}
+                    disabled={completing}
+                    onClick={async () => {
+                      if (completingRef.current) return;
+                      completingRef.current = true;
+                      setCompleting(true);
+                      try {
+                        await onComplete(dbInstance);
+                      } finally {
+                        completingRef.current = false;
+                        setCompleting(false);
+                      }
+                    }}
+                  >
+                    Continue
+                  </Button>
                 </div>
-              )}
-              {!validationResult && !conflictError && <Button variant="primary" onClick={handleVerifyInstall} loading={busy}>Verify Installation</Button>}
-              {validationResult && (
-                <div className={`setup-verify-result ${validationResult.valid ? 'success' : 'error'}`}>
-                  <Icon name={validationResult.valid ? 'check-circle' : 'x-circle'} size={32} />
-                  <h3>{validationResult.valid ? 'All checks passed' : `${validationResult.missing} objects still missing`}</h3>
-                  {validationResult.error && <p>{validationResult.error}</p>}
-                </div>
-              )}
-              <div className="setup-wizard-actions">
-                <Button variant="secondary" onClick={goPrev}>Back</Button>
-                {validationResult?.valid && <Button variant="primary" onClick={goNext}>Next</Button>}
-                {validationResult && !validationResult.valid && (
-                  <Button variant="primary" onClick={() => goTo(5)}>Return to Analysis</Button>
-                )}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Step 9 — Done */}
-          {step === 9 && (
-            <div className="setup-wizard-panel">
-              <div className="setup-complete">
-                <div className="setup-complete-icon">
-                  <Icon name="check-circle" size={64} />
-                </div>
-                <h1>Installation Successful</h1>
-                {(initialStep === 9 || installSkipped) ? (
-                  <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>The database is fully compatible. No installation was required.</p>
-                ) : (
-                  <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>Database has been configured and verified successfully.</p>
-                )}
-                <div className="setup-complete-info">
-                  <div className="complete-row"><span>Database Driver</span><span>{selectedProvider || (dbInstance?.isSupabase ? 'Supabase' : dbInstance?.provider?.constructor?.name) || (dbInstance ? 'Connected' : 'Not selected')}</span></div>
-                  <div className="complete-row"><span>Connected Database</span><span>{dbInstance?._databaseName || (dbInstance?.isSupabase ? 'Supabase' : 'Default')}</span></div>
-                  <div className="complete-row"><span>Schema Version</span><span>{schema.version || 1}</span></div>
-                  <div className="complete-row"><span>Migration Version</span><span>{validationReport?.details?.version?.current ?? (schema.version || 1)}</span></div>
-                  <div className="complete-row"><span>Installation Date</span><span>{new Date().toLocaleString()}</span></div>
-                  <div className="complete-row"><span>Database Status</span><span className="status-ok">Connected</span></div>
-                  <div className="complete-row"><span>Compatibility</span><span className="status-ok">Fully Compatible</span></div>
-                </div>
-                <Button
-                  variant="primary"
-                  loading={completing}
-                  disabled={completing}
-                  onClick={async () => {
-                    if (completingRef.current) return;
-                    completingRef.current = true;
-                    setCompleting(true);
-                    try {
-                      await onComplete(dbInstance);
-                    } finally {
-                      completingRef.current = false;
-                      setCompleting(false);
-                    }
-                  }}
-                >
-                  Continue
-                </Button>
-              </div>
-            </div>
-          )}
-
+          </div>
         </div>
       </div>
 
       {/* Error Modal */}
       {showErrorModal && (
-        <div className="setup-modal-overlay" onClick={() => setShowErrorModal(null)}>
-          <div className="setup-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="setup-modal-header">
+        <div className="sw-modal-overlay" onClick={() => setShowErrorModal(null)}>
+          <div className="sw-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="sw-modal-head">
               <Icon name="alert-circle" size={24} />
               <h2>{showErrorModal.title || 'Error'}</h2>
             </div>
-            <div className="setup-modal-body">
+            <div className="sw-modal-body">
               <p>{showErrorModal.message}</p>
               {showErrorModal.details && (
-                <details className="setup-modal-details">
+                <details className="sw-modal-details">
                   <summary>Technical Details</summary>
                   <pre>{showErrorModal.details}</pre>
                 </details>
               )}
               {showErrorModal.suggestion && (
-                <div className="setup-modal-suggestion">
+                <div className="sw-modal-tip">
                   <Icon name="info" size={14} />
                   <span>{showErrorModal.suggestion}</span>
                 </div>
               )}
             </div>
-            <div className="setup-modal-actions">
+            <div className="sw-modal-actions">
               <Button variant="secondary" onClick={() => setShowErrorModal(null)}>Close</Button>
               {showErrorModal.onRegenerate && (
                 <Button variant="primary" onClick={() => { setShowErrorModal(null); showErrorModal.onRegenerate(); }}>Regenerate SQL</Button>
@@ -1072,16 +1097,16 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
 
       {/* Verify Failure Modal */}
       {showVerifyModal && (
-        <div className="setup-modal-overlay" onClick={() => setShowVerifyModal(null)}>
-          <div className="setup-modal setup-modal--wide" onClick={(e) => e.stopPropagation()}>
-            <div className="setup-modal-header error">
+        <div className="sw-modal-overlay" onClick={() => setShowVerifyModal(null)}>
+          <div className="sw-modal sw-modal--wide" onClick={(e) => e.stopPropagation()}>
+            <div className="sw-modal-head error">
               <Icon name="x-circle" size={24} />
               <h2>Database Verification Failed</h2>
             </div>
-            <div className="setup-modal-body">
-              <div className="verify-modal-summary">
-                <div className="verify-modal-stat"><span className="stat-label">Missing Objects</span><span className="stat-value error">{showVerifyModal.missing?.length || 0}</span></div>
-                <div className="verify-modal-stat"><span className="stat-label">Failed Objects</span><span className="stat-value error">{showVerifyModal.failed || 0}</span></div>
+            <div className="sw-modal-body">
+              <div className="sw-vstats">
+                <div className="sw-vstat"><span className="sw-vlbl">Missing Objects</span><span className="sw-vval error">{showVerifyModal.missing?.length || 0}</span></div>
+                <div className="sw-vstat"><span className="sw-vlbl">Failed Objects</span><span className="sw-vval error">{showVerifyModal.failed || 0}</span></div>
               </div>
               {(() => {
                 const items = showVerifyModal.missing || [];
@@ -1102,13 +1127,13 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
                   if (label && label !== '—') groups[type].push({ label, item });
                 }
                 const missingEls = Object.entries(groups).map(([type, list]) => (
-                  <details key={type} className="verify-group" open>
-                    <summary><span className="verify-group-title">Missing {type}</span><span className="verify-group-count">{list.length}</span></summary>
-                    <ul className="verify-group-list">
+                  <details key={type} className="sw-vgroup" open>
+                    <summary><span className="sw-vgroup-title">Missing {type}</span><span className="sw-vgroup-count">{list.length}</span></summary>
+                    <ul className="sw-vlist">
                       {list.map((entry, i) => (
                         <li key={i}>
-                          <span className="verify-item-name">{entry.label}</span>
-                          <span className="verify-item-status">{entry.item.status || 'missing'}</span>
+                          <span className="sw-vname">{entry.label}</span>
+                          <span className="sw-vstatus">{entry.item.status || 'missing'}</span>
                         </li>
                       ))}
                     </ul>
@@ -1116,13 +1141,13 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
                 ));
                 const issues = showVerifyModal.issues || [];
                 const issueEls = issues.length > 0 ? (
-                  <details className="verify-group" open>
-                    <summary><span className="verify-group-title">Failed Checks</span><span className="verify-group-count">{issues.length}</span></summary>
-                    <ul className="verify-group-list">
+                  <details className="sw-vgroup" open>
+                    <summary><span className="sw-vgroup-title">Failed Checks</span><span className="sw-vgroup-count">{issues.length}</span></summary>
+                    <ul className="sw-vlist">
                       {issues.map((issue, i) => (
                         <li key={i}>
-                          <span className="verify-item-name">{issue.detail || issue.type || 'Unknown'}</span>
-                          <span className="verify-item-status failed">failed</span>
+                          <span className="sw-vname">{issue.detail || issue.type || 'Unknown'}</span>
+                          <span className="sw-vstatus failed">failed</span>
                         </li>
                       ))}
                     </ul>
@@ -1131,7 +1156,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
                 return [...missingEls, ...(issueEls ? [issueEls] : [])];
               })()}
             </div>
-            <div className="setup-modal-actions">
+            <div className="sw-modal-actions">
               <Button variant="secondary" onClick={() => setShowVerifyModal(null)}>Close</Button>
               <Button variant="secondary" onClick={() => { setShowVerifyModal(null); handleCopySql(); }}>View SQL</Button>
               <Button variant="primary" onClick={() => { setShowVerifyModal(null); handleGenerateSql(); }}>Regenerate SQL</Button>
@@ -1143,7 +1168,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
 
       {/* Toast */}
       {toast && (
-        <div className={`setup-toast setup-toast--${toast.type}`}>
+        <div className={`sw-toast sw-toast--${toast.type}`}>
           <Icon name={toast.type === 'error' ? 'alert-circle' : 'check-circle'} size={16} />
           <span>{toast.message}</span>
         </div>
