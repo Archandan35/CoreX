@@ -17,7 +17,7 @@ export default function EmptyState({ icon = 'inbox', title = 'No data', message 
 export function TableEmptyState({ colSpan, icon, title, message, action }) {
   return (
     <tr>
-      <td colSpan={colSpan || 8} style={{ textAlign: 'center', padding: '40px 20px' }}>
+      <td colSpan={colSpan || 8} className="table-empty-state-cell">
         <EmptyState icon={icon} title={title} message={message} action={action} />
       </td>
     </tr>

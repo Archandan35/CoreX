@@ -10,7 +10,7 @@ import Dropdown, { DropdownItem } from '../../components/ui/Dropdown.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import PermissionGate from '../../components/ui/PermissionGate.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
-import { api } from '../../services/api.js';
+import { roleService } from '../../services/role/index.js';
 
 export default function RoleList() {
   const navigate = useNavigate();
@@ -53,8 +53,9 @@ export default function RoleList() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const res = await api(`/api/roles/${deleteTarget.id}`, { method: 'DELETE' });
-      if (res.ok) setRoles((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+      await roleService.deleteRole(deleteTarget.id);
+      setRoles((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+    } catch {
     } finally {
       setDeleting(false);
       setDeleteTarget(null);

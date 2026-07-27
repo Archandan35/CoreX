@@ -6,7 +6,7 @@ import Badge from '../../components/ui/Badge.jsx';
 import PermissionGate from '../../components/ui/PermissionGate.jsx';
 import Icon from '../../components/ui/Icon.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
-import { api } from '../../services/api.js';
+import { roleService } from '../../services/role/index.js';
 
 export default function RoleShow() {
   const { id } = useParams();
@@ -16,14 +16,7 @@ export default function RoleShow() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api(`/api/roles/${id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.role) setRole(data.role);
-        else setError('Role not found.');
-      })
-      .catch(() => setError('Failed to load role.'))
-      .finally(() => setLoading(false));
+    roleService.getRole(id).then(setRole).catch((err) => setError(err.message || 'Failed to load role.')).finally(() => setLoading(false));
   }, [id]);
 
   if (loading) return <div className="spinner-center"><div className="spinner spinner-lg" /></div>;

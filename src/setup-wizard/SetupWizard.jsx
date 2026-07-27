@@ -640,10 +640,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
                 ) : (
                   <div className="sw-success-box">
                     <div className="sw-success-icon">
-                      <svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
-                        <circle className="sw-success-circle" cx="26" cy="26" r="25" fill="none" />
-                        <path className="sw-success-check" d="M14 27l7 7 16-16" fill="none" />
-                      </svg>
+                      <Icon name="check-circle" size={48} strokeWidth={1.5} />
                     </div>
                     <h1>Connection Verified</h1>
                     <p>{provider?.name || selectedProvider} connection established. Credentials validated successfully.</p>

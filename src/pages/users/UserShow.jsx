@@ -6,7 +6,7 @@ import Badge from '../../components/ui/Badge.jsx';
 import PermissionGate from '../../components/ui/PermissionGate.jsx';
 import Icon from '../../components/ui/Icon.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
-import { api } from '../../services/api.js';
+import { userService } from '../../services/user/index.js';
 
 export default function UserShow() {
   const { id } = useParams();
@@ -16,14 +16,7 @@ export default function UserShow() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api(`/api/users/${id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.user) setUser(data.user);
-        else setError('User not found.');
-      })
-      .catch(() => setError('Failed to load user.'))
-      .finally(() => setLoading(false));
+    userService.getUser(id).then(setUser).catch((err) => setError(err.message || 'Failed to load user.')).finally(() => setLoading(false));
   }, [id]);
 
   if (loading) return <div className="spinner-center"><div className="spinner spinner-lg" /></div>;

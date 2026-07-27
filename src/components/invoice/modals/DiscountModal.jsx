@@ -22,21 +22,15 @@ export default function DiscountModal({ open, onClose, extraDiscountType, extraD
         </>
       }
     >
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div className="discount-type-toggle">
         <button
-          style={{
-            flex: 1, padding: '8px 16px', border: type === 'percent' ? '2px solid #3815f7' : '1px solid #e2e8f0',
-            borderRadius: 6, background: type === 'percent' ? '#f0edfe' : '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-          }}
+          className={type === 'percent' ? 'discount-type-btn discount-type-btn--active' : 'discount-type-btn'}
           onClick={() => setType('percent')}
         >
           Percentage (%)
         </button>
         <button
-          style={{
-            flex: 1, padding: '8px 16px', border: type === 'fixed' ? '2px solid #3815f7' : '1px solid #e2e8f0',
-            borderRadius: 6, background: type === 'fixed' ? '#f0edfe' : '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-          }}
+          className={type === 'fixed' ? 'discount-type-btn discount-type-btn--active' : 'discount-type-btn'}
           onClick={() => setType('fixed')}
         >
           Fixed Amount (₹)

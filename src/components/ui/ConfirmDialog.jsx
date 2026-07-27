@@ -11,7 +11,7 @@ export default function ConfirmDialog({ open, onClose, onConfirm, title = 'Confi
         </>
       }
     >
-      <p style={{ margin: 0, fontSize: 14, color: '#475569', lineHeight: 1.5 }}>{message}</p>
+      <p className="confirm-dialog-message">{message}</p>
     </Modal>
   );
 }

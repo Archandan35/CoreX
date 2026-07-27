@@ -20,30 +20,22 @@ export default function PaymentModal({ open, onClose, payments, onAdd, onRemove,
 
   return (
     <Modal open={open} onClose={onClose} title="Payments" size="md"
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose}>Done</Button>
-        </>
-      }
+      footer={<Button variant="secondary" onClick={onClose}>Done</Button>}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <span style={{ fontSize: 13, color: '#64748b' }}>Balance Due: <strong style={{ color: '#0f172a' }}>₹{(balanceDue || 0).toFixed(2)}</strong></span>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
+      <div className="payment-header">
+        <span className="payment-header-label">Balance Due: <strong>₹{(balanceDue || 0).toFixed(2)}</strong></span>
+        <label className="payment-header-checkbox">
           <input type="checkbox" checked={markFullyPaid} onChange={(e) => onMarkFullyPaid?.(e.target.checked)} />
           Mark as fully paid
         </label>
       </div>
 
       {(payments || []).map((pmt, i) => (
-        <div key={pmt.id || i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #f1f5f9' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <input type="text" value={pmt.notes || ''} onChange={(e) => onUpdate?.(i, { ...pmt, notes: e.target.value })} placeholder="Notes" style={{ width: '100%', border: 'none', background: 'transparent', fontSize: 12, outline: 'none' }} />
-          </div>
-          <input type="number" min="0" step="0.01" value={pmt.amount ?? ''} onChange={(e) => onUpdate?.(i, { ...pmt, amount: Number(e.target.value) || 0 })} placeholder="Amount" style={{ width: 80, padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 12, textAlign: 'right' }} />
-          <div style={{ position: 'relative' }}>
-            <input type="date" value={pmt.paymentDate || ''} onChange={(e) => onUpdate?.(i, { ...pmt, paymentDate: e.target.value })} style={{ width: 100, padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 12 }} />
-          </div>
-          <Dropdown trigger={<span style={{ cursor: 'pointer', fontSize: 12, color: '#64748b', whiteSpace: 'nowrap' }}>{PAYMENT_MODE_OPTIONS.find(m => m.value === pmt.mode)?.label || 'Mode'} <Icon name="chevron-down" size={10} /></span>}>
+        <div key={pmt.id || i} className="payment-row">
+          <input type="text" value={pmt.notes || ''} onChange={(e) => onUpdate?.(i, { ...pmt, notes: e.target.value })} placeholder="Notes" className="payment-row-input" style={{ width: '100%' }} />
+          <input type="number" min="0" step="0.01" value={pmt.amount ?? ''} onChange={(e) => onUpdate?.(i, { ...pmt, amount: Number(e.target.value) || 0 })} placeholder="Amount" className="payment-row-amount" />
+          <input type="date" value={pmt.paymentDate || ''} onChange={(e) => onUpdate?.(i, { ...pmt, paymentDate: e.target.value })} className="payment-row-date" />
+          <Dropdown trigger={<span className="payment-row-mode-trigger">{PAYMENT_MODE_OPTIONS.find(m => m.value === pmt.mode)?.label || 'Mode'} <Icon name="chevron-down" size={10} /></span>}>
             {PAYMENT_MODE_OPTIONS.map(m => (
               <DropdownItem key={m.value} onClick={() => onUpdate?.(i, { ...pmt, mode: m.value })}>{m.label}</DropdownItem>
             ))}
@@ -53,14 +45,14 @@ export default function PaymentModal({ open, onClose, payments, onAdd, onRemove,
       ))}
 
       {(payments || []).length === 0 && (
-        <div style={{ textAlign: 'center', padding: 16, fontSize: 13, color: '#94a3b8' }}>No payments added yet.</div>
+        <div className="payment-empty-state">No payments added yet.</div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, padding: 12, background: '#fff', border: '1px dashed #e2e8f0', borderRadius: 8 }}>
-        <input type="text" value={newPmt.notes} onChange={(e) => setNewPmt(p => ({ ...p, notes: e.target.value }))} placeholder="Notes" style={{ flex: 1, border: 'none', fontSize: 12, outline: 'none', background: 'transparent' }} />
-        <input type="number" min="0" step="0.01" value={newPmt.amount || ''} onChange={(e) => setNewPmt(p => ({ ...p, amount: e.target.value }))} placeholder="Amount" style={{ width: 80, padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 12 }} />
-        <input type="date" value={newPmt.paymentDate} onChange={(e) => setNewPmt(p => ({ ...p, paymentDate: e.target.value }))} style={{ width: 100, padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 12 }} />
-        <Dropdown trigger={<span style={{ cursor: 'pointer', fontSize: 12, color: '#64748b' }}>{newPmt.mode ? PAYMENT_MODE_OPTIONS.find(m => m.value === newPmt.mode)?.label : 'Mode'} <Icon name="chevron-down" size={10} /></span>}>
+      <div className="payment-add-row">
+        <input type="text" value={newPmt.notes} onChange={(e) => setNewPmt(p => ({ ...p, notes: e.target.value }))} placeholder="Notes" className="payment-row-input" style={{ flex: 1 }} />
+        <input type="number" min="0" step="0.01" value={newPmt.amount || ''} onChange={(e) => setNewPmt(p => ({ ...p, amount: e.target.value }))} placeholder="Amount" className="payment-row-amount" />
+        <input type="date" value={newPmt.paymentDate} onChange={(e) => setNewPmt(p => ({ ...p, paymentDate: e.target.value }))} className="payment-row-date" />
+        <Dropdown trigger={<span className="payment-row-mode-trigger">{newPmt.mode ? PAYMENT_MODE_OPTIONS.find(m => m.value === newPmt.mode)?.label : 'Mode'} <Icon name="chevron-down" size={10} /></span>}>
           {PAYMENT_MODE_OPTIONS.map(m => (
             <DropdownItem key={m.value} onClick={() => setNewPmt(p => ({ ...p, mode: m.value }))}>{m.label}</DropdownItem>
           ))}
@@ -68,9 +60,9 @@ export default function PaymentModal({ open, onClose, payments, onAdd, onRemove,
         <Button variant="secondary" size="sm" icon="plus" onClick={addPayment}>Add</Button>
       </div>
 
-      <div style={{ marginTop: 12, fontSize: 12, color: '#64748b', textAlign: 'right' }}>
-        Total paid: <strong style={{ color: '#10b981' }}>₹{totalPaid.toFixed(2)}</strong>
-        {remaining > 0 && <> · Remaining: <strong style={{ color: '#ef4444' }}>₹{remaining.toFixed(2)}</strong></>}
+      <div className="payment-summary">
+        Total paid: <strong className="payment-summary-paid">₹{totalPaid.toFixed(2)}</strong>
+        {remaining > 0 && <> · Remaining: <strong className="payment-summary-remaining">₹{remaining.toFixed(2)}</strong></>}
       </div>
     </Modal>
   );

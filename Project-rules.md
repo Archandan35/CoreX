@@ -1,652 +1,591 @@
 # AI_PROJECT_RULES.md
 
-# Enterprise Development Rules
+# Enterprise Development Standards & Mandatory Implementation Rules
 
-> This document contains the mandatory development rules for the entire project.
+> **Purpose**
 >
-> Every task, regardless of size, must comply with every rule in this document.
+> This document defines the mandatory engineering, architecture, security, UI, database, and implementation standards for the entire project.
 >
-> No exception is allowed.
+> Every development task—regardless of its size or complexity—must fully comply with every rule in this document.
 >
-> A task is NOT considered complete until all mandatory verification steps in this document have been satisfied.
+> **No exceptions are permitted.**
+>
+> A task is considered complete **only after every mandatory verification, validation, security check, regression test, and quality gate has successfully passed.**
 
 ---
 
-# 1. General Rules
+# 1. Core Development Principles
 
 Every implementation must be:
 
-- Production Ready
-- Enterprise Grade
-- Fully Functional
-- Maintainable
-- Modular
-- Reusable
-- Scalable
-- Secure
-- Performant
-- Accessible
-- Responsive
-- Configurable
-- Testable
+* Production Ready
+* Enterprise Grade
+* Fully Functional
+* Feature Complete
+* Modular
+* Reusable
+* Extensible
+* Scalable
+* Maintainable
+* Secure
+* Performant
+* Responsive
+* Accessible (WCAG where applicable)
+* Configurable
+* Testable
+* White-label Ready
+* Multi-tenant Compatible (where applicable)
+* Internationalization Ready
+* Future-proof
 
-Never implement demo code.
+Never implement:
 
-Never implement placeholder code.
+* Demo code
+* Prototype code
+* Placeholder logic
+* Mock business logic
+* Temporary workarounds
+* Incomplete features
+* TODO comments
+* Disabled production code
+* Dead or unused code
+* Hardcoded business rules
+* Hardcoded permissions
+* Hardcoded database identifiers
+* Hardcoded API endpoints
+* Hardcoded provider-specific implementations
 
-Never leave TODOs.
-
-Never leave partially implemented features.
-
-Never implement mock business logic.
-
-Everything must be production quality.
-
----
-
-# 2. UI Rule
-
-The UI must never exist without business logic.
-
-Every visible element must work.
-
-This includes:
-
-- Inputs
-- Dropdowns
-- Search
-- Tables
-- Cards
-- Modals
-- Drawers
-- Buttons
-- Toggles
-- Tabs
-- Uploads
-- Calendars
-- Selectors
-- Grids
-- Badges
-- Pagination
-- Filters
-
-No static UI.
-
-No fake buttons.
-
-No placeholder actions.
+Everything must meet production-quality standards.
 
 ---
 
-# 3. Business Logic Rule
+# 2. UI Implementation Rules
+
+A UI is never considered complete without its underlying business logic.
+
+Every visible component must be fully functional.
+
+This includes, but is not limited to:
+
+* Forms
+* Inputs
+* Buttons
+* Dropdowns
+* Selectors
+* Tables
+* Cards
+* Charts
+* Dashboards
+* Modals
+* Drawers
+* Tabs
+* Accordions
+* Search
+* Filters
+* Pagination
+* Sorting
+* Uploads
+* Downloads
+* Calendars
+* Date Pickers
+* Tooltips
+* Context Menus
+* Breadcrumbs
+* Notifications
+* Toasts
+* Empty States
+* Loading States
+* Error States
+* Confirmation Dialogs
+
+The following are prohibited:
+
+* Static UI without functionality
+* Fake buttons
+* Disabled features without business justification
+* Placeholder actions
+* Non-functional navigation
+* Visual-only implementations
+
+Every interaction must execute its intended business process.
+
+---
+
+# 3. Business Logic Requirements
 
 Every feature must include complete business logic.
 
-Always implement:
+Mandatory implementation includes:
 
-- State Management
-- Validation
-- Calculations
-- Dependencies
-- Error Handling
-- Loading States
-- Empty States
-- Permissions
-- Save Logic
-- Update Logic
-- Delete Logic
-- Restore Logic
-- Undo (where applicable)
+* State Management
+* Validation
+* Business Rules
+* Dependency Resolution
+* Calculations
+* Data Synchronization
+* Save
+* Update
+* Delete
+* Restore
+* Undo (where applicable)
+* Conflict Resolution
+* Loading Handling
+* Error Handling
+* Retry Logic
+* Offline Handling (where applicable)
+* Audit Logging
+* Permission Validation
+* Activity Tracking
+* Event Dispatching
+* Cache Synchronization
 
----
-
-# 4. Shared Component Rule
-
-Never create duplicate components.
-
-Before creating any component always check whether a reusable component already exists.
-
-If yes
-
-Reuse it.
-
-If no
-
-Extend the shared component library.
-
-Everything reusable should remain reusable.
-
-Shared examples:
-
-- Buttons
-- Inputs
-- Tables
-- Modals
-- Drawers
-- Cards
-- Forms
-- Uploads
-- Selectors
-- Date Pickers
-- Search
-- Filters
-- Toolbars
-- Summary Panels
+No business process may be partially implemented.
 
 ---
 
-# 5. Database Impact Rule (MANDATORY)
+# 4. Shared Component Standards
 
-Every change MUST trigger a complete database impact verification.
+Before creating any new component:
 
-Never assume the database is already correct.
+1. Search the existing shared component library.
+2. Reuse an existing component whenever possible.
+3. Extend shared components if additional functionality is required.
+4. Create a new reusable component only when no suitable shared component exists.
 
-Always verify.
+Never duplicate:
 
-Check:
+* Buttons
+* Cards
+* Inputs
+* Tables
+* Forms
+* Search
+* Filters
+* Modals
+* Drawers
+* Toolbars
+* Pagination
+* Upload Components
+* Selectors
+* Date Pickers
+* Status Badges
+* Summary Panels
+* Charts
+* Icons
 
-- Tables
-- Columns
-- Relationships
-- Constraints
-- Foreign Keys
-- Primary Keys
-- Indexes
-- Triggers
-- Functions
-- Views
-- Policies
-- RLS
-- Roles
-- Permissions
-- Buckets
-- Storage
-- Configuration Tables
-- Lookup Tables
-- Master Data
-- Mapping Tables
-- Translation Tables
-- Seed Data
-
-If anything is missing
-
-Create or update it.
+Every reusable element belongs in the centralized components library.
 
 ---
 
-# 6. Complete Data Chain Verification
+# 5. Database Verification (Mandatory)
 
-Every task must verify the complete application data flow.
+Every implementation must perform a complete database impact assessment.
 
+Never assume the database already supports the requested feature.
+
+Always verify:
+
+* Schemas
+* Tables
+* Columns
+* Relationships
+* Primary Keys
+* Foreign Keys
+* Unique Constraints
+* Check Constraints
+* Indexes
+* Views
+* Materialized Views
+* Functions
+* Stored Procedures
+* Triggers
+* Sequences
+* Extensions
+* Policies
+* Row Level Security (RLS)
+* Roles
+* Permissions
+* Buckets
+* Storage Policies
+* Configuration Tables
+* Lookup Tables
+* Mapping Tables
+* Translation Tables
+* Seed Data
+* Default Values
+
+If any required object is missing:
+
+* Create it
+* Update it
+* Migrate it
+* Document it
+
+Never leave schema inconsistencies.
+
+---
+
+# 6. End-to-End Data Flow Verification
+
+Every feature must validate the complete data lifecycle.
+
+```
 UI
-↓
-Component
 ↓
 Shared Component
 ↓
+Page
+↓
 Form Engine
 ↓
-State
-↓
 Validation
+↓
+State Management
 ↓
 Business Rules
 ↓
 DTO
 ↓
-API
+API Layer
 ↓
-Service
+Service Layer
 ↓
 Repository
 ↓
 Database
 ↓
-Database Response
+Response Mapping
 ↓
 Repository
 ↓
 Service
 ↓
-API
+State
 ↓
-Frontend State
-↓
-UI
+UI Refresh
+```
 
 Every layer must remain synchronized.
 
 No broken mappings.
 
-No missing objects.
+No missing transformations.
+
+No provider leakage.
 
 ---
 
-# 7. Schema Translation Rule
+# 7. Schema & Mapping Verification
 
-Whenever a field, object, model, table, API, or property changes, verify:
+Whenever any field changes, verify all dependent layers:
 
-- UI Field Name
-- Component Property
-- State Property
-- Validation Schema
-- DTO
-- API Request
-- API Response
-- Database Column
-- Export Model
-- Import Model
-- Legacy Mapping
-- Translation Mapping
+* UI Labels
+* Component Props
+* State Models
+* Validation Schemas
+* DTOs
+* API Contracts
+* Service Models
+* Repository Models
+* Database Columns
+* Export Models
+* Import Models
+* Translation Models
+* Legacy Compatibility
+* Migration Scripts
 
 Maintain backward compatibility whenever required.
 
 ---
 
-# 8. CRUD Verification
+# 8. CRUD Compliance
 
-Every entity must support (where applicable):
+Every entity must support, where applicable:
 
-- Create
-- Read
-- Update
-- Delete
-- Restore
-- Soft Delete
-- Hard Delete
-- Search
-- Filter
-- Sort
-- Pagination
-- Bulk Operations
-
----
-
-# 9. Validation Rule
-
-Validation must exist at every layer.
-
-Verify:
-
-- UI
-- Shared Validator
-- API
-- Service
-- Database Constraint
-
-Rules must never conflict.
+* Create
+* Read
+* Update
+* Delete
+* Restore
+* Soft Delete
+* Hard Delete
+* Archive
+* Unarchive
+* Clone
+* Bulk Operations
+* Search
+* Filter
+* Sort
+* Pagination
+* Export
+* Import
+* Audit History
 
 ---
 
-# 10. Calculation Rule
+# 9. Validation Standards
 
-Every calculated value must automatically update whenever dependent values change.
+Validation must exist consistently across:
 
-Never require manual refresh.
+* UI
+* Shared Validators
+* Forms
+* API
+* Services
+* Database Constraints
+
+Validation rules must never conflict.
 
 ---
 
-# 11. Regression Rule
+# 10. Automatic Calculations
 
-Every change must verify existing functionality.
+All calculated values must update automatically.
 
-Always review related modules.
+No manual refresh.
 
-Never fix one feature while breaking another.
+No stale calculations.
 
-Verify:
+No duplicated calculation logic.
 
-- Existing CRUD
-- Existing Search
-- Existing Filters
-- Existing Sorting
-- Existing Forms
-- Existing Calculations
-- Existing Permissions
-- Existing Navigation
-- Existing Components
+---
+
+# 11. Regression Verification
+
+Every implementation must verify:
+
+* Existing CRUD
+* Existing Forms
+* Existing Navigation
+* Existing Components
+* Existing APIs
+* Existing Permissions
+* Existing Search
+* Existing Filters
+* Existing Sorting
+* Existing Reports
+* Existing Exports
+* Existing Imports
+
+No regression is acceptable.
 
 ---
 
 # 12. Missing Object Detection
 
-Always determine whether recent application changes require creating or updating:
+Always determine whether implementation requires updates to:
 
-Database
+### Database
 
-- Tables
-- Columns
-- Indexes
-- Views
-- Functions
-- Triggers
-- Policies
-- Constraints
-- Storage
-- Buckets
+* Tables
+* Columns
+* Views
+* Functions
+* Policies
+* Triggers
+* Buckets
+* Storage
+* Indexes
+* Constraints
 
-Application
+### Application
 
-- Components
-- Hooks
-- Services
-- Utilities
-- Types
-- Interfaces
-- Enums
-- Constants
-- Validators
-- Calculators
-- State
-- Context
-- DTOs
-- APIs
+* Components
+* Hooks
+* Services
+* Repositories
+* DTOs
+* APIs
+* Utilities
+* Constants
+* Types
+* Interfaces
+* Validators
+* Calculators
+* Context
+* Events
 
-Configuration
+### Configuration
 
-- Settings
-- Master Data
-- Lookup Data
-- Translation Tables
-- Mapping Tables
-- Seed Data
+* Settings
+* Master Data
+* Translation Tables
+* Seed Data
+* Lookup Data
 
-Never assume they already exist.
-
-Always verify.
+Never assume anything already exists.
 
 ---
 
-# 13. Architecture Rule
+# 13. Architecture Rules
 
-Maintain one consistent architecture.
+Maintain the existing project architecture.
 
-Never introduce:
+Do NOT introduce:
 
-- Duplicate Services
-- Duplicate Utilities
-- Duplicate Components
-- Duplicate Hooks
-- Duplicate APIs
-- Duplicate Validation
-- Duplicate Calculations
-- Duplicate Business Rules
+* Duplicate Services
+* Duplicate Hooks
+* Duplicate Utilities
+* Duplicate Components
+* Duplicate APIs
+* Duplicate Validation
+* Duplicate Business Rules
+* Duplicate Calculations
 
-Reuse existing architecture whenever possible.
-
----
-
-# 14. Performance Rule
-
-Review performance impact for every task.
-
-Verify:
-
-- Rendering
-- Re-renders
-- Memoization
-- Lazy Loading
-- Code Splitting
-- Query Performance
-- Missing Indexes
-- N+1 Queries
-- Duplicate Requests
+Always reuse existing architecture.
 
 ---
 
-# 15. Security Rule
+# 14. Provider Independence
 
-Verify:
+The application must remain provider-agnostic.
 
-- Authentication
-- Authorization
-- RLS
-- Permissions
-- Input Validation
-- SQL Injection Protection
-- XSS Protection
-- File Upload Validation
-- API Security
+Pages and components must never directly communicate with:
 
----
+* Database Providers
+* AI Providers
+* Storage Providers
+* Authentication Providers
+* Search Providers
+* Analytics Providers
 
-# 16. Documentation Rule
-
-Whenever functionality changes update:
-
-- Types
-- Interfaces
-- API Contracts
-- Configuration
-- Shared Components
-- Database Mappings
-- Architecture Documentation
-
-Keep documentation synchronized with the implementation.
+All communication must go through the established service/data layer.
 
 ---
 
-# 17. Completion Gate (MANDATORY)
+# 15. CSS & Styling Standards
 
-A task is NOT complete until ALL items below are verified.
+* Use only the existing global stylesheet (`index.css`).
+* Do not create page-specific stylesheets.
+* Do not use inline styles unless already established.
+* Reuse existing design tokens.
+* Follow the application's spacing, typography, color, and layout standards.
+* Ensure responsive behavior for desktop, tablet, and mobile.
 
-☐ Business Logic Complete
+---
 
-☐ UI Functional
+# 16. Icon Standards
 
-☐ Shared Components Reused
-
-☐ Database Verified
-
-☐ Missing Database Objects Checked
-
-☐ Schema Verified
-
-☐ Mapping Verified
-
-☐ Translation Layer Verified
-
-☐ CRUD Verified
-
-☐ Validation Verified
-
-☐ Calculations Verified
-
-☐ State Verified
-
-☐ API Verified
-
-☐ DTO Verified
-
-☐ Services Verified
-
-☐ Repository Verified
-
-☐ Permissions Verified
-
-☐ Security Verified
-
-☐ Performance Verified
-
-☐ Regression Check Passed
-
-☐ Documentation Updated
-
-☐ No Duplicate Code
-
-☐ No Placeholder Code
-
-☐ No Mock Logic
-
-☐ No Broken Dependencies
-
-Only after every checkpoint passes may the implementation be considered complete.
-
-Any failed checkpoint must be resolved before marking the task as finished.
-
-
-CoreX now audit and implement The implementation must follow the existing project architecture, component library, and coding standards.
-
-Architecture Requirements (Mandatory)
-
-Do NOT
-------------
-Do NOT redesign the existing architecture.
-Do NOT introduce new abstraction layers.
-Do NOT create new frameworks.
-Do NOT create duplicate reusable components.
-Do NOT place CSS inside JSX/components/pages.
-Do NOT use inline SVG icons.
-Provider Independence
-
-The platform must remain provider-agnostic.
-
-No frontend page should directly depend on:
-
-Database providers
-AI providers
-Storage providers
-Search providers
-other providers
-
-Frontend pages must continue communicating only through the existing respective service/data layer etc etc so on .
-
-Reuse Existing Components
-
-Reuse the existing shared components wherever applicable.
-
-Modal
-Card
-Badge
-Button
-Table
-Filter
-Search
-Pagination
-Dropdown
-Form Controls
-Color Swatches
-components 
-icons
-
-etc etc so on
-
-Do not create duplicate versions of any of these components.
-
-CSS Rules
-
-Use the existing global stylesheet: - index.css
-
-If additional styling is required:
-
-Add all new CSS rules only to index.css.
-
-Do not create page-specific CSS files.
-
-Do not use inline styles unless already established by the project.
-
-add all components in in components folders
-
-Icon Rules
--------------------
-All newly required icons must be added only to: icon.jsx
-
-icons and savg only use lucid line icons
-
-Do not use inline SVG.
-
-Do not duplicate existing icons.
-
-add RBAC features 
-
-PermissionGate Integration
-
-The page must be fully integrated with the application's PermissionGate module. 
-
-Unauthorized users must:
-
-Be prevented from accessing the page.
-Never execute protected actions.
-Receive the application's standard unauthorized response or page.
-
-Component-Level PermissionGate
-Wrap all sensitive UI sections with PermissionGate where appropriate
-If a user lacks permission:
-
-Hide the component when appropriate, or
-Disable it according to the application's existing UX standards.
-
-Do not expose restricted controls in the DOM unless required by the application's security model.
-
-API Authorization
-
-Every operation must validate permissions before execution
-Server-side authorization must always be enforced, even if client-side PermissionGate is present.
-
-Database Security
-
-The database layer must enforce access control through the existing authorization architecture.
-
-Where applicable:
-
-Apply Row Level Security (RLS) policies.
-Restrict CRUD operations based on user permissions.
-Prevent unauthorized reads, inserts, updates, and deletes.
-Ensure users can access only data they are authorized to view or modify.
-
-PermissionGate must complement database security and must never be the only security layer.
-
-Architecture Requirements
-Reuse the existing PermissionGate implementation.
-Do not create a new permission framework.
-Do not duplicate authorization logic.
-Do not hardcode permission names inside UI components.
-Centralize permission constants and checks using the existing authorization architecture.
-Keep all permission logic maintainable, reusable, and consistent across the application.
-
-Acceptance Criteria (Additional)
-
-The implementation is complete only when:
-
-Every protected route is secured using PermissionGate.
-Every protected UI action validates user permissions.
-Unauthorized users cannot access restricted  functionality.
-Authorization is enforced in both the frontend and backend.
-Database access is protected using the existing security model (including RLS where applicable).
-all authorization is authority/permission-based.
-No hardcoded permission logic exists outside the centralized authorization system.
----------------------------------
-
-Responsive Requirements
--------------------------------
-Desktop
-
-Full-width  workspace
-
-Tablet
-
-Responsive grid
-Maintain logical reading order
-
-Mobile
-
-Stack all sections vertically
-Maintain spacing and usability
-Footer actions remain accessible
-
-Functional Requirements
-------------------------------
-Use existing reusable components wherever available.
-Preserve current project architecture.
-Keep all provider access through the existing service/data layer.
-Follow current validation and form handling patterns.
-Maintain consistent spacing, typography, colors, and component behavior with the rest of the application.
-Ensure accessibility for form controls, labels, buttons, and keyboard navigation.
-Use existing global design tokens and CSS conventions. 
-RLS 
-white label code. 
-clean code
-clean way code
-bug free code
-no hardcoded value 
-no hard-coded or dummy value
+* Use only centralized icons.
+* Add new icons only to `icon.jsx`.
+* Use Lucide line icons.
+* Never embed inline SVG.
+* Never duplicate icons.
+
+---
+
+# 17. Security Standards
+
+Every implementation must verify:
+
+* Authentication
+* Authorization
+* RBAC
+* PermissionGate
+* API Authorization
+* RLS Policies
+* SQL Injection Protection
+* XSS Protection
+* CSRF Protection (where applicable)
+* File Upload Validation
+* Input Sanitization
+* Output Encoding
+* Secure Defaults
+
+Frontend security complements backend enforcement and never replaces it.
+
+---
+
+# 18. Permission & RBAC Standards
+
+All authorization must be permission-based.
+
+Requirements:
+
+* Integrate with the existing PermissionGate.
+* Protect routes.
+* Protect components.
+* Protect API endpoints.
+* Protect database operations.
+* Hide or disable unauthorized controls.
+* Never hardcode permissions.
+* Centralize permission definitions.
+* Enforce authorization at every layer.
+
+---
+
+# 19. Performance Standards
+
+Review:
+
+* Rendering Performance
+* Memoization
+* Lazy Loading
+* Code Splitting
+* Query Optimization
+* Missing Indexes
+* N+1 Queries
+* Duplicate Requests
+* Bundle Size
+* Memory Usage
+
+Every implementation should maintain or improve performance.
+
+---
+
+# 20. Documentation Standards
+
+Whenever functionality changes, update:
+
+* Types
+* Interfaces
+* API Contracts
+* Database Mappings
+* Architecture Documentation
+* Configuration
+* Shared Components
+* Developer Documentation
+
+Documentation must remain synchronized with implementation.
+
+---
+
+# 21. Completion Gate (Mandatory)
+
+A task is complete only after all checkpoints pass.
+
+* Business Logic Complete
+* UI Fully Functional
+* Shared Components Reused
+* Architecture Preserved
+* Provider Independence Maintained
+* Database Verified
+* Missing Objects Verified
+* Schema Verified
+* Mappings Verified
+* CRUD Complete
+* Validation Complete
+* State Verified
+* API Verified
+* DTO Verified
+* Services Verified
+* Repository Verified
+* PermissionGate Integrated
+* RBAC Verified
+* RLS Verified
+* Security Verified
+* Performance Reviewed
+* Accessibility Verified
+* Responsive Verification Passed
+* Regression Tests Passed
+* Documentation Updated
+* No Duplicate Code
+* No Placeholder Code
+* No Mock Logic
+* No Dead Code
+* No Broken Dependencies
+* Production Ready
+
+**Only after every checkpoint has successfully passed may the implementation be considered complete.**
+
+**Any failed checkpoint must be resolved before the task is marked as finished.**

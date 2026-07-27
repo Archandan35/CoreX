@@ -362,7 +362,7 @@ function AppRoutes() {
         <Route path="roles/new" element={<ProtectedRoute permission={PERMISSIONS.ROLE_CREATE}><RoleCreate /></ProtectedRoute>} />
         <Route path="roles/:id/edit" element={<ProtectedRoute permission={PERMISSIONS.ROLE_UPDATE}><RoleEdit /></ProtectedRoute>} />
         <Route path="roles/:id" element={<ProtectedRoute permission={PERMISSIONS.ROLE_READ}><RoleShow /></ProtectedRoute>} />
-        <Route path="settings" element={<Settings />} />
+        <Route path="settings" element={<ProtectedRoute permission={PERMISSIONS.SETTINGS_READ}><Settings /></ProtectedRoute>} />
         <Route path="invoices/new" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_CREATE}><CreateInvoice /></ProtectedRoute>} />
       </Route>
 

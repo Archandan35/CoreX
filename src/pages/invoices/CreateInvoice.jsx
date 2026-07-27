@@ -44,7 +44,7 @@ export default function CreateInvoice() {
 
   // --- Header ---
   const [prefix, setPrefix] = useState('INV');
-  const [invoiceNumber, setInvoiceNumber] = useState('159');
+  const [invoiceNumber, setInvoiceNumber] = useState('');
   const [saving, setSaving] = useState(false);
 
   // --- Customer ---
@@ -101,7 +101,7 @@ export default function CreateInvoice() {
   const [bankModal, setBankModal] = useState(false);
   const [signatureModal, setSignatureModal] = useState(false);
   const [bankForm, setBankForm] = useState({ bank_name: '', account_number: '', ifsc: '', branch: '', upi_id: '' });
-  const [sigName, setSigName] = useState('Maruf');
+  const [sigName, setSigName] = useState('');
 
   // --- Validation ---
   const [errors, setErrors] = useState({});
@@ -122,6 +122,11 @@ export default function CreateInvoice() {
       invoiceService.listSignatures().then(d => setSignatures(Array.isArray(d) ? d : [])).catch(() => {}),
     ]);
   }, []);
+
+  // --- Fetch next invoice number ---
+  useEffect(() => {
+    invoiceService.nextInvoiceNumber(prefix).then(n => { if (n) setInvoiceNumber(n); }).catch(() => {});
+  }, [prefix]);
 
   // --- Auto due date ---
   useEffect(() => {

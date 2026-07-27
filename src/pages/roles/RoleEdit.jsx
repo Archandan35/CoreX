@@ -5,7 +5,7 @@ import Card from '../../components/ui/Card.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
 import Textarea from '../../components/ui/Textarea.jsx';
 import Icon from '../../components/ui/Icon.jsx';
-import { api } from '../../services/api.js';
+import { roleService } from '../../services/role/index.js';
 
 export default function RoleEdit() {
   const { id } = useParams();
@@ -16,18 +16,10 @@ export default function RoleEdit() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api(`/api/roles/${id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.role) {
-          const r = data.role;
-          setForm({ name: r.name, label: r.label, description: r.description || '' });
-        } else {
-          setError('Role not found.');
-        }
-      })
-      .catch(() => setError('Failed to load role.'))
-      .finally(() => setLoading(false));
+    roleService.getRole(id).then((r) => {
+      setForm({ name: r.name, label: r.label, description: r.description || '' });
+    }).catch((err) => setError(err.message || 'Failed to load role.'))
+    .finally(() => setLoading(false));
   }, [id]);
 
   const set = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
@@ -37,19 +29,10 @@ export default function RoleEdit() {
     setError('');
     setBusy(true);
     try {
-      const res = await api(`/api/roles/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (res.ok && data.role) {
-        navigate(`/roles/${id}`);
-      } else {
-        setError(data.error || 'Failed to update role.');
-      }
-    } catch {
-      setError('Network error.');
+      await roleService.updateRole(id, form);
+      navigate(`/roles/${id}`);
+    } catch (err) {
+      setError(err.message || 'Network error.');
     } finally {
       setBusy(false);
     }

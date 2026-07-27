@@ -5153,3 +5153,271 @@ select.form-input { cursor: pointer; appearance: auto; }
   .ss-footer-bar { font-size: 10px; padding: 8px 12px; }
   .ss-foot-left { font-size: 10px; gap: 4px; }
 }
+
+/* ===== ConfirmDialog ===== */
+.confirm-dialog-message {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ===== EmptyState (table wrapper) ===== */
+.table-empty-state-cell {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+/* ===== FileUpload ===== */
+.file-upload-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--bg-secondary);
+  transition: all var(--transition);
+}
+.file-upload-dropzone--active {
+  background: var(--success-light);
+  border-color: var(--success);
+}
+.file-upload-hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.file-upload-hint-link {
+  color: var(--primary);
+  font-weight: 600;
+}
+.file-upload-meta {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.file-upload-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+.file-upload-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+}
+.file-upload-item-name {
+  flex: 1;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-upload-item-size {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+/* ===== LookupSelect ===== */
+.lookup-select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  min-width: 180px;
+  font-size: 13px;
+}
+.lookup-select-label {
+  flex: 1;
+  color: var(--text);
+}
+.lookup-select-label--placeholder {
+  color: var(--text-tertiary);
+}
+.lookup-select-chevron {
+  color: var(--text-tertiary);
+}
+.lookup-select-dropdown {
+  min-width: 240px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.lookup-select-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+/* ===== SummaryPanel ===== */
+.summary-amount-positive {
+  color: var(--success);
+}
+.summary-amount-negative {
+  color: var(--danger);
+}
+.summary-amount-bold {
+  font-weight: 700;
+}
+.summary-roundoff-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.summary-balance-due-line {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+/* ===== DiscountModal ===== */
+.discount-type-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.discount-type-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.discount-type-btn--active {
+  border: 2px solid var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+/* ===== PaymentModal / ChargesModal shared ===== */
+.payment-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+}
+.payment-row-input {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  outline: none;
+  color: var(--text);
+}
+.payment-row-amount {
+  width: 80px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  text-align: right;
+  color: var(--text);
+  background: var(--bg);
+}
+.payment-row-date {
+  width: 100px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+}
+.payment-row-mode-trigger {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+.payment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.payment-header-label {
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.payment-header-label strong {
+  color: var(--text);
+}
+.payment-header-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+.payment-empty-state {
+  text-align: center;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+.payment-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+.payment-summary {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-soft);
+  text-align: right;
+}
+.payment-summary-paid {
+  color: var(--success);
+}
+.payment-summary-remaining {
+  color: var(--danger);
+}
+.charge-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+}
+.charge-row-input {
+  flex: 1;
+}
+.charge-row-amount {
+  width: 100px;
+}
+.charge-empty-state {
+  text-align: center;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+.charge-add-btn {
+  margin-top: 12px;
+}
+

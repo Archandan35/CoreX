@@ -6,7 +6,8 @@ import { Field, Input } from '../../components/ui/Field.jsx';
 import PasswordInput from '../../components/ui/PasswordInput.jsx';
 import Select from '../../components/ui/Select.jsx';
 import Icon from '../../components/ui/Icon.jsx';
-import { api } from '../../services/api.js';
+import { userService } from '../../services/user/index.js';
+import { roleService } from '../../services/role/index.js';
 
 export default function UserCreate() {
   const navigate = useNavigate();
@@ -16,17 +17,12 @@ export default function UserCreate() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api('/api/roles')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.roles) {
-          setRoles(data.roles);
-          if (data.roles.length > 0 && !form.role) {
-            setForm((p) => ({ ...p, role: data.roles[0].name }));
-          }
-        }
-      })
-      .catch(() => {});
+    roleService.listRoles().then((roles) => {
+      setRoles(roles);
+      if (roles.length > 0 && !form.role) {
+        setForm((p) => ({ ...p, role: roles[0].name }));
+      }
+    }).catch(() => {});
   }, []);
 
   const set = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
@@ -36,19 +32,10 @@ export default function UserCreate() {
     setError('');
     setBusy(true);
     try {
-      const res = await api('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (res.ok && data.user) {
-        navigate(`/users/${data.user.id}`);
-      } else {
-        setError(data.error || 'Failed to create user.');
-      }
-    } catch {
-      setError('Network error.');
+      const user = await userService.createUser(form);
+      navigate(`/users/${user.id}`);
+    } catch (err) {
+      setError(err.message || 'Network error.');
     } finally {
       setBusy(false);
     }

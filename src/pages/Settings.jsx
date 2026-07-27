@@ -5,7 +5,7 @@ import { Field, Input } from '../components/ui/Field.jsx';
 import PermissionGate from '../components/ui/PermissionGate.jsx';
 import Icon from '../components/ui/Icon.jsx';
 import { PERMISSIONS } from '../identity/rbac/permissions.js';
-import { api } from '../services/api.js';
+import { settingsApiService } from '../services/settings/SettingsApiService.js';
 import { config } from '../config/index.js';
 import { useAuth } from '../identity/auth/AuthContext.jsx';
 
@@ -60,12 +60,8 @@ export default function Settings() {
     setBusy(true);
     setSaved(false);
     try {
-      const res = await api('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteTitle }),
-      });
-      if (res.ok) setSaved(true);
+      await settingsApiService.update({ siteTitle });
+      setSaved(true);
     } catch {
     } finally {
       setBusy(false);

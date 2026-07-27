@@ -5,7 +5,7 @@ import Card from '../../components/ui/Card.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
 import Textarea from '../../components/ui/Textarea.jsx';
 import Icon from '../../components/ui/Icon.jsx';
-import { api } from '../../services/api.js';
+import { roleService } from '../../services/role/index.js';
 
 export default function RoleCreate() {
   const navigate = useNavigate();
@@ -20,19 +20,10 @@ export default function RoleCreate() {
     setError('');
     setBusy(true);
     try {
-      const res = await api('/api/roles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (res.ok && data.role) {
-        navigate(`/roles/${data.role.id}`);
-      } else {
-        setError(data.error || 'Failed to create role.');
-      }
-    } catch {
-      setError('Network error.');
+      const role = await roleService.createRole(form);
+      navigate(`/roles/${role.id}`);
+    } catch (err) {
+      setError(err.message || 'Network error.');
     } finally {
       setBusy(false);
     }

@@ -10,12 +10,12 @@ export default function ChargesModal({ open, onClose, charges, onAdd, onRemove, 
       footer={<Button variant="secondary" onClick={onClose}>Done</Button>}
     >
       {(charges || []).map((c, i) => (
-        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #f1f5f9' }}>
+        <div key={i} className="charge-row">
           <Input
             value={c.label || ''}
             onChange={(e) => onUpdate?.(i, { ...c, label: e.target.value })}
             placeholder="Charge name"
-            style={{ flex: 1 }}
+            className="charge-row-input"
           />
           <Input
             type="number"
@@ -24,7 +24,7 @@ export default function ChargesModal({ open, onClose, charges, onAdd, onRemove, 
             value={c.amount ?? ''}
             onChange={(e) => onUpdate?.(i, { ...c, amount: Number(e.target.value) || 0 })}
             placeholder="Amount"
-            style={{ width: 100 }}
+            className="charge-row-amount"
           />
           <Checkbox
             checked={!!c.taxable}
@@ -37,9 +37,9 @@ export default function ChargesModal({ open, onClose, charges, onAdd, onRemove, 
         </div>
       ))}
       {(charges || []).length === 0 && (
-        <div style={{ textAlign: 'center', padding: 16, fontSize: 13, color: '#94a3b8' }}>No additional charges added.</div>
+        <div className="charge-empty-state">No additional charges added.</div>
       )}
-      <div style={{ marginTop: 12 }}>
+      <div className="charge-add-btn">
         <Button variant="secondary" icon="plus" onClick={() => onAdd?.({ label: '', amount: 0, taxable: true })}>
           Add Charge
         </Button>

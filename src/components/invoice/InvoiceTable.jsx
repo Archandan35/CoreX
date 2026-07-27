@@ -4,14 +4,7 @@ import Badge from '../ui/Badge.jsx';
 import { computeLine, round2 } from '../../business/invoice/calculations.js';
 import { TAX_RATE_OPTIONS, DISCOUNT_TYPE } from '../../constants/index.js';
 
-const EMPTY_SVG = (
-  <svg width="90" height="70" viewBox="0 0 90 70" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="10" y="18" width="70" height="45" rx="6" stroke="currentColor" strokeWidth="2.5" fill="#F6F5FE"/>
-    <path d="M10 24 L45 48 L80 24" stroke="currentColor" strokeWidth="2.5" fill="none"/>
-    <circle cx="70" cy="16" r="12" fill="#F6F5FE" stroke="currentColor" strokeWidth="2.5"/>
-    <path d="M65 16 h10 M70 11 v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-);
+const EMPTY_ICON = 'package';
 
 const LineRow = memo(function LineRow({ line, index, onChange, onRemove }) {
   const computed = useMemo(() => computeLine(line), [line]);
@@ -132,7 +125,7 @@ export default function InvoiceTable({ items, onChangeItem, onRemoveItem, showDe
           </thead>
         </table>
         <div className="inv-empty-state">
-          <div className="inv-empty-icon">{EMPTY_SVG}</div>
+          <div className="inv-empty-icon"><Icon name={EMPTY_ICON} size={48} strokeWidth={1.5} /></div>
           <p>Search existing products to add to this list or add new product to get started! 🚀</p>
           <button className="inv-btn-add-product" onClick={onAddNewProduct}>
             <Icon name="plus" size={14} /> Add New Product

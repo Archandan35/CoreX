@@ -12,7 +12,7 @@ import Modal from '../../components/ui/Modal.jsx';
 import PermissionGate from '../../components/ui/PermissionGate.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 import { usePermission } from '../../identity/authorization/PermissionContext.jsx';
-import { api } from '../../services/api.js';
+import { userService } from '../../services/user/index.js';
 
 const STATUS_OPTIONS = ['active', 'inactive'];
 
@@ -63,10 +63,9 @@ export default function UserList() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const res = await api(`/api/users/${deleteTarget.id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
-      }
+      await userService.deleteUser(deleteTarget.id);
+      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+    } catch {
     } finally {
       setDeleting(false);
       setDeleteTarget(null);

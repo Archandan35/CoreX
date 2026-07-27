@@ -6,7 +6,8 @@ import { Field, Input } from '../../components/ui/Field.jsx';
 import PasswordInput from '../../components/ui/PasswordInput.jsx';
 import Select from '../../components/ui/Select.jsx';
 import Icon from '../../components/ui/Icon.jsx';
-import { api } from '../../services/api.js';
+import { userService } from '../../services/user/index.js';
+import { roleService } from '../../services/role/index.js';
 
 const STATUS_OPTIONS = ['active', 'inactive'];
 
@@ -20,25 +21,14 @@ export default function UserEdit() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api('/api/roles')
-      .then((r) => r.json())
-      .then((data) => { if (data.roles) setRoles(data.roles); })
-      .catch(() => {});
+    roleService.listRoles().then(setRoles).catch(() => {});
   }, []);
 
   useEffect(() => {
-    api(`/api/users/${id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.user) {
-          const u = data.user;
-          setForm({ name: u.name, email: u.email, phone: u.phone || '', role: u.role, status: u.status });
-        } else {
-          setError('User not found.');
-        }
-      })
-      .catch(() => setError('Failed to load user.'))
-      .finally(() => setLoading(false));
+    userService.getUser(id).then((u) => {
+      setForm({ name: u.name, email: u.email, phone: u.phone || '', role: u.role, status: u.status });
+    }).catch((err) => setError(err.message || 'Failed to load user.'))
+    .finally(() => setLoading(false));
   }, [id]);
 
   const set = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
@@ -48,19 +38,10 @@ export default function UserEdit() {
     setError('');
     setBusy(true);
     try {
-      const res = await api(`/api/users/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (res.ok && data.user) {
-        navigate(`/users/${id}`);
-      } else {
-        setError(data.error || 'Failed to update user.');
-      }
-    } catch {
-      setError('Network error.');
+      await userService.updateUser(id, form);
+      navigate(`/users/${id}`);
+    } catch (err) {
+      setError(err.message || 'Network error.');
     } finally {
       setBusy(false);
     }
