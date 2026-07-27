@@ -1,3 +1,6 @@
+const REQUIRED_FUNCTIONS = ['exec_sql', 'check_admin_exists', 'is_admin_user'];
+const REQUIRED_AUTH_TRIGGER = 'on_auth_user_created';
+
 export class DatabaseValidator {
   constructor(db) {
     this.db = db;
@@ -173,7 +176,7 @@ export class DatabaseValidator {
   }
 
   async _checkFunctions() {
-    let detected = false;
+    const existingNames = new Set();
 
     try {
       const result = await this.db.query(
@@ -181,14 +184,13 @@ export class DatabaseValidator {
       );
       if (result && result.length > 0) {
         for (const row of result) {
+          existingNames.add(row.routine_name);
           this.results.functions.push({ name: row.routine_name, exists: true, status: 'existing', type: 'function' });
         }
-        detected = true;
       }
-    } catch {
-    }
+    } catch {}
 
-    if (detected) return;
+    if (existingNames.size > 0) return;
 
     try {
       const result = await this.db.query(
@@ -198,48 +200,37 @@ export class DatabaseValidator {
       );
       if (result && result.length > 0) {
         for (const row of result) {
+          existingNames.add(row.proname);
           this.results.functions.push({ name: row.proname, exists: true, status: 'existing', type: 'function' });
         }
-        detected = true;
       }
-    } catch {
-    }
+    } catch {}
 
-    if (detected) return;
+    if (existingNames.size > 0) return;
 
     if (this.db._raw && typeof this.db._raw.rpc === 'function') {
       const supabase = this.db._raw;
-      const knownFunctions = ['exec_sql', 'check_admin_exists', 'is_admin_user', 'handle_new_user'];
-      for (const fnName of knownFunctions) {
+      for (const fnName of REQUIRED_FUNCTIONS) {
         try {
           const params = fnName === 'exec_sql' ? { query_text: 'SELECT 1' } : {};
           const { error } = await supabase.rpc(fnName, params);
-          const missing = error
-            && (
-              error.code === '404'
-              || error.status === 404
-              || (typeof error.message === 'string' && (
-                error.message.includes('404')
-                || error.message.includes('does not exist')
-                || error.message.toLowerCase().includes('not found')
-              ))
-            );
-          if (!missing) {
+          if (!error) {
             this.results.functions.push({ name: fnName, exists: true, status: 'existing', type: 'function' });
+            existingNames.add(fnName);
           }
         } catch (err) {
-          const missing = err
-            && (
-              err.code === '404'
-              || err.status === 404
-              || (typeof err.message === 'string' && (
-                err.message.includes('404')
-                || err.message.includes('does not exist')
-                || err.message.toLowerCase().includes('not found')
-              ))
-            );
-          if (!missing) {
+          const is404 = err && (
+            err.code === '404'
+            || err.status === 404
+            || (typeof err.message === 'string' && (
+              err.message.includes('404')
+              || err.message.includes('does not exist')
+              || err.message.toLowerCase().includes('not found')
+            ))
+          );
+          if (!is404) {
             this.results.functions.push({ name: fnName, exists: true, status: 'existing', type: 'function' });
+            existingNames.add(fnName);
           }
         }
       }
@@ -256,66 +247,33 @@ export class DatabaseValidator {
           this.results.triggers.push({ name: row.trigger_name, exists: true, status: 'existing' });
         }
       }
-    } catch {
-    }
+    } catch {}
 
-    const REQUIRED_AUTH_TRIGGER = 'on_auth_user_created';
     let authTriggerExists = false;
-    let handleNewUserExists = false;
-    let pgCatalogError = null;
 
     try {
-      const rpcResult = await this.db.query(
-        `SELECT * FROM exec_sql(
-          'SELECT t.tgname::text
-           FROM pg_catalog.pg_trigger t
-           JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid
-           JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-           WHERE NOT t.tgisinternal
-             AND n.nspname = ''auth''
-             AND c.relname = ''users''
-             AND t.tgname = ''on_auth_user_created'''
-        )`
+      const result = await this.db.query(
+        `SELECT trigger_name FROM information_schema.triggers
+         WHERE trigger_schema = 'auth' AND event_object_table = 'users'`
       );
-      authTriggerExists = !!(rpcResult && rpcResult.length > 0);
-    } catch (err) {
-      pgCatalogError = err;
-    }
+      authTriggerExists = !!(result && result.some((r) => r.trigger_name === REQUIRED_AUTH_TRIGGER));
+    } catch {}
 
     if (!authTriggerExists) {
       try {
         const result = await this.db.query(
-          `SELECT t.tgname
-           FROM pg_catalog.pg_trigger t
+          `SELECT t.tgname::text FROM pg_catalog.pg_trigger t
            JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid
            JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-           WHERE NOT t.tgisinternal
-             AND n.nspname = 'auth'
-             AND c.relname = 'users'
-             AND t.tgname = $1`,
+           WHERE NOT t.tgisinternal AND n.nspname = 'auth'
+             AND c.relname = 'users' AND t.tgname = $1`,
           [REQUIRED_AUTH_TRIGGER]
         );
         authTriggerExists = !!(result && result.length > 0);
-      } catch (err) {
-        if (!pgCatalogError) pgCatalogError = err;
-      }
+      } catch {}
     }
 
-    if (!authTriggerExists && pgCatalogError) {
-      try {
-        const rpcFuncResult = await this.db.query(
-          `SELECT * FROM exec_sql(
-            'SELECT ''exists''::text as found FROM pg_catalog.pg_proc
-             WHERE proname::text = ''handle_new_user''
-               AND pronamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = ''public'')'
-          )`
-        );
-        handleNewUserExists = !!(rpcFuncResult && rpcFuncResult.length > 0);
-      } catch {
-      }
-    }
-
-    if (!authTriggerExists && !handleNewUserExists) {
+    if (!authTriggerExists) {
       const execSqlExists = this.results.functions.some(
         (f) => f.name === 'exec_sql' && f.exists
       );
@@ -328,25 +286,6 @@ export class DatabaseValidator {
     if (authTriggerExists) {
       if (!this.results.triggers.some((t) => t.name === REQUIRED_AUTH_TRIGGER)) {
         this.results.triggers.push({ name: REQUIRED_AUTH_TRIGGER, exists: true, status: 'existing' });
-      }
-    } else if (handleNewUserExists) {
-      if (!this.results.triggers.some((t) => t.name === REQUIRED_AUTH_TRIGGER)) {
-        this.results.triggers.push({
-          name: REQUIRED_AUTH_TRIGGER,
-          exists: true,
-          status: 'existing',
-          detail: 'Inferred present (pg_catalog restricted, handle_new_user function confirmed via exec_sql RPC)',
-        });
-      }
-    } else if (pgCatalogError) {
-      if (!this.results.triggers.some((t) => t.name === REQUIRED_AUTH_TRIGGER)) {
-        this.results.triggers.push({
-          name: REQUIRED_AUTH_TRIGGER,
-          exists: false,
-          status: 'missing',
-          type: 'trigger',
-          detail: 'Cannot verify on_auth_user_created trigger (pg_catalog access restricted). Execute the SQL in Supabase SQL Editor and verify again.',
-        });
       }
     } else {
       this.results.triggers.push({
@@ -369,8 +308,7 @@ export class DatabaseValidator {
           this.results.views.push({ name: row.table_name, exists: true, status: 'existing' });
         }
       }
-    } catch {
-    }
+    } catch {}
   }
 
   async _checkPolicies() {
@@ -383,8 +321,7 @@ export class DatabaseValidator {
           this.results.policies.push({ table: row.tablename, name: row.policyname, exists: true, status: 'existing' });
         }
       }
-    } catch {
-    }
+    } catch {}
   }
 
   async _constraintExists(table, type, column) {
@@ -508,16 +445,16 @@ export class DatabaseValidator {
       this.results.functions.filter((f) => f.exists).map((f) => f.name)
     );
 
-    const requiredFunctions = ['exec_sql', 'check_admin_exists', 'is_admin_user'];
+    const required = [...REQUIRED_FUNCTIONS];
 
     for (const [key, def] of Object.entries(schema)) {
       if (!def || typeof def !== 'object') continue;
-      if (def.type === 'function' && !requiredFunctions.includes(key)) {
-        requiredFunctions.push(key);
+      if (def.type === 'function' && !required.includes(key)) {
+        required.push(key);
       }
     }
 
-    for (const funcName of requiredFunctions) {
+    for (const funcName of required) {
       if (!existingNames.has(funcName)) {
         this.results.functions.push({ name: funcName, exists: false, status: 'missing', type: 'function' });
       }

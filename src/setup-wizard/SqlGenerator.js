@@ -102,21 +102,19 @@ export class SqlGenerator {
 
     const missingNames = new Set();
     for (const item of missing) {
-      const name = item.name
-        || (item.type === 'function' && item.name)
-        || (item.column ? `${item.table}.${item.column}` : null);
+      const name = item.name || (item.type === 'function' && item.name) || null;
       if (name) missingNames.add(name);
     }
 
-    const existsInMissing = (name) => full || missing.some(
+    const isMissing = (name) => full || missing.some(
       (i) => i.name === name || (i.type === 'function' && i.name === name)
     );
 
-    if (existsInMissing('exec_sql')) blocks.push(buildExecSqlFunction());
-    if (existsInMissing('check_admin_exists')) blocks.push(buildCheckAdminExistsFunction());
+    if (isMissing('exec_sql')) blocks.push(buildExecSqlFunction());
+    if (isMissing('check_admin_exists')) blocks.push(buildCheckAdminExistsFunction());
 
     const isAdminNeeded = full
-      || missing.some((i) => i.name === 'is_admin_user' || (i.type === 'function' && i.name === 'is_admin_user'))
+      || isMissing('is_admin_user')
       || missing.some((i) => (i.type === 'policy' || i.policyname) && i.table === 'users')
       || missing.some((i) => i.type === 'table' && i.name === 'users');
     if (isAdminNeeded) blocks.push(buildIsAdminUserFunction());
@@ -281,10 +279,6 @@ export class SqlGenerator {
       '-- Installation script complete',
       '-- ============================================================',
       '',
-      '-- Refresh PostgREST schema cache so newly created functions and',
-      '-- tables are immediately available via the REST API (without this,',
-      '-- supabase.rpc() calls return 404 until the cache refreshes automatically,',
-      '-- which can take up to 30 seconds).',
       "NOTIFY pgrst, 'reload schema';",
     ].join('\n');
   }

@@ -1,18 +1,5 @@
 import { config } from '../../config/index.js';
-
-let storageClient = null;
-let storageClientPromise = null;
-
-async function getStorageClient() {
-  if (storageClient) return storageClient;
-  if (storageClientPromise) return storageClientPromise;
-  storageClientPromise = (async () => {
-    const { createClient } = await import('@supabase/supabase-js');
-    storageClient = createClient(config.supabaseUrl, config.supabaseAnonKey);
-    return storageClient;
-  })();
-  return storageClientPromise;
-}
+import { getSupabaseClient } from '../../identity/auth/supabaseClient.js';
 
 export class StorageService {
   constructor() {
@@ -21,7 +8,7 @@ export class StorageService {
   }
 
   async upload(file, path) {
-    const client = await getStorageClient();
+    const client = await getSupabaseClient();
     const { data, error } = await client.storage
       .from(config.supabaseBucket)
       .upload(path, file);
@@ -30,7 +17,7 @@ export class StorageService {
   }
 
   async getUrl(path) {
-    const client = await getStorageClient();
+    const client = await getSupabaseClient();
     const { data } = client.storage
       .from(config.supabaseBucket)
       .getPublicUrl(path);
@@ -38,7 +25,7 @@ export class StorageService {
   }
 
   async delete(path) {
-    const client = await getStorageClient();
+    const client = await getSupabaseClient();
     const { error } = await client.storage
       .from(config.supabaseBucket)
       .remove([path]);
