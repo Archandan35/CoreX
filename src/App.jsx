@@ -105,7 +105,7 @@ function AppRoutes() {
       return { compatible: false, missingCount: failedTables.length, everInstalled };
     }
 
-    // All tables accessible — now verify version
+    // All tables accessible — now verify version and required functions
     const { data: versionRows, error: versionError } = await database.supabase
       .from('_schema_version')
       .select('version')
@@ -118,9 +118,21 @@ function AppRoutes() {
     let versionMatch = current == required;
     if (!versionMatch && current == null) versionMatch = true;
 
+    // Probe required functions to catch partial installations where tables
+    // exist but triggers, RLS policies, or helper functions are missing.
+    let functionsOk = false;
+    try {
+      const { error: fnError } = await database.supabase.rpc('check_admin_exists');
+      functionsOk = !fnError;
+    } catch {}
+
+    const missing = [];
+    if (!versionMatch) missing.push('schema version');
+    if (!functionsOk) missing.push('required functions');
+
     return {
-      compatible: versionMatch,
-      missingCount: versionMatch ? 0 : 1,
+      compatible: missing.length === 0,
+      missingCount: missing.length,
       everInstalled: everInstalled || versionMatch,
     };
   }

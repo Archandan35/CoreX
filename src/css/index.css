@@ -723,8 +723,10 @@ kbd.cmd__kbd {
 .auth-sub { font-size: 14px; color: var(--text-secondary); text-align: center; margin-bottom: 24px; }
 .auth-foot { display: flex; align-items: center; gap: 8px; margin-top: 24px; font-size: 14px; justify-content: center; flex-wrap: wrap; }
 .auth-foot--between { justify-content: space-between; }
+.auth-foot--compact { margin-top: 8px; }
 .auth-link { color: var(--primary); font-weight: 500; }
 .auth-link:hover { color: var(--primary-hover); text-decoration: underline; }
+.auth-link--btn { background: none; border: none; cursor: pointer; padding: 0; font: inherit; }
 .auth-theme-toggle {
   position: absolute; top: 12px; right: 12px; width: 32px; height: 32px;
   display: flex; align-items: center; justify-content: center;
@@ -780,6 +782,7 @@ kbd.cmd__kbd {
   border-top: 1px solid var(--border-light);
 }
 select.form-input { cursor: pointer; appearance: auto; }
+.form-input--filter-select { width: 140px; }
 
 .password-input-wrapper {
   position: relative; display: flex; align-items: center;
@@ -802,6 +805,7 @@ select.form-input { cursor: pointer; appearance: auto; }
 .alert-success { background: var(--success-light); color: #065f46; }
 [data-theme="dark"] .alert-success { color: var(--success); }
 .alert--mb { margin-bottom: 16px; }
+.alert--danger-mt { margin-top: 8px; }
 
 /* ===== SETTINGS: AUTH REDIRECT URLS ===== */
 .settings-auth-urls { margin-bottom: 20px; }

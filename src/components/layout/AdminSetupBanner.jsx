@@ -25,11 +25,13 @@ export default function AdminSetupBanner() {
   const { adminExists, dbHealth } = useApp();
   const navigate = useNavigate();
 
-  // Only show when the database is confirmed compatible AND no admin exists.
-  // While the database is incomplete, the Setup Wizard handles initialization
-  // instead — do not double-surface a banner.
+  // Show when no admin exists and the database is either compatible (fresh
+  // install) or was previously installed but is now degraded (everInstalled).
+  // When the database has never been installed the Setup Wizard handles
+  // initialization exclusively — the banner stays hidden to avoid clutter.
   if (adminExists !== false) return null;
-  if (!dbHealth || !dbHealth.compatible) return null;
+  if (!dbHealth) return null;
+  if (!dbHealth.compatible && !dbHealth.everInstalled) return null;
 
   return (
     <div className="db-health-banner admin-setup-banner" role="alert">

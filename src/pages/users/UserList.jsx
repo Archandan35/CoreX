@@ -87,7 +87,7 @@ export default function UserList() {
             <Search value={search} onChange={setSearch} placeholder="Search users..." />
           </FilterItem>
           <FilterItem label="Status">
-            <select className="form-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ width: 140 }}>
+            <select className="form-input form-input--filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">All</option>
               {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>

@@ -124,7 +124,7 @@ export default function Register({ isFirstAccount }) {
         </p>
 
         {error && <div className="alert alert-danger alert--mb"><Icon name="alert" size={16} />{error}</div>}
-        {notice && <div className="alert alert-success alert--mb" style={{ marginBottom: 16 }}><Icon name="check" size={16} />{notice}</div>}
+        {notice && <div className="alert alert-success alert--mb"><Icon name="check" size={16} />{notice}</div>}
 
         {!notice ? (
 
@@ -167,7 +167,7 @@ export default function Register({ isFirstAccount }) {
                 </div>
               </div>
               {!fullAccess && (
-                <div className="alert alert-danger alert--mb" style={{ marginTop: 8 }}>
+                <div className="alert alert-danger alert--mb alert--danger-mt">
                   <Icon name="alert" size={16} />
                   Full Access must be enabled to create an account. Administrative authority is required.
                 </div>
@@ -205,14 +205,13 @@ export default function Register({ isFirstAccount }) {
               <span className="auth-note">Already confirmed? </span>
               <a href="#login" className="auth-link" onClick={(e) => { e.preventDefault(); navigate('/login'); }}>Sign in</a>
             </div>
-            <div className="auth-foot" style={{ marginTop: 8 }}>
+            <div className="auth-foot auth-foot--compact">
               <span className="auth-note">Didn't receive the email? </span>
               <button
                 type="button"
-                className="auth-link"
                 onClick={handleResend}
                 disabled={resending}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
+                className="auth-link auth-link--btn"
               >
                 {resending ? 'Sending...' : 'Resend confirmation email'}
               </button>
