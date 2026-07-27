@@ -251,12 +251,11 @@ function AppRoutes() {
 
         if (!adminFound) {
           try {
-            const { data, error } = await database.supabase
+            const { count, error } = await database.supabase
               .from('users')
-              .select('id', { count: 'exact', head: true })
-              .eq('full_access', true)
-              .limit(1);
-            if (!error) adminFound = (data?.length || 0) > 0;
+              .select('*', { count: 'exact', head: true })
+              .eq('full_access', true);
+            if (!error) adminFound = (count || 0) > 0;
           } catch {}
         }
 
