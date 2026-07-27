@@ -10,6 +10,7 @@ import InvoiceSummary from '../../components/invoice/InvoiceSummary.jsx';
 import InvoiceFooter from '../../components/invoice/InvoiceFooter.jsx';
 import ProductModal from '../../components/invoice/ProductModal.jsx';
 import CustomerModal from '../../components/invoice/CustomerModal.jsx';
+import DocumentSettings from '../../components/invoice/DocumentSettings.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
@@ -55,6 +56,7 @@ export default function CreateInvoice() {
   // --- Headers ---
   const [headerDefs, setHeaderDefs] = useState(DEFAULT_CUSTOM_HEADERS);
   const [headerSettingsOpen, setHeaderSettingsOpen] = useState(false);
+  const [docSettingsOpen, setDocSettingsOpen] = useState(false);
 
   // --- Products ---
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -335,7 +337,7 @@ export default function CreateInvoice() {
           <button className="inv-link-action" onClick={() => setHeaderSettingsOpen(true)}>
             <Icon name="info" size={14} /> Custom Headers
           </button>
-          <button className="inv-link-action" onClick={() => {}}>
+          <button className="inv-link-action" onClick={() => setDocSettingsOpen(true)}>
             <Icon name="settings" size={14} /> Settings
           </button>
         </div>
@@ -499,6 +501,8 @@ export default function CreateInvoice() {
           </Field>
         </form>
       </Modal>
+
+      <DocumentSettings open={docSettingsOpen} onClose={() => setDocSettingsOpen(false)} />
 
       <NotificationToast />
     </div>

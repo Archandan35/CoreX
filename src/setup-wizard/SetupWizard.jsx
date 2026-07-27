@@ -1,12 +1,15 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import Button from '../components/ui/Button.jsx';
 import Icon from '../components/ui/Icon.jsx';
-import ThemeToggle from '../components/ui/ThemeToggle.jsx';
+import { WizardShell } from './components/index.js';
+import { WizardSidebar } from './components/index.js';
+import { WizardRightColumn } from './components/index.js';
 import { DatabaseValidator } from './DatabaseValidator.js';
 import { SqlGenerator } from './SqlGenerator.js';
 import { SchemaAnalyzer } from './SchemaAnalyzer.js';
 import { highlightSql } from './SqlHighlighter.js';
-import { PROVIDERS, getProvider } from './ProviderRegistry.js';
+import { getProvider } from './ProviderRegistry.js';
+import DatabaseProviderStep from './steps/DatabaseProviderStep.jsx';
 import { isMissingTableError, isMissingColumnError } from '../utils/dbErrors.js';
 import { bindInline } from '../data/sqlParams.js';
 
@@ -462,7 +465,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
   const lineCount = sqlText ? sqlText.split('\n').length : 0;
 
   const provider = getProvider(selectedProvider);
-  const progress = ((step + 1) / STEPS.length) * 100;
 
   const genSteps = [
     { key: 'scan', label: 'Scan Database', status: genStepStatus === genStatus.RUNNING ? genStatus.RUNNING : sqlText ? genStatus.COMPLETED : genStepStatus },
@@ -472,56 +474,17 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
   ];
 
   return (
-    <div className="ss-shell">
-      {/* HEADER */}
-      <header className="ss-header">
-        <div className="ss-header-left">
-          <div className="ss-logo"><Icon name="database" size={26} /></div>
-          <div className="ss-header-title">
-            <h1>Setup Wizard</h1>
-            <p>Guided setup for your application</p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <ThemeToggle />
-          <button className="ss-btn-help" type="button"><Icon name="info" size={16} /> Need Help?</button>
-        </div>
-      </header>
-
+    <WizardShell>
       {/* BODY: 3-col layout */}
       <div className="ss-body">
-        {/* SIDEBAR — 10 steps with numbered circles */}
-        <aside className="ss-sidebar">
-          <div className="ss-step-list">
-            {STEPS.map((s, i) => {
-              const isCompleted = completedSteps.has(i);
-              const isActive = i === step;
-              const isLocked = i > maxAccessible + 1;
-              return (
-                <div
-                  key={s.id}
-                  className={`ss-step-row${isActive ? ' ss-step-active' : ''}`}
-                  style={{ opacity: isLocked ? 0.45 : 1 }}
-                >
-                  <div className="ss-connector" />
-                  <button
-                    type="button"
-                    className={`ss-num-circle${isCompleted ? ' ss-done' : ''}${isActive ? ' ss-current' : ''}`}
-                    onClick={() => goTo(i)}
-                    disabled={isLocked}
-                    style={{ cursor: isLocked ? 'not-allowed' : 'pointer', border: 'none', fontFamily: 'inherit', fontSize: 13, fontWeight: 700 }}
-                  >
-                    {isCompleted ? <Icon name="check" size={14} /> : i + 1}
-                  </button>
-                  <div className="ss-step-text">
-                    <div className="ss-step-title">{s.label}</div>
-                    <div className="ss-step-desc">{s.desc}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </aside>
+        {/* SIDEBAR — reusable numbered step rail */}
+        <WizardSidebar
+          steps={STEPS}
+          step={step}
+          completedSteps={completedSteps}
+          maxAccessible={maxAccessible}
+          onGoTo={goTo}
+        />
 
         {/* MAIN COLUMN — per-step content */}
         <main className="ss-main">
@@ -560,46 +523,15 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
               </div>
             )}
 
-            {/* Driver */}
+            {/* Database Provider (Step 2) */}
             {step === 1 && (
-              <div className="setup-wizard-card">
-                <h1>Database Driver</h1>
-                <p>Select your database provider to get started.</p>
-                <div className="setup-provider-section">
-                  <h2 className="setup-section-title">Select Database Provider</h2>
-                  <div className="setup-provider-grid">
-                    {PROVIDERS.map((p) => (
-                      <button
-                        key={p.id}
-                        className={`setup-provider-card ${selectedProvider === p.id ? 'selected' : ''}`}
-                        onClick={() => selectProvider(p.id)}
-                        type="button"
-                      >
-                        <div className="setup-provider-card-header">
-                          <div className="setup-provider-card-logo" style={{ backgroundColor: p.color }}>
-                            {p.logo}
-                          </div>
-                          <div className="setup-provider-card-body">
-                            <div className="setup-provider-card-name">{p.name}</div>
-                            <div className="setup-provider-card-desc">{p.description}</div>
-                          </div>
-                        </div>
-                        <div className="setup-provider-card-footer">
-                          {validationSuccess && selectedProvider === p.id ? (
-                            <span className="provider-status-validated"><Icon name="check-circle" size={12} /> Validated</span>
-                          ) : (
-                            <span className="provider-status-not-configured">Not Configured</span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="setup-wizard-actions">
-                  <Button variant="secondary" onClick={goPrev}>Back</Button>
-                  <Button variant="primary" onClick={() => { if (selectedProvider) goNext(); }} disabled={!selectedProvider}>Next</Button>
-                </div>
-              </div>
+              <DatabaseProviderStep
+                selectedProvider={selectedProvider}
+                validated={Boolean(validationSuccess)}
+                onSelect={selectProvider}
+                onBack={goPrev}
+                onNext={() => { if (selectedProvider) goNext(); }}
+              />
             )}
 
             {/* Connection */}
@@ -1121,43 +1053,10 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
           </div>{/* ss-main-inner */}
         </main>{/* ss-main */}
 
-        {/* RIGHT COLUMN — progress ring + next step preview */}
-        <aside className="ss-right-col">
-          <div className="ss-rc-card">
-            <h3>Setup Progress</h3>
-            <div className="ss-progress-wrap">
-              <div className="ss-progress-ring">
-                <svg width="150" height="150" viewBox="0 0 150 150">
-                  <circle cx="75" cy="75" r="64" fill="none" stroke="#E7E9EE" strokeWidth="10" />
-                  <circle cx="75" cy="75" r="64" fill="none" stroke="var(--primary)" strokeWidth="10"
-                    strokeLinecap="round" strokeDasharray="402" strokeDashoffset={402 - (step / (STEPS.length - 1)) * 402} />
-                </svg>
-                <div className="ss-pct">{Math.round(progress)}%</div>
-              </div>
-              <div className="ss-progress-caption">{step + 1} of {STEPS.length} completed</div>
-            </div>
-          </div>
+        {/* RIGHT COLUMN — reusable progress + next-step preview */}
+        <WizardRightColumn step={step} steps={STEPS} />
 
-          {step < STEPS.length - 1 && (
-            <div className="ss-rc-card">
-              <div className="ss-next-head">
-                <div className="ss-next-num">{step + 2}</div>
-                <div className="ss-next-title">{STEPS[step + 1]?.label}</div>
-              </div>
-              <p className="ss-next-desc">{STEPS[step + 1]?.desc}</p>
-              <div className="ss-illustration-box">
-                <Icon name="arrow-right" size={46} />
-              </div>
-            </div>
-          )}
-        </aside>
       </div>{/* ss-body */}
-
-      {/* FOOTER */}
-      <footer className="ss-footer-bar">
-        <div className="ss-foot-left"><Icon name="lock" size={14} /> Your data is safe with us. We use industry-standard encryption.</div>
-        <div>Setup Wizard v1.0.0</div>
-      </footer>
 
       {/* Error Modal */}
       {showErrorModal && (
@@ -1273,6 +1172,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
           <span>{toast.message}</span>
         </div>
       )}
-    </div>
+    </WizardShell>
   );
 }
