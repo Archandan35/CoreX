@@ -239,22 +239,33 @@ function AppRoutes() {
     try {
       let adminFound = false;
       if (database.isSupabase) {
-        const { data: rpcData, error: rpcError } = await database.supabase.rpc('check_admin_exists');
-        if (!rpcError && rpcData !== null) {
-          adminFound = rpcData === true;
-        } else {
-          const { data, error } = await database.supabase
-            .from('users')
-            .select('id', { count: 'exact', head: true })
-            .eq('full_access', true)
-            .limit(1);
-          if (error && isMissingTableError(error)) {
-            // Schema disappeared/incomplete between the initial check and now —
-            // route back to setup instead of silently treating this as "no admin".
-            setAppState('setup');
-            return;
-          }
-          if (!error) adminFound = (data?.length || 0) > 0;
+        // Try three methods in order: RPC → direct query → exec_sql
+        // RPC may not have SECURITY DEFINER (old schema), direct query may be
+        // blocked by RLS for anon key, but exec_sql (SECURITY DEFINER) always
+        // bypasses RLS. If any method finds an admin, the result is accepted.
+        try {
+          const { data: rpcData, error: rpcError } = await database.supabase.rpc('check_admin_exists');
+          if (!rpcError && rpcData !== null) adminFound = rpcData === true;
+        } catch {}
+
+        if (!adminFound) {
+          try {
+            const { data, error } = await database.supabase
+              .from('users')
+              .select('id', { count: 'exact', head: true })
+              .eq('full_access', true)
+              .limit(1);
+            if (!error) adminFound = (data?.length || 0) > 0;
+          } catch {}
+        }
+
+        if (!adminFound) {
+          try {
+            const result = await database.query(
+              `SELECT COUNT(*) as count FROM public.users WHERE full_access = true`
+            );
+            adminFound = parseInt(result?.[0]?.count || 0, 10) > 0;
+          } catch {}
         }
       } else {
         const result = await database.query(
@@ -352,9 +363,7 @@ function AppRoutes() {
         element={
           isAuthenticated
             ? <Navigate to="/" replace />
-            : adminExists
-              ? <Login />
-              : <Navigate to="/register" replace />
+            : <Login />
         }
       />
       <Route
