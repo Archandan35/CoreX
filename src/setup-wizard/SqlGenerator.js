@@ -204,8 +204,9 @@ export class SqlGenerator {
     const blocks = [];
     for (const entity of this._entities) {
       const def = entity.def;
-      if (!def.table || !def.searchableFields) continue;
-      for (const field of def.searchableFields) {
+      if (!def.table) continue;
+      const fields = [...(def.searchableFields || []), ...(def.indexes || [])];
+      for (const field of fields) {
         const idx = `idx_${def.table}_${field}`;
         if (this._emittedIndexNames.has(idx)) continue;
         this._emittedIndexNames.add(idx);
@@ -220,8 +221,9 @@ export class SqlGenerator {
     const blocks = indexes.map((ix) => this._genIndex(ix));
     for (const entity of this._entities) {
       const def = entity.def;
-      if (!def.table || !def.searchableFields || !allTableNames.has(def.table)) continue;
-      for (const field of def.searchableFields) {
+      if (!def.table || !allTableNames.has(def.table)) continue;
+      const fields = [...(def.searchableFields || []), ...(def.indexes || [])];
+      for (const field of fields) {
         const idx = `idx_${def.table}_${field}`;
         if (this._emittedIndexNames.has(idx)) continue;
         this._emittedIndexNames.add(idx);
@@ -349,8 +351,12 @@ export class SqlGenerator {
   }
 
   _genRLS(tableName, def) {
+    const isUsers = def && def.table === 'users';
+    const isInvoiceChild = def && ['invoice_items', 'invoice_payments'].includes(def.table);
+
     const lines = ['ALTER TABLE ' + tableName + ' ENABLE ROW LEVEL SECURITY;'];
-    if (def && def.table === 'users') {
+
+    if (isUsers) {
       lines.push(
         '',
         'DO $$',
@@ -409,6 +415,29 @@ export class SqlGenerator {
         '  END IF;',
         'END $$;',
       );
+    } else if (def && def.rls) {
+      lines.push('ALTER TABLE ' + tableName + ' FORCE ROW LEVEL SECURITY;');
+
+      const ownerCondition = isInvoiceChild
+        ? 'invoice_id IN (SELECT id FROM public.invoices WHERE created_by = auth.uid())'
+        : 'created_by = auth.uid()';
+      const condition = 'public.is_admin_user() OR ' + ownerCondition;
+
+      const ops = [
+        { name: 'read', operation: 'SELECT', clause: 'USING (' + condition + ')' },
+        { name: 'write', operation: 'INSERT', clause: 'WITH CHECK (' + condition + ')' },
+        { name: 'update', operation: 'UPDATE', clause: 'USING (' + condition + ') WITH CHECK (' + condition + ')' },
+        { name: 'delete', operation: 'DELETE', clause: 'USING (' + condition + ')' },
+      ];
+
+      for (const op of ops) {
+        lines.push(
+          '',
+          'DO $$ BEGIN',
+          '  CREATE POLICY "Owner ' + op.name + '" ON ' + tableName + ' FOR ' + op.operation + ' ' + op.clause + ';',
+          'EXCEPTION WHEN duplicate_object THEN NULL; END $$;'
+        );
+      }
     }
     return lines.join('\n');
   }

@@ -125,6 +125,7 @@ export const SCHEMAS = {
     defaults: { created_at: 'NOW()', updated_at: 'NOW()' },
     rls: true,
     searchableFields: ['name', 'company', 'email', 'phone', 'gstin'],
+    indexes: ['created_by'],
   },
 
   product_categories: {
@@ -147,6 +148,7 @@ export const SCHEMAS = {
     defaults: { unit_price: '0', tax_rate: '0', is_service: 'false', created_at: 'NOW()', updated_at: 'NOW()' },
     rls: true,
     searchableFields: ['name', 'sku', 'barcode', 'hsn_code'],
+    indexes: ['created_by'],
   },
 
   banks: {
@@ -181,6 +183,7 @@ export const SCHEMAS = {
     unique: { invoice_number: 'invoice_number' },
     rls: true,
     searchableFields: ['invoice_number', 'reference'],
+    indexes: ['customer_id', 'created_by', 'status'],
   },
 
   invoice_items: {
@@ -188,10 +191,11 @@ export const SCHEMAS = {
     columns: ['id', 'invoice_id', 'product_id', 'name', 'description', 'show_description', 'quantity', 'unit_price', 'tax_rate', 'discount_type', 'discount_value', 'discount_amount', 'tax_amount', 'line_total', 'sort_order', 'created_at', 'updated_at'],
     columnTypes: { id: 'UUID', invoice_id: 'UUID', product_id: 'UUID', name: 'TEXT', description: 'TEXT', show_description: 'BOOLEAN', quantity: 'NUMERIC', unit_price: 'NUMERIC', tax_rate: 'NUMERIC', discount_type: 'TEXT', discount_value: 'NUMERIC', discount_amount: 'NUMERIC', tax_amount: 'NUMERIC', line_total: 'NUMERIC', sort_order: 'INTEGER', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
     primaryKey: 'id',
-    nullable: ['product_id', 'description', 'discount_type', 'created_by'],
+    nullable: ['product_id', 'description', 'discount_type'],
     defaults: { show_description: 'false', quantity: '1', unit_price: '0', tax_rate: '0', discount_type: "'percent'", discount_value: '0', discount_amount: '0', tax_amount: '0', line_total: '0', sort_order: '0', created_at: 'NOW()', updated_at: 'NOW()' },
     rls: true,
     searchableFields: ['name'],
+    indexes: ['invoice_id'],
   },
 
   invoice_payments: {
@@ -203,6 +207,7 @@ export const SCHEMAS = {
     defaults: { amount: '0', payment_date: 'NOW()', created_at: 'NOW()', updated_at: 'NOW()' },
     rls: true,
     searchableFields: ['note'],
+    indexes: ['invoice_id'],
   },
 };
 
