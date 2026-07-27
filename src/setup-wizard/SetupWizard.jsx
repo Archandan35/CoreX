@@ -12,15 +12,15 @@ import { bindInline } from '../data/sqlParams.js';
 
 const STEPS = [
   { id: 'welcome', label: 'Welcome', icon: 'home' },
-  { id: 'driver', label: 'Database Driver', icon: 'database' },
-  { id: 'connection', label: 'Connection Details', icon: 'gear' },
-  { id: 'verify-connection', label: 'Verify Connection', icon: 'shield' },
-  { id: 'verify-result', label: 'Connection Verified', icon: 'check-circle' },
-  { id: 'analysis', label: 'Schema Analysis', icon: 'scan' },
-  { id: 'plan', label: 'Installation Plan', icon: 'list' },
-  { id: 'execute', label: 'Generate & Execute SQL', icon: 'bolt' },
-  { id: 'verify-install', label: 'Verify Installation', icon: 'check-circle' },
-  { id: 'complete', label: 'Setup Complete', icon: 'check' },
+  { id: 'driver', label: 'Driver', icon: 'database' },
+  { id: 'connection', label: 'Connection', icon: 'gear' },
+  { id: 'verify', label: 'Verify', icon: 'shield' },
+  { id: 'verified', label: 'Verified', icon: 'check-circle' },
+  { id: 'analysis', label: 'Analysis', icon: 'scan' },
+  { id: 'plan', label: 'Plan', icon: 'list' },
+  { id: 'execute', label: 'Execute', icon: 'bolt' },
+  { id: 'recheck', label: 'Re-check', icon: 'check-circle' },
+  { id: 'complete', label: 'Done', icon: 'check' },
 ];
 
 const genStatus = { PENDING: 'pending', RUNNING: 'running', COMPLETED: 'completed', FAILED: 'failed' };
@@ -487,50 +487,50 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
 
   return (
     <div className="setup-wizard">
-      <div className="setup-wizard-sidebar">
-        <div className="setup-wizard-brand">
-          <div className="setup-wizard-logo">C</div>
-          <div className="setup-wizard-brand-text">
-            <span className="setup-wizard-title">CoreX Setup</span>
-            <span className="setup-wizard-subtitle">Database Configuration</span>
+      {/* Header Bar */}
+      <div className="setup-wizard-header">
+        <div className="setup-wizard-header-brand">
+          <div className="setup-wizard-header-logo">C</div>
+          <div>
+            <div className="setup-wizard-header-title">CoreX Setup</div>
+            <div className="setup-wizard-header-sub">Database Configuration</div>
           </div>
         </div>
-
-        <nav className="setup-wizard-nav">
-          {STEPS.map((s, i) => {
-            const isCompleted = completedSteps.has(i);
-            const isActive = i === step;
-            const isLocked = i > maxAccessible + 1;
-            return (
-              <button
-                key={s.id}
-                className={`setup-wizard-nav-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${isLocked ? 'locked' : ''}`}
-                onClick={() => goTo(i)}
-                disabled={isLocked}
-              >
-                <span className="setup-wizard-nav-dot">
-                  {isCompleted ? <Icon name="check" size={12} /> : i + 1}
-                </span>
-                <span className="setup-wizard-nav-label">{s.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="setup-wizard-progress">
-          <div className="setup-wizard-progress-label">
-            <span>Setup Progress</span>
-            <span>{step + 1} / {STEPS.length}</span>
-          </div>
-          <div className="setup-wizard-progress-bar">
-            <div className="setup-wizard-progress-fill" style={{ width: `${progress}%` }} />
-          </div>
+        <div className="setup-wizard-header-actions">
+          <ThemeToggle className="setup-wizard-theme-toggle" />
         </div>
       </div>
 
-      <div className="setup-wizard-content">
-        <ThemeToggle className="setup-wizard-theme-toggle" />
-        <div className="setup-wizard-content-inner">
+      {/* Horizontal Stepper */}
+      <div className="setup-wizard-stepper">
+        {STEPS.map((s, i) => {
+          const isCompleted = completedSteps.has(i);
+          const isActive = i === step;
+          const isLocked = i > maxAccessible + 1;
+          return (
+            <div className="setup-wizard-step" key={s.id}>
+              <button
+                className={`setup-wizard-step-button ${isActive ? 'setup-wizard-step--active' : ''} ${isCompleted ? 'setup-wizard-step--completed' : ''}`}
+                onClick={() => goTo(i)}
+                disabled={isLocked}
+                type="button"
+              >
+                <span className="setup-wizard-step-circle">
+                  {isCompleted ? <Icon name="check" size={11} /> : i + 1}
+                </span>
+                <span className="setup-wizard-step-label">{s.label}</span>
+              </button>
+              {i < STEPS.length - 1 && (
+                <div className={`setup-wizard-step-connector ${isCompleted || (completedSteps.has(i + 1)) ? 'setup-wizard-step-connector--completed' : ''}`} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Body */}
+      <div className="setup-wizard-body">
+        <div className="setup-wizard-body-inner">
 
           {/* Step 0 — Welcome */}
           {step === 0 && (
@@ -548,18 +548,18 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
                 </div>
                 <div className="setup-feature">
                   <span className="setup-feature-icon"><Icon name="bolt" size={18} /></span>
-                  <span>SQL Generation & Execution</span>
+                  <span>SQL Generation</span>
                 </div>
                 <div className="setup-feature">
                   <span className="setup-feature-icon"><Icon name="shield" size={18} /></span>
-                  <span>Installation Verification</span>
+                  <span>Verification</span>
                 </div>
               </div>
               <div className="setup-wizard-actions"><Button variant="primary" onClick={goNext}>Get Started</Button></div>
             </div>
           )}
 
-          {/* Step 1 — Database Driver (Provider Selection) */}
+          {/* Step 1 — Driver */}
           {step === 1 && (
             <div className="setup-wizard-panel">
               <h1>Database Driver</h1>
@@ -601,7 +601,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             </div>
           )}
 
-          {/* Step 2 — Connection Details */}
+          {/* Step 2 — Connection */}
           {step === 2 && (
             <div className="setup-wizard-panel">
               <h1>Connection Details</h1>
@@ -663,7 +663,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             </div>
           )}
 
-          {/* Step 3 — Verify Connection */}
+          {/* Step 3 — Verify */}
           {step === 3 && (
             <div className="setup-wizard-panel">
               <h1>Verify Connection</h1>
@@ -704,7 +704,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             </div>
           )}
 
-          {/* Step 4 — Verify Connection Result */}
+          {/* Step 4 — Verified */}
           {step === 4 && (
             <div className="setup-wizard-panel">
               <div className="setup-connection-result">
@@ -714,8 +714,8 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
                     <path className="setup-success-check" d="M14 27l7 7 16-16" fill="none" />
                   </svg>
                 </div>
-                <h1>Connection Verified Successfully</h1>
-                <p>{provider?.name || selectedProvider} connection established. Credentials validated successfully. Database metadata loaded successfully.</p>
+                <h1>Connection Verified</h1>
+                <p>{provider?.name || selectedProvider} connection established. Credentials validated successfully.</p>
                 <div className="setup-complete-info">
                   <div className="complete-row"><span>Connected Database</span><span>{validationSuccess?.projectInfo?.url || provider?.name || 'Connected'}</span></div>
                   <div className="complete-row"><span>Database Provider</span><span>{provider?.name || selectedProvider}</span></div>
@@ -729,7 +729,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             </div>
           )}
 
-          {/* Step 5 — Schema Analysis */}
+          {/* Step 5 — Analysis */}
           {step === 5 && (
             <div className="setup-wizard-panel">
               <h1>Schema Analysis</h1>
@@ -761,13 +761,13 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
                       <span className={`summary-card-value ${analysis.isComplete ? 'text-success' : analysis.totalMissing > 0 ? 'text-danger' : 'text-warning'}`}>
                         {analysis.isComplete ? 'Complete' : analysis.totalMissing > 0 ? 'Incomplete' : 'Issues'}
                       </span>
-                      <span className="summary-card-label">Overall Status</span>
+                      <span className="summary-card-label">Overall</span>
                     </div>
                     <div className={`setup-summary-card ${analysis.dependencyStatus === 'complete' ? 'complete' : analysis.dependencyStatus === 'missing' ? 'incomplete' : 'card-issues'}`}>
                       <span className={`summary-card-value ${analysis.dependencyStatus === 'complete' ? 'text-success' : analysis.dependencyStatus === 'missing' ? 'text-danger' : 'text-warning'}`}>
                         {analysis.dependencyStatus === 'complete' ? 'Resolved' : analysis.dependencyStatus === 'missing' ? 'Missing' : 'Issues'}
                       </span>
-                      <span className="summary-card-label">Dependency Status</span>
+                      <span className="summary-card-label">Dependencies</span>
                     </div>
                   </div>
                   {Object.entries(analysis.categories).map(([key, cat]) => {
@@ -814,17 +814,17 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             </div>
           )}
 
-          {/* Step 6 — Installation Plan */}
+          {/* Step 6 — Plan */}
           {step === 6 && plan && (
             <div className="setup-wizard-panel setup-plan-page">
               <h1>Installation Plan</h1>
               <p>Review the objects that will be created, updated, or skipped.</p>
               <div className="setup-plan-scroll">
                 <div className="setup-plan-stats-grid">
-                  <div className="plan-stat-card"><span className="plan-stat-value">{plan.existing.length}</span><span className="plan-stat-label">Existing Objects</span></div>
-                  <div className="plan-stat-card accent-create"><span className="plan-stat-value">{plan.toCreate.length}</span><span className="plan-stat-label">Objects To Create</span></div>
-                  <div className="plan-stat-card accent-update"><span className="plan-stat-value">{plan.toUpdate.length}</span><span className="plan-stat-label">Objects To Update</span></div>
-                  <div className="plan-stat-card accent-skip"><span className="plan-stat-value">{plan.toSkip.length}</span><span className="plan-stat-label">Objects To Skip</span></div>
+                  <div className="plan-stat-card"><span className="plan-stat-value">{plan.existing.length}</span><span className="plan-stat-label">Existing</span></div>
+                  <div className="plan-stat-card accent-create"><span className="plan-stat-value">{plan.toCreate.length}</span><span className="plan-stat-label">To Create</span></div>
+                  <div className="plan-stat-card accent-update"><span className="plan-stat-value">{plan.toUpdate.length}</span><span className="plan-stat-label">To Update</span></div>
+                  <div className="plan-stat-card accent-skip"><span className="plan-stat-value">{plan.toSkip.length}</span><span className="plan-stat-label">To Skip</span></div>
                 </div>
                 {(() => {
                   const groups = {};
@@ -861,7 +861,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             </div>
           )}
 
-          {/* Step 7 — Generate & Execute SQL */}
+          {/* Step 7 — Execute */}
           {step === 7 && (
             <div className="setup-wizard-panel">
               <h1>Generate & Execute SQL</h1>
@@ -958,7 +958,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             </div>
           )}
 
-          {/* Step 8 — Verify Installation */}
+          {/* Step 8 — Re-check */}
           {step === 8 && (
             <div className="setup-wizard-panel">
               <h1>Verify Installation</h1>
@@ -987,7 +987,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             </div>
           )}
 
-          {/* Step 9 — Setup Complete */}
+          {/* Step 9 — Done */}
           {step === 9 && (
             <div className="setup-wizard-panel">
               <div className="setup-complete">
@@ -1003,7 +1003,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
                 <div className="setup-complete-info">
                   <div className="complete-row"><span>Database Driver</span><span>{selectedProvider || (dbInstance?.isSupabase ? 'Supabase' : dbInstance?.provider?.constructor?.name) || (dbInstance ? 'Connected' : 'Not selected')}</span></div>
                   <div className="complete-row"><span>Connected Database</span><span>{dbInstance?._databaseName || (dbInstance?.isSupabase ? 'Supabase' : 'Default')}</span></div>
-                  <div className="complete-row"><span>Installed Schema Version</span><span>{schema.version || 1}</span></div>
+                  <div className="complete-row"><span>Schema Version</span><span>{schema.version || 1}</span></div>
                   <div className="complete-row"><span>Migration Version</span><span>{validationReport?.details?.version?.current ?? (schema.version || 1)}</span></div>
                   <div className="complete-row"><span>Installation Date</span><span>{new Date().toLocaleString()}</span></div>
                   <div className="complete-row"><span>Database Status</span><span className="status-ok">Connected</span></div>
@@ -1141,7 +1141,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
         </div>
       )}
 
-      {/* Toast notification */}
+      {/* Toast */}
       {toast && (
         <div className={`setup-toast setup-toast--${toast.type}`}>
           <Icon name={toast.type === 'error' ? 'alert-circle' : 'check-circle'} size={16} />
