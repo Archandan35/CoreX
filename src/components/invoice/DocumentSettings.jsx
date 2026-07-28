@@ -6,6 +6,7 @@ import { notificationManager } from '../../managers/NotificationManager.js';
 import { invoiceService } from '../../services/invoice/index.js';
 import PrefixSuffixPanel from './PrefixSuffixPanel.jsx';
 import CustomHeaderPanel from './CustomHeaderPanel.jsx';
+import DocumentNotesPanel from './DocumentNotesPanel.jsx';
 
 export const DEFAULT_DOCUMENT_SETTINGS = {
   invoiceTemplate: 'classic',
@@ -126,6 +127,7 @@ export default function DocumentSettings({ open, onClose }) {
   const [whatsappPreview, setWhatsappPreview] = useState(false);
   const [prefixSuffixOpen, setPrefixSuffixOpen] = useState(false);
   const [customHeaderOpen, setCustomHeaderOpen] = useState(false);
+  const [documentNotesOpen, setDocumentNotesOpen] = useState(false);
   const scrollRef = useRef(null);
   const sectionRefs = useRef({});
   const observerRef = useRef(null);
@@ -322,6 +324,11 @@ export default function DocumentSettings({ open, onClose }) {
                           ) : qa.type === 'group' && qa.title === 'Prefixes / suffixes' ? (
                             <button className="ds-btn ds-btn-secondary" style={{ fontSize: 11, padding: '2px 8px', height: 'auto' }}
                               onClick={(e) => { e.stopPropagation(); setPrefixSuffixOpen(true); }}>
+                              <Icon name="arrow-right" size={12} /> Open
+                            </button>
+                          ) : qa.type === 'group' && qa.title === 'Notes and terms' ? (
+                            <button className="ds-btn ds-btn-secondary" style={{ fontSize: 11, padding: '2px 8px', height: 'auto' }}
+                              onClick={(e) => { e.stopPropagation(); setDocumentNotesOpen(true); }}>
                               <Icon name="arrow-right" size={12} /> Open
                             </button>
                           ) : qa.locked && <Icon name="lock" size={12} className="ds-lock" />}
@@ -637,6 +644,7 @@ export default function DocumentSettings({ open, onClose }) {
 
       <PrefixSuffixPanel open={prefixSuffixOpen} onClose={() => setPrefixSuffixOpen(false)} />
       <CustomHeaderPanel open={customHeaderOpen} onClose={() => setCustomHeaderOpen(false)} />
+      <DocumentNotesPanel open={documentNotesOpen} onClose={() => setDocumentNotesOpen(false)} />
     </div>
   );
 }
