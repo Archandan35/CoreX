@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Icon from '../ui/Icon.jsx';
-import Button from '../ui/Button.jsx';
+import ResponsiveTabs from '../shared/ResponsiveTabs.jsx';
+
 import { Field, Input } from '../ui/Field.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import Pagination from '../ui/Pagination.jsx';
@@ -439,18 +440,14 @@ export default function PrefixSuffixPanel({ open, onClose }) {
               </button>
             </div>
 
-            {/* Document Type Tabs */}
-            <div className="ps-doc-type-tabs">
-              {docTypes.map((dt) => (
-                <button
-                  key={dt}
-                  className={`ps-doc-type-tab${docType === dt ? ' active' : ''}`}
-                  onClick={() => setDocType(dt)}
-                >
-                  {dt}
-                </button>
-              ))}
-            </div>
+{/* Document Type Tabs */}
+<ResponsiveTabs
+  items={docTypes.map((t) => ({ id: t, label: t, value: t }))}
+  value={docType}
+  onChange={setDocType}
+  className="ps-doc-type-tabs"
+  tabClassName="ps-doc-type-tab"
+/>
 
             {/* Toolbar */}
             <div className="ps-toolbar">
