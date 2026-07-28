@@ -129,6 +129,25 @@ export class InvoiceService {
     const text = res?.choices?.[0]?.message?.content || '';
     try { return JSON.parse(text); } catch { return null; }
   }
+  // --- Exports ----------------------------------------------------------
+  async exportInvoicesCsv(filters) {
+    const q = filters ? `?${new URLSearchParams(filters)}` : '';
+    const r = await asJson(await api(`/api/invoices/export/csv${q}`));
+    if (!r.ok) throw new Error(r.data?.error || 'CSV export failed.');
+    return r.data;
+  }
+  async exportInvoicesPdf(filters) {
+    const q = filters ? `?${new URLSearchParams(filters)}` : '';
+    const r = await asJson(await api(`/api/invoices/export/pdf${q}`));
+    if (!r.ok) throw new Error(r.data?.error || 'PDF export failed.');
+    return r.data;
+  }
+  async duplicateInvoice(id) {
+    const r = await asJson(await api(`/api/invoices/${id}/duplicate`, { method: 'POST' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to duplicate invoice.');
+    return r.data.invoice;
+  }
+
   async suggestNote(existingNotes, intent) {
     const res = await aiService.chat([
       { role: 'system', content: 'Write a concise professional invoice note.' },

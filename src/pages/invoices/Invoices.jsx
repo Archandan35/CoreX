@@ -6,8 +6,17 @@ import { usePermission } from '../../identity/authorization/PermissionContext.js
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 import DocumentSettings from '../../components/invoice/DocumentSettings.jsx';
 import { invoiceService } from '../../services/invoice/index.js';
+import { notificationManager } from '../../managers/NotificationManager.js';
 
 const TABS = ['All', 'Pending', 'Paid', 'Cancelled', 'Drafts'];
+
+const DATE_RANGES = [
+  { key: 'all', label: 'All time' },
+  { key: 'this_year', label: 'This Year' },
+  { key: 'this_quarter', label: 'This Quarter' },
+  { key: 'this_month', label: 'This Month' },
+  { key: 'custom', label: 'Custom Range' },
+];
 
 const VARIANT_TITLES = {
   invoices: 'Invoices',
@@ -55,11 +64,9 @@ function mapInvoice(raw) {
   else if (totalPaid >= (Number(raw.grandTotal) || 0) && Number(raw.grandTotal) > 0) status = 'Paid';
   else if (status === 'Cancelled') status = 'Cancelled';
   else status = 'Pending';
-
   const cust = raw.customer || {};
   const dateInfo = formatDate(raw.invoiceDate);
   const billNo = [raw.prefix, raw.invoiceNumber].filter(Boolean).join('-') || raw.id || '—';
-
   return {
     id: raw.id || billNo,
     amount: Number(raw.grandTotal) || 0,
@@ -78,6 +85,22 @@ function mapInvoice(raw) {
   };
 }
 
+function matchesDateRange(inv, rangeKey) {
+  if (rangeKey === 'all' || !rangeKey) return true;
+  const d = inv.invoiceDate ? new Date(inv.invoiceDate) : null;
+  if (!d || isNaN(d.getTime())) return false;
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const startOfQuarter = (() => { const q = Math.floor(now.getMonth() / 3); return new Date(now.getFullYear(), q * 3, 1); })();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  switch (rangeKey) {
+    case 'this_year': return d >= startOfYear;
+    case 'this_quarter': return d >= startOfQuarter;
+    case 'this_month': return d >= startOfMonth;
+    default: return true;
+  }
+}
+
 export default function Invoices({ variant = 'invoices' }) {
   const navigate = useNavigate();
   const { hasPermission } = usePermission();
@@ -92,6 +115,10 @@ export default function Invoices({ variant = 'invoices' }) {
   const [page, setPage] = useState(1);
   const [docSettingsOpen, setDocSettingsOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [dateRange, setDateRange] = useState('this_year');
+  const [sortField, setSortField] = useState('invoiceDate');
+  const [sortDir, setSortDir] = useState('desc');
+  const [showFilters, setShowFilters] = useState(false);
   const pageSize = 10;
 
   useEffect(() => {
@@ -116,9 +143,28 @@ export default function Invoices({ variant = 'invoices' }) {
         || inv.customer.toLowerCase().includes(q)
         || (inv.id || '').toLowerCase().includes(q)
         || (inv.raw?.reference || '').toLowerCase().includes(q);
-      return statusMatch && qMatch;
+      return statusMatch && qMatch && matchesDateRange(inv, dateRange);
     });
-  }, [allInvoices, activeTab, query]);
+  }, [allInvoices, activeTab, query, dateRange]);
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let va, vb;
+      if (sortField === 'amount') { va = a.amount; vb = b.amount; }
+      else if (sortField === 'billNo') { va = a.billNo; vb = b.billNo; }
+      else { va = a.invoiceDate || ''; vb = b.invoiceDate || ''; }
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return arr;
+  }, [filtered, sortField, sortDir]);
+
+  const toggleSort = useCallback((field) => {
+    setSortField(field);
+    setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+  }, []);
 
   const counts = useMemo(() => {
     const c = { All: allInvoices.length, Pending: 0, Paid: 0, Cancelled: 0, Drafts: 0 };
@@ -136,9 +182,9 @@ export default function Invoices({ variant = 'invoices' }) {
     return { total, paid, pending };
   }, [filtered]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const pageRows = sorted.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const goPrev = () => setPage((p) => Math.max(1, p - 1));
   const goNext = () => setPage((p) => Math.min(totalPages, p + 1));
@@ -169,12 +215,77 @@ export default function Invoices({ variant = 'invoices' }) {
     if (!selectedIds.length) return;
     const confirmed = window.confirm(`Delete ${selectedIds.length} invoice(s)?`);
     if (!confirmed) return;
+    let success = 0;
     for (const id of selectedIds) {
-      try { await invoiceService.deleteInvoice(id); } catch {}
+      try { await invoiceService.deleteInvoice(id); success++; } catch {}
     }
+    if (success > 0) notificationManager.success('Invoices', `${success} invoice(s) deleted.`);
     handleRefresh();
     setSelectedIds([]);
   }, [selectedIds, handleRefresh]);
+
+  const handleExportCsv = useCallback(async (close) => {
+    close();
+    try {
+      await invoiceService.exportInvoicesCsv({ tab: activeTab, range: dateRange, q: query || undefined });
+      notificationManager.success('Export', 'CSV export started. Check your downloads.');
+    } catch (e) {
+      notificationManager.error('Export', e.message);
+    }
+  }, [activeTab, dateRange, query]);
+
+  const handleExportPdf = useCallback(async (close) => {
+    close();
+    try {
+      await invoiceService.exportInvoicesPdf({ tab: activeTab, range: dateRange, q: query || undefined });
+      notificationManager.success('Export', 'PDF export started. Check your downloads.');
+    } catch (e) {
+      notificationManager.error('Export', e.message);
+    }
+  }, [activeTab, dateRange, query]);
+
+  const handleView = useCallback((id) => {
+    navigate(`/invoices/${id}`);
+  }, [navigate]);
+
+  const handleSend = useCallback((inv, close) => {
+    close?.();
+    notificationManager.info('Send', `Send invoice ${inv.billNo} — email service will be available soon.`);
+  }, []);
+
+  const handleDeleteOne = useCallback(async (inv, close) => {
+    close();
+    const confirmed = window.confirm(`Delete invoice ${inv.billNo}?`);
+    if (!confirmed) return;
+    try {
+      await invoiceService.deleteInvoice(inv.id);
+      notificationManager.success('Invoices', `Invoice ${inv.billNo} deleted.`);
+      handleRefresh();
+    } catch (e) {
+      notificationManager.error('Invoices', e.message);
+    }
+  }, [handleRefresh]);
+
+  const handleDuplicate = useCallback(async (inv, close) => {
+    close();
+    try {
+      const dup = await invoiceService.duplicateInvoice(inv.id);
+      notificationManager.success('Invoices', `Invoice duplicated as ${[dup.prefix, dup.invoiceNumber].filter(Boolean).join('-')}`);
+      handleRefresh();
+    } catch (e) {
+      notificationManager.error('Invoices', e.message);
+    }
+  }, [handleRefresh]);
+
+  const handleDownloadPdf = useCallback((inv, close) => {
+    close();
+    notificationManager.info('PDF', `PDF download for ${inv.billNo} will be available once the PDF generation endpoint is configured.`);
+  }, []);
+
+  const handlePrint = useCallback((inv, close) => {
+    close();
+    window.print();
+  }, []);
 
   const title = VARIANT_TITLES[variant] || 'Invoices';
 
@@ -232,16 +343,17 @@ export default function Invoices({ variant = 'invoices' }) {
         <Dropdown
           trigger={
             <button type="button" className="invoice-btn invoice-btn--ghost invoice-btn--auto">
-              <Icon name="calendar" size={16} /> This Year <Icon name="chevronDown" size={14} />
+              <Icon name="calendar" size={16} /> {DATE_RANGES.find((r) => r.key === dateRange)?.label || 'Date Range'} <Icon name="chevronDown" size={14} />
             </button>
           }
         >
           {(close) => (
             <div style={{ minWidth: 160 }}>
-              <DropdownItem onClick={() => close()}>This Year</DropdownItem>
-              <DropdownItem onClick={() => close()}>This Quarter</DropdownItem>
-              <DropdownItem onClick={() => close()}>This Month</DropdownItem>
-              <DropdownItem onClick={() => close()}>Custom Range</DropdownItem>
+              {DATE_RANGES.map((r) => (
+                <DropdownItem key={r.key} onClick={() => { setDateRange(r.key); close(); }}>
+                  {r.label}
+                </DropdownItem>
+              ))}
             </div>
           )}
         </Dropdown>
@@ -255,12 +367,12 @@ export default function Invoices({ variant = 'invoices' }) {
           {(close) => (
             <div style={{ minWidth: 180 }}>
               {canExport && (
-                <DropdownItem onClick={() => { close(); }}>
+                <DropdownItem onClick={() => handleExportCsv(close)}>
                   <Icon name="download" size={14} /> Export CSV
                 </DropdownItem>
               )}
               {canExport && (
-                <DropdownItem onClick={() => { close(); }}>
+                <DropdownItem onClick={() => handleExportPdf(close)}>
                   <Icon name="file-text" size={14} /> Export PDF
                 </DropdownItem>
               )}
@@ -272,16 +384,49 @@ export default function Invoices({ variant = 'invoices' }) {
               </DropdownItem>
               {canDelete && selectedIds.length > 0 && (
                 <DropdownItem onClick={() => { close(); handleBulkDelete(); }}>
-                  <Icon name="trash" size={14} /> Delete ({selectedIds.length})
+                  <Icon name="trash-2" size={14} /> Delete ({selectedIds.length})
                 </DropdownItem>
               )}
             </div>
           )}
         </Dropdown>
-        <button type="button" className="invoice-filter-btn" aria-label="Filters">
+        <button
+          type="button"
+          className={`invoice-filter-btn${showFilters ? ' invoice-filter-btn--active' : ''}`}
+          onClick={() => setShowFilters((v) => !v)}
+          aria-label="Toggle filters"
+        >
           <Icon name="sliders-horizontal" size={18} />
         </button>
       </div>
+
+      {/* Inline Filter Panel */}
+      {showFilters && (
+        <div className="invoice-filter-panel">
+          <div className="invoice-filter-row">
+            <label>Sort</label>
+            <select
+              value={`${sortField}-${sortDir}`}
+              onChange={(e) => {
+                const [f, d] = e.target.value.split('-');
+                setSortField(f);
+                setSortDir(d);
+              }}
+              className="form-input"
+            >
+              <option value="invoiceDate-desc">Date (newest)</option>
+              <option value="invoiceDate-asc">Date (oldest)</option>
+              <option value="amount-desc">Amount (high to low)</option>
+              <option value="amount-asc">Amount (low to high)</option>
+              <option value="billNo-asc">Bill # (A-Z)</option>
+              <option value="billNo-desc">Bill # (Z-A)</option>
+            </select>
+          </div>
+          <button type="button" className="invoice-btn invoice-btn--ghost" onClick={() => { setShowFilters(false); }}>
+            <Icon name="x" size={14} /> Close
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="invoice-table-wrap">
@@ -298,34 +443,32 @@ export default function Invoices({ variant = 'invoices' }) {
                   <input type="checkbox" onChange={handleSelectAll} checked={selectedIds.length === pageRows.length && pageRows.length > 0} />
                 </th>
                 <th>
-                  <div className="invoice-th-flex">
+                  <div className="invoice-th-flex" style={{ cursor: 'pointer' }} onClick={() => toggleSort('amount')}>
                     Amount
-                    <Icon name="chevrons-up-down" size={14} />
-                    <Icon name="filter" size={14} />
+                    <Icon name={sortField === 'amount' && sortDir === 'asc' ? 'chevron-up' : sortField === 'amount' && sortDir === 'desc' ? 'chevron-down' : 'chevrons-up-down'} size={14} />
                   </div>
                 </th>
                 <th>
                   <div className="invoice-th-flex">
                     Status
-                    <Icon name="filter" size={14} />
                   </div>
                 </th>
                 <th>
                   <div className="invoice-th-flex">
                     Mode
-                    <Icon name="filter" size={14} />
                   </div>
                 </th>
                 <th>
-                  <div className="invoice-th-flex">
+                  <div className="invoice-th-flex" style={{ cursor: 'pointer' }} onClick={() => toggleSort('billNo')}>
                     Bill #
-                    <Icon name="chevrons-up-down" size={14} />
-                    <Icon name="filter" size={14} />
+                    <Icon name={sortField === 'billNo' && sortDir === 'asc' ? 'chevron-up' : sortField === 'billNo' && sortDir === 'desc' ? 'chevron-down' : 'chevrons-up-down'} size={14} />
                   </div>
                 </th>
                 <th>Customer</th>
                 <th>
-                  <div className="invoice-th-flex">Date <Icon name="chevrons-up-down" size={14} /></div>
+                  <div className="invoice-th-flex" style={{ cursor: 'pointer' }} onClick={() => toggleSort('invoiceDate')}>
+                    Date <Icon name={sortField === 'invoiceDate' && sortDir === 'asc' ? 'chevron-up' : sortField === 'invoiceDate' && sortDir === 'desc' ? 'chevron-down' : 'chevrons-up-down'} size={14} />
+                  </div>
                   <div className="invoice-th-sub">Created time</div>
                 </th>
                 <th aria-label="Row actions" />
@@ -375,10 +518,10 @@ export default function Invoices({ variant = 'invoices' }) {
                   </td>
                   <td>
                     <div className="invoice-row-actions">
-                      <button type="button" className="invoice-action invoice-action--view" title="View">
+                      <button type="button" className="invoice-action invoice-action--view" title="View" onClick={() => handleView(inv.id)}>
                         <Icon name="eye" size={14} /> View
                       </button>
-                      <button type="button" className="invoice-action invoice-action--send" title="Send">
+                      <button type="button" className="invoice-action invoice-action--send" title="Send" onClick={() => handleSend(inv)}>
                         <Icon name="send" size={14} /> Send
                       </button>
                       <Dropdown
@@ -390,18 +533,21 @@ export default function Invoices({ variant = 'invoices' }) {
                       >
                         {(close) => (
                           <div style={{ minWidth: 160 }}>
-                            <DropdownItem onClick={() => close()}>
+                            <DropdownItem onClick={() => handleDownloadPdf(inv, close)}>
                               <Icon name="file-text" size={14} /> Download PDF
                             </DropdownItem>
-                            <DropdownItem onClick={() => close()}>
+                            <DropdownItem onClick={() => handlePrint(inv, close)}>
                               <Icon name="printer" size={14} /> Print
                             </DropdownItem>
-                            <DropdownItem onClick={() => close()}>
+                            <DropdownItem onClick={() => handleDuplicate(inv, close)}>
                               <Icon name="copy" size={14} /> Duplicate
                             </DropdownItem>
+                            <DropdownItem onClick={() => handleSend(inv, close)}>
+                              <Icon name="send" size={14} /> Send
+                            </DropdownItem>
                             {canDelete && (
-                              <DropdownItem onClick={() => { close(); }}>
-                                <Icon name="trash" size={14} /> Delete
+                              <DropdownItem onClick={() => handleDeleteOne(inv, close)}>
+                                <Icon name="trash-2" size={14} /> Delete
                               </DropdownItem>
                             )}
                           </div>
