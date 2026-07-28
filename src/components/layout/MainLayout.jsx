@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar.jsx';
 import Topbar from './Topbar.jsx';
-import DatabaseHealthBanner from './DatabaseHealthBanner.jsx';
 
 export default function MainLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -23,7 +22,6 @@ export default function MainLayout() {
         <div className="sidebar-overlay" onClick={() => setMobileOpen(false)} />
       )}
       <div className={`app-main ${collapsed ? 'collapsed' : ''}`}>
-        <DatabaseHealthBanner />
         <Topbar onToggle={toggle} />
         <main id="main-content" className="page-area">
           <Outlet />
