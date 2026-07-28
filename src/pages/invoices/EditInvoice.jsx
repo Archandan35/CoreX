@@ -61,6 +61,10 @@ export default function EditInvoice() {
   const [categories, setCategories] = useState([]);
   const [banks, setBanks] = useState([]);
   const [signatures, setSignatures] = useState([]);
+  const [prefixes, setPrefixes] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [dueDateOffset, setDueDateOffset] = useState(DEFAULT_DUE_DATE_OFFSET_DAYS);
 
   // --- Header ---
   const [prefix, setPrefix] = useState('INV');
@@ -169,6 +173,10 @@ export default function EditInvoice() {
       }).catch(() => {}),
       invoiceService.listBanks().then(d => { if (!loadedRef.current) setBanks(Array.isArray(d) ? d : []); }).catch(() => {}),
       invoiceService.listSignatures().then(d => { if (!loadedRef.current) setSignatures(Array.isArray(d) ? d : []); }).catch(() => {}),
+      invoiceService.listPrefixes({ docType: 'invoice' }).then(d => { if (!loadedRef.current) setPrefixes((d?.items || []).filter(p => p.isActive !== false)); }).catch(() => {}),
+      invoiceService.listUnits().then(d => { if (!loadedRef.current) setUnits(Array.isArray(d) ? d : []); }).catch(() => {}),
+      invoiceService.listWarehouses().then(d => { if (!loadedRef.current) setWarehouses(Array.isArray(d) ? d : []); }).catch(() => {}),
+      invoiceService.getDocumentSettings().then(d => { if (d?.default_due_days) setDueDateOffset(Number(d.default_due_days)); }).catch(() => {}),
     ]).then(([invoice]) => {
       if (!invoice) return;
       loadedRef.current = true;
@@ -389,6 +397,14 @@ export default function EditInvoice() {
   const saveDraft = useCallback(() => save('draft'), [save]);
   const canSave = items.length > 0 && !!selectedCustomer;
 
+  // Map API prefixes to { value, label } format for InvoiceHeader
+  const prefixOptions = useMemo(() => {
+    return prefixes.map(p => ({
+      value: p.prefix || p.value || p,
+      label: p.prefix || p.label || p,
+    }));
+  }, [prefixes]);
+
   if (loadingInvoice) {
     return (
       <div className="inv-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
@@ -398,17 +414,18 @@ export default function EditInvoice() {
   }
 
   return (
-    <div className="inv-page">
+    <div className="inv-page" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <InvoiceHeader
         prefix={prefix} invoiceNumber={invoiceNumber}
         onPrefixChange={setPrefix} onInvoiceNumberChange={setInvoiceNumber}
         onSave={saveInvoice} onDraft={saveDraft}
         saving={saving} canSave={canSave}
         title="Edit Invoice"
+        prefixes={prefixOptions}
       />
 
       {/* Subbar */}
-      <div className="inv-subbar">
+      <div className="inv-subbar" style={{ flexShrink: 0 }}>
         <div className="inv-subbar-left">
           <span className="inv-label">Type</span>
           <InvoiceTypeSelector value={docType} onChange={setDocType} />
@@ -427,7 +444,7 @@ export default function EditInvoice() {
         invoiceDate={invoiceDate} dueDate={dueDate}
         onInvoiceDate={setInvoiceDate} onDueDate={setDueDate}
         reference={reference} onReference={setReference}
-        dueDateOffset={DEFAULT_DUE_DATE_OFFSET_DAYS}
+        dueDateOffset={dueDateOffset}
         onOpenCreateCustomer={openCreateCustomer}
         errors={errors}
       />
@@ -440,68 +457,76 @@ export default function EditInvoice() {
         onOpenSettings={() => setCustomHeaderSettingsOpen(true)}
       />
 
-      {/* Products & Services */}
-      <section className="inv-card">
-        <ProductsToolbar
-          category={categoryFilter} onCategory={setCategoryFilter}
-          categories={categories} productQuery={productQuery}
-          onProductQuery={setProductQuery} products={products}
-          qty={defaultQty} onQty={setDefaultQty}
-          onAddProduct={addProduct} onCreateProduct={openCreateProduct}
-          showDescription={showDescription}
-          onToggleShowDescription={setShowDescription}
-          onDraftWithAI={draftWithAI} aiBusy={aiBusy}
-          disabledAdd={!productQuery.trim()}
-        />
-
-        <InvoiceTable
-          items={items} onChangeItem={onChangeItem}
-          onRemoveItem={onRemoveItem} showDescription={showDescription}
-          onAddNewProduct={addNewProductLine}
-          visibleColumns={INVOICE_TABLE_COLUMNS.filter((c) => visibleColumns.includes(c.key))}
-        />
-        <div style={{ position: 'relative', float: 'right', margin: '8px 0' }}>
-          <Dropdown
-            trigger={
-              <button className="inv-icon-btn" aria-label="Column settings">
-                <Icon name="sliders-horizontal" size={14} />
-              </button>
-            }
-          >
-            <div style={{ padding: '8px 12px', minWidth: 200 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--inv-text-primary)' }}>Column Visibility</div>
-              {INVOICE_TABLE_COLUMNS.filter((c) => !c.always).map((col) => (
-                <label key={col.key} className="inv-checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={visibleColumns.includes(col.key)}
-                    onChange={() => toggleColumn(col.key)}
-                  />
-                  <span style={{ fontSize: 13 }}>{col.label}</span>
-                </label>
-              ))}
-            </div>
-          </Dropdown>
+      {/* Products & Services - Flex section that fills remaining space */}
+      <section className="inv-card" style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ flexShrink: 0 }}>
+          <ProductsToolbar
+            category={categoryFilter} onCategory={setCategoryFilter}
+            categories={categories} productQuery={productQuery}
+            onProductQuery={setProductQuery} products={products}
+            qty={defaultQty} onQty={setDefaultQty}
+            onAddProduct={addProduct} onCreateProduct={openCreateProduct}
+            showDescription={showDescription}
+            onToggleShowDescription={setShowDescription}
+            onDraftWithAI={draftWithAI} aiBusy={aiBusy}
+            disabledAdd={!productQuery.trim()}
+          />
+          <div style={{ padding: '0 22px 8px', display: 'flex', justifyContent: 'flex-end' }}>
+            <Dropdown
+              trigger={
+                <button className="inv-icon-btn" aria-label="Column settings">
+                  <Icon name="sliders-horizontal" size={14} />
+                </button>
+              }
+            >
+              <div style={{ padding: '8px 12px', minWidth: 200 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--inv-text-primary)' }}>Column Visibility</div>
+                {INVOICE_TABLE_COLUMNS.filter((c) => !c.always).map((col) => (
+                  <label key={col.key} className="inv-checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.includes(col.key)}
+                      onChange={() => toggleColumn(col.key)}
+                    />
+                    <span style={{ fontSize: 13 }}>{col.label}</span>
+                  </label>
+                ))}
+              </div>
+            </Dropdown>
+          </div>
         </div>
 
-        <InvoiceDiscount
-          items={items}
-          extraDiscountType={extraDiscountType}
-          extraDiscountValue={extraDiscountValue}
-          onExtraDiscountType={setExtraDiscountType}
-          onExtraDiscountValue={setExtraDiscountValue}
-          additionalCharges={additionalCharges}
-          onAddCharge={addCharge}
-          onRemoveCharge={removeCharge}
-          onUpdateCharge={updateCharge}
-          subtotal={computed.subtotal}
-          lineDiscountTotal={computed.lineDiscountTotal}
-          invoiceDiscount={computed.invoiceDiscount}
-        />
+        <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'auto' }}>
+          <InvoiceTable
+            items={items} onChangeItem={onChangeItem}
+            onRemoveItem={onRemoveItem} showDescription={showDescription}
+            onAddNewProduct={addNewProductLine}
+            visibleColumns={INVOICE_TABLE_COLUMNS.filter((c) => visibleColumns.includes(c.key))}
+            units={units}
+            warehouses={warehouses}
+          />
+        </div>
+
+        <div style={{ flexShrink: 0 }}>
+          <InvoiceDiscount
+            items={items}
+            extraDiscountType={extraDiscountType}
+            extraDiscountValue={extraDiscountValue}
+            onExtraDiscountType={setExtraDiscountType}
+            onExtraDiscountValue={setExtraDiscountValue}
+            additionalCharges={additionalCharges}
+            onAddCharge={addCharge}
+            onRemoveCharge={removeCharge}
+            onUpdateCharge={updateCharge}
+            subtotal={computed.subtotal}
+            lineDiscountTotal={computed.lineDiscountTotal}
+            invoiceDiscount={computed.invoiceDiscount}
+          />
+        </div>
       </section>
 
       {/* Bottom Grid */}
-      <div className="inv-bottom-grid">
+      <div className="inv-bottom-grid" style={{ flexShrink: 0 }}>
         <InvoiceNotes
           notes={notes} onAddNote={addNote} onRemoveNote={removeNote} onUpdateNote={updateNote}
           terms={terms} onAddTerm={addTerm} onRemoveTerm={removeTerm} onUpdateTerm={updateTerm}

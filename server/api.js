@@ -211,7 +211,7 @@ async function handleInvoiceMemory(db, path, method, parsed, send, currentUser) 
   // Document types — return the default set. In production (Supabase) these
   // are managed through the document_type_master table.
   if (method === 'GET' && path === '/api/document-types') {
-    return send(200, { types: ['Regular', 'Bill of Supply', 'Export / SEZ', 'Multi Currency'] });
+    return send(200, { types: ['Invoice', 'Purchase', 'Sales Return', 'Purchase Return', 'Purchase Order', 'Delivery Challan', 'Sales Order', 'Quotation', 'Pro Forma Invoice', 'Subscription', 'Sales Debit Note'] });
   }
 
   // Custom headers — persisted via settings in memory mode.

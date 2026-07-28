@@ -9,8 +9,10 @@ export default function InvoiceHeader({
   prefix, invoiceNumber, onPrefixChange, onInvoiceNumberChange,
   onSave, onDraft,
   saving, canSave, title = 'Create Invoice',
+  prefixes,
 }) {
   const navigate = useNavigate();
+  const items = prefixes && prefixes.length > 0 ? prefixes : INVOICE_PREFIXES;
 
   return (
     <section className="inv-topbar-section">
@@ -33,7 +35,7 @@ export default function InvoiceHeader({
             }
           >
             <DropdownItem onClick={() => onPrefixChange(prefix)}>{prefix}</DropdownItem>
-            {INVOICE_PREFIXES.filter(p => p.value !== prefix).map(p => (
+            {items.filter(p => p.value !== prefix).map(p => (
               <DropdownItem key={p.value} onClick={() => onPrefixChange(p.value)}>{p.label}</DropdownItem>
             ))}
           </Dropdown>

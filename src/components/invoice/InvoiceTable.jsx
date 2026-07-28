@@ -1,4 +1,4 @@
-import { useMemo, useCallback, memo } from 'react';
+import { useMemo, memo } from 'react';
 import Icon from '../ui/Icon.jsx';
 import Badge from '../ui/Badge.jsx';
 import { computeLine, round2 } from '../../business/invoice/calculations.js';
@@ -31,17 +31,34 @@ const COLUMN_RENDERERS = {
       <input type="number" min="0" step="any" className="inv-table-input" value={line.freeQty ?? ''} onChange={(e) => { let val = e.target.value === '' ? '' : Number(e.target.value); onChange(index, { ...line, freeQty: val }); }} placeholder="0" />
     </td>
   ),
-  unit: ({ line, index, onChange }) => (
-    <td key="unit">
-      <input className="inv-table-input" value={line.unit || ''} onChange={(e) => onChange(index, { ...line, unit: e.target.value })} placeholder="Unit" />
-    </td>
-  ),
+  unit: ({ line, index, onChange, units, warehouses }) => {
+    const unitList = units || [];
+    if (unitList.length > 0) {
+      return (
+        <td key="unit">
+          <select className="inv-table-select" value={line.unit || ''} onChange={(e) => onChange(index, { ...line, unit: e.target.value })}>
+            <option value="">Select</option>
+            {unitList.map((u) => {
+              const val = u.name || u.unit || u.value || u;
+              const lbl = u.name || u.unit || u.label || u;
+              return <option key={val} value={val}>{lbl}</option>;
+            })}
+          </select>
+        </td>
+      );
+    }
+    return (
+      <td key="unit">
+        <input className="inv-table-input" value={line.unit || ''} onChange={(e) => onChange(index, { ...line, unit: e.target.value })} placeholder="Unit" />
+      </td>
+    );
+  },
   unitPrice: ({ line, index, onChange }) => (
     <td key="unitPrice">
       <input type="number" min="0" step="0.01" className="inv-table-input" value={line.unitPrice ?? ''} onChange={(e) => { let val = e.target.value === '' ? '' : Number(e.target.value); onChange(index, { ...line, unitPrice: val }); }} placeholder="0.00" />
     </td>
   ),
-  priceWithTax: ({ line, computed }) => (
+  priceWithTax: ({ computed }) => (
     <td key="priceWithTax" style={{ textAlign: 'right', fontSize: 13 }}>{round2(computed.unitPriceWithTax)}</td>
   ),
   discount: ({ line, index, onChange }) => (
@@ -78,11 +95,28 @@ const COLUMN_RENDERERS = {
       <input className="inv-table-input" value={line.batch || ''} onChange={(e) => onChange(index, { ...line, batch: e.target.value })} placeholder="Batch" />
     </td>
   ),
-  warehouse: ({ line, index, onChange }) => (
-    <td key="warehouse">
-      <input className="inv-table-input" value={line.warehouse || ''} onChange={(e) => onChange(index, { ...line, warehouse: e.target.value })} placeholder="Warehouse" />
-    </td>
-  ),
+  warehouse: ({ line, index, onChange, units, warehouses }) => {
+    const whList = warehouses || [];
+    if (whList.length > 0) {
+      return (
+        <td key="warehouse">
+          <select className="inv-table-select" value={line.warehouse || ''} onChange={(e) => onChange(index, { ...line, warehouse: e.target.value })}>
+            <option value="">Select</option>
+            {whList.map((w) => {
+              const val = w.name || w.warehouse || w.value || w;
+              const lbl = w.name || w.warehouse || w.label || w;
+              return <option key={val} value={val}>{lbl}</option>;
+            })}
+          </select>
+        </td>
+      );
+    }
+    return (
+      <td key="warehouse">
+        <input className="inv-table-input" value={line.warehouse || ''} onChange={(e) => onChange(index, { ...line, warehouse: e.target.value })} placeholder="Warehouse" />
+      </td>
+    );
+  },
   lineTotal: ({ computed }) => (
     <td key="lineTotal" style={{ textAlign: 'right' }}><span className="inv-table-amount">{round2(computed.lineTotal)}</span></td>
   ),
@@ -93,9 +127,7 @@ const COLUMN_RENDERERS = {
   ),
 };
 
-const EMPTY_HEADERS = ['#', 'Product Name', 'Quantity', 'Unit Price', 'Discount', 'Total Amount', ''];
-
-const LineRow = memo(function LineRow({ line, index, onChange, onRemove, columns }) {
+const LineRow = memo(function LineRow({ line, index, onChange, onRemove, columns, units, warehouses }) {
   const computed = useMemo(() => computeLine(line), [line]);
   const stockWarning = line.product_id && line.stock_quantity > 0 && (Number(line.quantity) || 0) > line.stock_quantity;
 
@@ -104,63 +136,56 @@ const LineRow = memo(function LineRow({ line, index, onChange, onRemove, columns
       {columns.map((col) => {
         const renderer = COLUMN_RENDERERS[col.key];
         if (!renderer) return null;
-        return renderer({ line, index, onChange, onRemove, computed, stockWarning });
+        return renderer({ line, index, onChange, onRemove, computed, stockWarning, units, warehouses });
       })}
     </tr>
   );
 });
 
-export default function InvoiceTable({ items, onChangeItem, onRemoveItem, showDescription, onAddNewProduct, visibleColumns }) {
+export default function InvoiceTable({ items, onChangeItem, onRemoveItem, showDescription, onAddNewProduct, visibleColumns, units, warehouses }) {
   const resolvedColumns = visibleColumns || INVOICE_TABLE_COLUMNS.filter((c) => c.always || c.defaultVisible);
 
   const headerColumns = resolvedColumns.filter((c) => c.key !== 'actions');
 
-  if (!items || items.length === 0) {
-    return (
-      <div className="inv-ps-table">
-        <table>
-          <thead>
-            <tr>
-              {headerColumns.map((col) => (
-                <th key={col.key}>{col.label}</th>
-              ))}
-            </tr>
-          </thead>
-        </table>
-        <div className="inv-empty-state">
-          <div className="inv-empty-icon"><Icon name={EMPTY_ICON} size={48} strokeWidth={1.5} /></div>
-          <p>Search existing products to add to this list or add new product to get started! 🚀</p>
-          <button className="inv-btn-add-product" onClick={onAddNewProduct}>
-            <Icon name="plus" size={14} /> Add New Product
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="inv-ps-table">
-      <table>
+    <div className="inv-ps-table" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <table style={{ flexShrink: 0 }}>
         <thead>
           <tr>
             {headerColumns.map((col) => (
-              <th key={col.key}>{col.label}</th>
+              <th key={col.key} style={col.width ? { width: col.width } : undefined}>{col.label}</th>
             ))}
           </tr>
         </thead>
-        <tbody>
-          {items.map((line, i) => (
-            <LineRow
-              key={line._key || i}
-              line={line}
-              index={i}
-              onChange={onChangeItem}
-              onRemove={onRemoveItem}
-              columns={resolvedColumns}
-            />
-          ))}
-        </tbody>
       </table>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+        {(!items || items.length === 0) ? (
+          <div className="inv-empty-state" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 40 }}>
+            <div className="inv-empty-icon"><Icon name={EMPTY_ICON} size={48} strokeWidth={1.5} /></div>
+            <p>Search existing products to add to this list or add new product to get started!</p>
+            <button className="inv-btn-add-product" onClick={onAddNewProduct}>
+              <Icon name="plus" size={14} /> Add New Product
+            </button>
+          </div>
+        ) : (
+          <table>
+            <tbody>
+              {items.map((line, i) => (
+                <LineRow
+                  key={line._key || i}
+                  line={line}
+                  index={i}
+                  onChange={onChangeItem}
+                  onRemove={onRemoveItem}
+                  columns={resolvedColumns}
+                  units={units}
+                  warehouses={warehouses}
+                />
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
