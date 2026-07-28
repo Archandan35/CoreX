@@ -3,17 +3,14 @@ import Icon from '../ui/Icon.jsx';
 import Search from '../ui/Search.jsx';
 import Dropdown, { DropdownItem } from '../ui/Dropdown.jsx';
 import PermissionGate from '../ui/PermissionGate.jsx';
-import CustomerModal from './CustomerModal.jsx';
 import { useDebounce } from '../../hooks/useDebounce.js';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
-import Button from '../ui/Button.jsx';
 
 export default function InvoiceDetails({
   customers, customerQuery, onCustomerQuery, selectedCustomer,
   onSelectCustomer, onEditCustomer, invoiceDate, dueDate,
   onInvoiceDate, onDueDate, reference, onReference, dueDateOffset,
-  onAutoDueDate, customerModal, onOpenCreateCustomer, onCloseCustomerModal,
-  onSubmitCustomer, errors,
+  onAutoDueDate, onOpenCreateCustomer, errors,
 }) {
   const debounced = useDebounce(customerQuery, 300);
   const filtered = useMemo(() => {
@@ -33,9 +30,9 @@ export default function InvoiceDetails({
         <div className="inv-row-head">
           <h2>Select Customer</h2>
           <PermissionGate permission={PERMISSIONS.CUSTOMER_CREATE}>
-            <button className="inv-btn-outline" onClick={onOpenCreateCustomer}>
-              <Icon name="plus" size={14} /> Create Customer
-            </button>
+            <a className="inv-create-customer-link" onClick={onOpenCreateCustomer}>
+              + Create Customer
+            </a>
           </PermissionGate>
         </div>
 
@@ -98,7 +95,7 @@ export default function InvoiceDetails({
       <div className="inv-customer-right">
         <div className="inv-field-block">
           <span className="inv-label">Invoice Date</span>
-          <div className="inv-date-input">
+          <div className="inv-date-input" style={{ position: 'relative' }}>
             <span>{invoiceDate || 'Select date'}</span>
             <input
               type="date"
@@ -136,13 +133,6 @@ export default function InvoiceDetails({
         </div>
       </div>
 
-      <CustomerModal
-        open={customerModal.open}
-        mode={customerModal.mode}
-        initial={customerModal.customer}
-        onClose={onCloseCustomerModal}
-        onSubmit={onSubmitCustomer}
-      />
     </section>
   );
 }

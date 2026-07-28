@@ -10,6 +10,7 @@ import InvoiceSummary from '../../components/invoice/InvoiceSummary.jsx';
 import InvoiceFooter from '../../components/invoice/InvoiceFooter.jsx';
 import ProductModal from '../../components/invoice/ProductModal.jsx';
 import CustomerModal from '../../components/invoice/CustomerModal.jsx';
+import AddCustomerPanel from '../../components/invoice/AddCustomerPanel.jsx';
 import DocumentSettings from '../../components/invoice/DocumentSettings.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -97,6 +98,7 @@ export default function CreateInvoice() {
 
   // --- Modals ---
   const [customerModal, setCustomerModal] = useState({ open: false, mode: 'create', customer: null });
+  const [addCustomerPanelOpen, setAddCustomerPanelOpen] = useState(false);
   const [productModal, setProductModal] = useState({ open: false, mode: 'create', product: null });
   const [bankModal, setBankModal] = useState(false);
   const [signatureModal, setSignatureModal] = useState(false);
@@ -153,7 +155,8 @@ export default function CreateInvoice() {
   }, [items, extraDiscountType, extraDiscountValue, additionalCharges, roundOff, payments]);
 
   // --- Customer CRUD ---
-  const openCreateCustomer = () => setCustomerModal({ open: true, mode: 'create', customer: null });
+  const openCreateCustomer = () => setAddCustomerPanelOpen(true);
+  const closeAddCustomerPanel = () => setAddCustomerPanelOpen(false);
   const closeCustomerModal = () => setCustomerModal(p => ({ ...p, open: false }));
   const editCustomer = () => {
     if (selectedCustomer) setCustomerModal({ open: true, mode: 'edit', customer: selectedCustomer });
@@ -368,10 +371,7 @@ export default function CreateInvoice() {
         onInvoiceDate={setInvoiceDate} onDueDate={setDueDate}
         reference={reference} onReference={setReference}
         dueDateOffset={DEFAULT_DUE_DATE_OFFSET_DAYS} onAutoDueDate={autoDueDate}
-        customerModal={customerModal}
         onOpenCreateCustomer={openCreateCustomer}
-        onCloseCustomerModal={closeCustomerModal}
-        onSubmitCustomer={submitCustomer}
         errors={errors}
       />
 
@@ -518,6 +518,8 @@ export default function CreateInvoice() {
           </Field>
         </form>
       </Modal>
+
+      <AddCustomerPanel open={addCustomerPanelOpen} onClose={closeAddCustomerPanel} onSubmit={submitCustomer} />
 
       <DocumentSettings open={docSettingsOpen} onClose={() => setDocSettingsOpen(false)} />
 

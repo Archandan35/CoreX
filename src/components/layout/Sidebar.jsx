@@ -122,6 +122,17 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle }) {
           const { heading, group } = section;
           if (!group) return null;
 
+          if (group.children) {
+            const visible = group.children.filter((c) => !c.permission || hasPermission(c.permission));
+            if (visible.length === 0) return null;
+            return (
+              <Fragment key={i}>
+                {heading && <div className="nav-heading">{heading}</div>}
+                <SidebarItem item={group} collapsed={collapsed} />
+              </Fragment>
+            );
+          }
+
           const visibleItems = (group.items || []).filter((item) => {
             if (item.children) {
               return item.children.some((c) => !c.permission || hasPermission(c.permission));

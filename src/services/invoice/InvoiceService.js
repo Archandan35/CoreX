@@ -8,6 +8,7 @@
 
 import { api } from '../api.js';
 import { aiService } from '../ai/AiService.js';
+import { settingsApiService } from '../settings/SettingsApiService.js';
 
 async function asJson(res) {
   let data = null;
@@ -134,6 +135,26 @@ export class InvoiceService {
       { role: 'user', content: `Intent: ${intent}. Existing notes: ${existingNotes || 'none'}` },
     ]);
     return res?.choices?.[0]?.message?.content || '';
+  }
+
+  // --- Document settings ------------------------------------------------
+  // Persisted as a single JSON blob under the `documentSettings` key via the
+  // generic /api/settings endpoint so we don't need a new backend route.
+  async getDocumentSettings() {
+    const all = await settingsApiService.getAll();
+    let doc = all?.documentSettings || {};
+    if (typeof doc === 'string') {
+      try { doc = JSON.parse(doc); } catch { doc = {}; }
+    }
+    return doc && typeof doc === 'object' ? doc : {};
+  }
+  async saveDocumentSettings(updates) {
+    const r = await asJson(await api('/api/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ documentSettings: updates }),
+    }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to save document settings.');
+    return true;
   }
 }
 
