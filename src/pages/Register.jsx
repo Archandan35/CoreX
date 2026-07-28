@@ -7,6 +7,7 @@ import { Field, Input } from '../components/ui/Field.jsx';
 import { useAuth } from '../identity/auth/AuthContext.jsx';
 import { useApp } from '../state/AppContext.jsx';
 import PasswordStrength from '../components/ui/PasswordStrength.jsx';
+import { notificationManager } from '../managers/NotificationManager.js';
 
 export default function Register({ isFirstAccount }) {
   const navigate = useNavigate();
@@ -24,7 +25,6 @@ export default function Register({ isFirstAccount }) {
   const [fullAccess, setFullAccess] = useState(false);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [resending, setResending] = useState(false);
@@ -43,18 +43,17 @@ export default function Register({ isFirstAccount }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    setError('');
     setNotice('');
 
-    if (!name.trim()) return setError('Full name is required.');
-    if (!username.trim()) return setError('Username is required.');
-    if (!/^[a-zA-Z0-9]+$/.test(username.trim())) return setError('Username can only contain letters and numbers.');
-    if (!email.trim()) return setError('Email is required.');
-    if (!phone.trim()) return setError('Phone number is required.');
-    if (phone.length !== 10) return setError('Phone number must be exactly 10 digits.');
-    if (!password) return setError('Password is required.');
-    if (password !== confirm) return setError('Passwords do not match.');
-    if (!fullAccess) return setError('Full Access must be enabled to create an account.');
+    if (!name.trim()) { notificationManager.error('Full name is required.'); return; }
+    if (!username.trim()) { notificationManager.error('Username is required.'); return; }
+    if (!/^[a-zA-Z0-9]+$/.test(username.trim())) { notificationManager.error('Username can only contain letters and numbers.'); return; }
+    if (!email.trim()) { notificationManager.error('Email is required.'); return; }
+    if (!phone.trim()) { notificationManager.error('Phone number is required.'); return; }
+    if (phone.length !== 10) { notificationManager.error('Phone number must be exactly 10 digits.'); return; }
+    if (!password) { notificationManager.error('Password is required.'); return; }
+    if (password !== confirm) { notificationManager.error('Passwords do not match.'); return; }
+    if (!fullAccess) { notificationManager.error('Full Access must be enabled to create an account.'); return; }
 
     setBusy(true);
     try {
@@ -87,24 +86,23 @@ export default function Register({ isFirstAccount }) {
         }
         setNotice(result.notice || 'Account created. Please check your email to confirm before signing in.');
       } else {
-        setError(result.error || 'Registration failed.');
+        notificationManager.error(result.error || 'Registration failed.');
       }
     } catch {
-      setError('Registration failed.');
+      notificationManager.error('Registration failed.');
     } finally {
       setBusy(false);
     }
   };
 
   const handleResend = async () => {
-    setError('');
     setResending(true);
     try {
       const result = await resendEmail(email);
-      if (result.notice) setNotice(result.notice);
-      if (result.error) setError(result.error);
+      if (result.notice) notificationManager.success(result.notice);
+      if (result.error) notificationManager.error(result.error);
     } catch {
-      setError('Failed to resend confirmation email.');
+      notificationManager.error('Failed to resend confirmation email.');
     } finally {
       setResending(false);
     }
@@ -129,7 +127,6 @@ export default function Register({ isFirstAccount }) {
             : 'Register a new administrator account to get started.'}
         </p>
 
-        {error && <div className="alert alert-danger alert--mb"><Icon name="alert" size={16} />{error}</div>}
         {notice && <div className="alert alert-success alert--mb"><Icon name="check" size={16} />{notice}</div>}
 
         {!notice ? (

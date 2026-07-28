@@ -306,6 +306,9 @@ export default function Invoices({ variant = 'invoices' }) {
         </div>
       </div>
 
+      {/* Scrollable content area */}
+      <div className="invoice-scrollable-content">
+
       {/* Tabs */}
       <div className="invoice-tabs" role="tablist">
         {TABS.map((tab) => (
@@ -557,6 +560,8 @@ export default function Invoices({ variant = 'invoices' }) {
             </tbody>
           </table>
         )}
+      </div>
+
       </div>
 
       {/* Summary + pagination */}

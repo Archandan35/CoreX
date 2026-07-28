@@ -5,16 +5,15 @@ import Card from '../../components/ui/Card.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
 import PasswordInput from '../../components/ui/PasswordInput.jsx';
 import Select from '../../components/ui/Select.jsx';
-import Icon from '../../components/ui/Icon.jsx';
 import { userService } from '../../services/user/index.js';
 import { roleService } from '../../services/role/index.js';
+import { notificationManager } from '../../managers/NotificationManager.js';
 
 export default function UserCreate() {
   const navigate = useNavigate();
   const [roles, setRoles] = useState([]);
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', role: '' });
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     roleService.listRoles().then((roles) => {
@@ -29,13 +28,12 @@ export default function UserCreate() {
 
   const submit = async (e) => {
     e.preventDefault();
-    setError('');
     setBusy(true);
     try {
       const user = await userService.createUser(form);
       navigate(`/users/${user.id}`);
     } catch (err) {
-      setError(err.message || 'Network error.');
+      notificationManager.error(err.message || 'Network error.');
     } finally {
       setBusy(false);
     }
@@ -47,7 +45,6 @@ export default function UserCreate() {
         <h1 className="page__title">Create User</h1>
       </div>
       <Card>
-        {error && <div className="alert alert-danger alert--mb"><Icon name="alert" size={16} />{error}</div>}
         <form onSubmit={submit}>
           <Field label="Full Name" required>
             <Input value={form.name} onChange={set('name')} placeholder="Enter full name" required />

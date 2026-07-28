@@ -7,6 +7,7 @@ import PermissionGate from '../../components/ui/PermissionGate.jsx';
 import Icon from '../../components/ui/Icon.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 import { roleService } from '../../services/role/index.js';
+import { notificationManager } from '../../managers/NotificationManager.js';
 
 export default function RoleShow() {
   const { id } = useParams();

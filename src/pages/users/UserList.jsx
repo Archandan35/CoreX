@@ -13,6 +13,7 @@ import PermissionGate from '../../components/ui/PermissionGate.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 import { usePermission } from '../../identity/authorization/PermissionContext.jsx';
 import { userService } from '../../services/user/index.js';
+import { notificationManager } from '../../managers/NotificationManager.js';
 
 const STATUS_OPTIONS = ['active', 'inactive'];
 
@@ -65,7 +66,9 @@ export default function UserList() {
     try {
       await userService.deleteUser(deleteTarget.id);
       setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+      notificationManager.success('User deleted successfully.');
     } catch {
+      notificationManager.error('Failed to delete user.');
     } finally {
       setDeleting(false);
       setDeleteTarget(null);

@@ -15,7 +15,7 @@ import DocumentSettings from '../../components/invoice/DocumentSettings.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
-import NotificationToast from '../../components/ui/Toast.jsx';
+
 import Icon from '../../components/ui/Icon.jsx';
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx';
 import useUnsavedChanges from '../../hooks/useUnsavedChanges.js';
@@ -559,7 +559,6 @@ export default function EditInvoice() {
         variant="danger"
       />
 
-      <NotificationToast />
     </div>
   );
 }

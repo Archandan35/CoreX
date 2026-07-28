@@ -12,7 +12,7 @@ export default function ProductsToolbar({
   category, onCategory, categories,
   productQuery, onProductQuery, products, qty, onQty,
   onAddProduct, onCreateProduct, showDescription, onToggleShowDescription,
-  onDraftWithAI, aiBusy, disabledAdd,
+  onDraftWithAI, aiBusy, disabledAdd, onAddNewProduct,
 }) {
   return (
     <>
@@ -21,6 +21,9 @@ export default function ProductsToolbar({
           Products &amp; Services <Icon name="info" size={14} />
         </div>
         <div className="inv-ps-head-right">
+          <button className="inv-link-action" onClick={onAddNewProduct} style={{ marginRight: 12 }}>
+            <Icon name="plus" size={14} /> Add Product
+          </button>
           <label className="inv-checkbox-label">
             <input type="checkbox" checked={showDescription} onChange={(e) => onToggleShowDescription(e.target.checked)} />
             Show description

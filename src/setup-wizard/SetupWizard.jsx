@@ -12,6 +12,7 @@ import { getProvider } from './ProviderRegistry.js';
 import DatabaseProviderStep from './steps/DatabaseProviderStep.jsx';
 import { isMissingTableError, isMissingColumnError } from '../utils/dbErrors.js';
 import { bindInline } from '../data/sqlParams.js';
+import { notificationManager } from '../managers/NotificationManager.js';
 
 const STEPS = [
   { id: 'welcome', label: 'Welcome', icon: 'home', desc: 'Introduction & overview' },
@@ -50,8 +51,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
   const [dbInstance, setDbInstance] = useState(db || null);
   const [sqlSearch, setSqlSearch] = useState('');
   const [sqlFullscreen, setSqlFullscreen] = useState(false);
-  const [toast, setToast] = useState(null);
-  const toastTimer = useRef(null);
   const [validatingStage, setValidatingStage] = useState(0);
   const [showErrorModal, setShowErrorModal] = useState(null);
   const [showVerifyModal, setShowVerifyModal] = useState(null);
@@ -74,9 +73,8 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
   };
 
   const notify = (message, type = 'success') => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast({ message, type });
-    toastTimer.current = setTimeout(() => { setToast(null); toastTimer.current = null; }, 2500);
+    if (type === 'error') notificationManager.error(message);
+    else notificationManager.success(message);
   };
 
   const maxAccessible = Math.max(...completedSteps);
@@ -1162,13 +1160,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
         </div>
       )}
 
-      {/* Toast */}
-      {toast && (
-        <div className={`sw-toast sw-toast--${toast.type}`}>
-          <Icon name={toast.type === 'error' ? 'alert-circle' : 'check-circle'} size={16} />
-          <span>{toast.message}</span>
-        </div>
-      )}
     </WizardShell>
   );
 }

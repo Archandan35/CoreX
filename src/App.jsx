@@ -6,6 +6,7 @@ import { AppProvider, useApp } from './state/AppContext.jsx';
 import MainLayout from './components/layout/MainLayout.jsx';
 import AdminSetupBanner from './components/layout/AdminSetupBanner.jsx';
 import DatabaseHealthBanner from './components/layout/DatabaseHealthBanner.jsx';
+import Toast from './components/ui/Toast.jsx';
 import PermissionGate from './components/ui/PermissionGate.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
@@ -416,6 +417,7 @@ export default function App() {
               authenticated MainLayout. It self-hides when the DB is compatible
               or the current user lacks full_access. */}
           <DatabaseHealthBanner />
+          <Toast />
           <AppRoutes />
         </PermissionProvider>
       </AuthProvider>

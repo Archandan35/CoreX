@@ -5,9 +5,10 @@ import Card from '../../components/ui/Card.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
 import PasswordInput from '../../components/ui/PasswordInput.jsx';
 import Select from '../../components/ui/Select.jsx';
-import Icon from '../../components/ui/Icon.jsx';
 import { userService } from '../../services/user/index.js';
 import { roleService } from '../../services/role/index.js';
+import Icon from '../../components/ui/Icon.jsx';
+import { notificationManager } from '../../managers/NotificationManager.js';
 
 const STATUS_OPTIONS = ['active', 'inactive'];
 
@@ -35,13 +36,12 @@ export default function UserEdit() {
 
   const submit = async (e) => {
     e.preventDefault();
-    setError('');
     setBusy(true);
     try {
       await userService.updateUser(id, form);
       navigate(`/users/${id}`);
     } catch (err) {
-      setError(err.message || 'Network error.');
+      notificationManager.error(err.message || 'Network error.');
     } finally {
       setBusy(false);
     }

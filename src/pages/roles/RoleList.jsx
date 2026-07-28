@@ -11,6 +11,7 @@ import Modal from '../../components/ui/Modal.jsx';
 import PermissionGate from '../../components/ui/PermissionGate.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 import { roleService } from '../../services/role/index.js';
+import { notificationManager } from '../../managers/NotificationManager.js';
 
 export default function RoleList() {
   const navigate = useNavigate();
@@ -55,7 +56,9 @@ export default function RoleList() {
     try {
       await roleService.deleteRole(deleteTarget.id);
       setRoles((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+      notificationManager.success('Role deleted successfully.');
     } catch {
+      notificationManager.error('Failed to delete role.');
     } finally {
       setDeleting(false);
       setDeleteTarget(null);

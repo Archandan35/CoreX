@@ -489,6 +489,50 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
     return send(200, { product: data });
   }
 
+  if (method === 'GET' && path === '/api/product-brands') {
+    if (!cp('product:read')) return;
+    const { data, error } = await adminClient.from('product_brands').select('*').order('name', { ascending: true });
+    if (error) return send(500, { error: error.message });
+    return send(200, { brands: data || [] });
+  }
+  if (method === 'GET' && path === '/api/product-units') {
+    if (!cp('product:read')) return;
+    const { data, error } = await adminClient.from('product_units').select('*').order('name', { ascending: true });
+    if (error) return send(500, { error: error.message });
+    return send(200, { units: data || [] });
+  }
+  if (method === 'GET' && path === '/api/product-warehouses') {
+    if (!cp('product:read')) return;
+    const { data, error } = await adminClient.from('product_warehouses').select('*').order('name', { ascending: true });
+    if (error) return send(500, { error: error.message });
+    return send(200, { warehouses: data || [] });
+  }
+  if (method === 'GET' && path === '/api/price-lists') {
+    if (!cp('product:read')) return;
+    const { data, error } = await adminClient.from('product_price_lists').select('*').order('name', { ascending: true });
+    if (error) return send(500, { error: error.message });
+    return send(200, { priceLists: data || [] });
+  }
+  if (method === 'GET' && path.match(/^\/api\/products\/(.+)\/price-lists$/)) {
+    if (!cp('product:read')) return;
+    const id = path.match(/^\/api\/products\/(.+)\/price-lists$/)[1];
+    const { data, error } = await adminClient.from('product_price_list_items').select('*, price_list:product_price_lists(name)').eq('product_id', id);
+    if (error) return send(500, { error: error.message });
+    return send(200, { items: data || [] });
+  }
+  if (method === 'POST' && path.match(/^\/api\/products\/(.+)\/price-lists$/)) {
+    if (!cp('product:update')) return;
+    const id = path.match(/^\/api\/products\/(.+)\/price-lists$/)[1];
+    const { error: delErr } = await adminClient.from('product_price_list_items').delete().eq('product_id', id);
+    if (delErr) return send(500, { error: delErr.message });
+    const rows = (parsed.items || []).map(r => ({ ...r, product_id: id }));
+    if (rows.length) {
+      const { error: insErr } = await adminClient.from('product_price_list_items').insert(rows);
+      if (insErr) return send(500, { error: insErr.message });
+    }
+    return send(200, { ok: true });
+  }
+
   if (method === 'GET' && path === '/api/banks') {
     if (!cp('invoice:read')) return;
     const { data, error } = await adminClient.from('banks').select('*').order('created_at', { ascending: false });

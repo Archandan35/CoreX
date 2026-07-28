@@ -4,8 +4,9 @@ import Button from '../../components/ui/Button.jsx';
 import Card from '../../components/ui/Card.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
 import Textarea from '../../components/ui/Textarea.jsx';
-import Icon from '../../components/ui/Icon.jsx';
 import { roleService } from '../../services/role/index.js';
+import Icon from '../../components/ui/Icon.jsx';
+import { notificationManager } from '../../managers/NotificationManager.js';
 
 export default function RoleEdit() {
   const { id } = useParams();
@@ -26,13 +27,12 @@ export default function RoleEdit() {
 
   const submit = async (e) => {
     e.preventDefault();
-    setError('');
     setBusy(true);
     try {
       await roleService.updateRole(id, form);
       navigate(`/roles/${id}`);
     } catch (err) {
-      setError(err.message || 'Network error.');
+      notificationManager.error(err.message || 'Network error.');
     } finally {
       setBusy(false);
     }

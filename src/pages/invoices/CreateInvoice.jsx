@@ -11,11 +11,12 @@ import InvoiceFooter from '../../components/invoice/InvoiceFooter.jsx';
 import ProductModal from '../../components/invoice/ProductModal.jsx';
 import CustomerModal from '../../components/invoice/CustomerModal.jsx';
 import AddCustomerPanel from '../../components/invoice/AddCustomerPanel.jsx';
+import AddProductPanel from '../../components/invoice/AddProductPanel.jsx';
 import DocumentSettings from '../../components/invoice/DocumentSettings.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
-import NotificationToast from '../../components/ui/Toast.jsx';
+
 import Icon from '../../components/ui/Icon.jsx';
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx';
 import useUnsavedChanges from '../../hooks/useUnsavedChanges.js';
@@ -98,6 +99,7 @@ export default function CreateInvoice() {
   // --- Modals ---
   const [customerModal, setCustomerModal] = useState({ open: false, mode: 'create', customer: null });
   const [addCustomerPanelOpen, setAddCustomerPanelOpen] = useState(false);
+  const [addProductPanelOpen, setAddProductPanelOpen] = useState(false);
   const [productModal, setProductModal] = useState({ open: false, mode: 'create', product: null });
   const [bankModal, setBankModal] = useState(false);
   const [signatureModal, setSignatureModal] = useState(false);
@@ -178,8 +180,25 @@ export default function CreateInvoice() {
   };
 
   // --- Product ---
-  const openCreateProduct = () => setProductModal({ open: true, mode: 'create', product: null });
+  const openCreateProduct = () => setAddProductPanelOpen(true);
+  const closeAddProductPanel = () => setAddProductPanelOpen(false);
   const closeProductModal = () => setProductModal(p => ({ ...p, open: false }));
+  const handleAddProduct = useCallback((product) => {
+    if (!product) return;
+    setProducts(prev => [...prev, product]);
+    setAddProductPanelOpen(false);
+    const item = {
+      _key: generateKey(), name: product.name || '',
+      description: product.description || '',
+      quantity: Number(defaultQty) || 1, unitPrice: Number(product.unit_price) || 0,
+      taxRate: Number(product.tax_rate) || 0, discountType: 'percent', discountValue: 0,
+      product_id: product.id || null,
+      stock_quantity: Number(product.stock_quantity) || 0,
+    };
+    setItems(prev => [...prev, item]);
+    setProductQuery('');
+    notificationManager.success('Product', `"${product.name}" added to invoice.`);
+  }, [defaultQty, setProductQuery]);
   const submitProduct = async (form) => {
     const errs = validateProduct(form);
     if (Object.keys(errs).length) return;
@@ -382,6 +401,7 @@ export default function CreateInvoice() {
           onToggleShowDescription={setShowDescription}
           onDraftWithAI={draftWithAI} aiBusy={aiBusy}
           disabledAdd={!productQuery.trim()}
+          onAddNewProduct={() => setAddProductPanelOpen(true)}
         />
 
         <InvoiceTable
@@ -507,6 +527,8 @@ export default function CreateInvoice() {
 
       <AddCustomerPanel open={addCustomerPanelOpen} onClose={closeAddCustomerPanel} onSubmit={submitCustomer} />
 
+      <AddProductPanel open={addProductPanelOpen} onClose={closeAddProductPanel} onSubmit={handleAddProduct} />
+
       <DocumentSettings open={docSettingsOpen} onClose={() => setDocSettingsOpen(false)} />
 
       <ConfirmDialog
@@ -520,7 +542,6 @@ export default function CreateInvoice() {
         variant="danger"
       />
 
-      <NotificationToast />
     </div>
   );
 }

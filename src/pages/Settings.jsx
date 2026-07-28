@@ -3,11 +3,11 @@ import Card from '../components/ui/Card.jsx';
 import Button from '../components/ui/Button.jsx';
 import { Field, Input } from '../components/ui/Field.jsx';
 import PermissionGate from '../components/ui/PermissionGate.jsx';
-import Icon from '../components/ui/Icon.jsx';
 import { PERMISSIONS } from '../identity/rbac/permissions.js';
 import { settingsApiService } from '../services/settings/SettingsApiService.js';
 import { config } from '../config/index.js';
 import { useAuth } from '../identity/auth/AuthContext.jsx';
+import { notificationManager } from '../managers/NotificationManager.js';
 
 function AuthRedirectUrls() {
   const { hasFullAccess } = useAuth();
@@ -53,16 +53,15 @@ function AuthRedirectUrls() {
 export default function Settings() {
   const [siteTitle, setSiteTitle] = useState('');
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);
-    setSaved(false);
     try {
       await settingsApiService.update({ siteTitle });
-      setSaved(true);
+      notificationManager.success('Settings saved.');
     } catch {
+      notificationManager.error('Failed to save settings.');
     } finally {
       setBusy(false);
     }
@@ -78,7 +77,6 @@ export default function Settings() {
       }>
         <AuthRedirectUrls />
         <Card title="General Settings">
-          {saved && <div className="alert alert-success alert--mb"><Icon name="check" size={16} />Settings saved.</div>}
           <form onSubmit={submit}>
             <Field label="Site Title">
               <Input value={siteTitle} onChange={(e) => setSiteTitle(e.target.value)} placeholder="My Application" />

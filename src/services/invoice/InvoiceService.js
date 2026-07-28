@@ -50,6 +50,37 @@ export class InvoiceService {
     if (!r.ok) throw new Error(r.data?.error || 'Failed to update product.');
     return r.data.product;
   }
+  async listProductCategories() {
+    const r = await asJson(await api('/api/products'));
+    return r.ok ? (r.data.categories || []) : [];
+  }
+  async listBrands() {
+    const r = await asJson(await api('/api/product-brands'));
+    return r.ok ? (r.data.brands || []) : [];
+  }
+  async listUnits() {
+    const r = await asJson(await api('/api/product-units'));
+    return r.ok ? (r.data.units || []) : [];
+  }
+  async listWarehouses() {
+    const r = await asJson(await api('/api/product-warehouses'));
+    return r.ok ? (r.data.warehouses || []) : [];
+  }
+  async listPriceLists() {
+    const r = await asJson(await api('/api/price-lists'));
+    return r.ok ? (r.data.priceLists || []) : [];
+  }
+  async getProductPriceLists(productId) {
+    const r = await asJson(await api(`/api/products/${productId}/price-lists`));
+    return r.ok ? (r.data.items || []) : [];
+  }
+  async saveProductPriceLists(productId, items) {
+    const r = await asJson(await api(`/api/products/${productId}/price-lists`, {
+      method: 'POST', body: JSON.stringify({ items }),
+    }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to save price lists.');
+    return true;
+  }
 
   // --- Banks -------------------------------------------------------------
   async listBanks() {

@@ -5,6 +5,7 @@ import Button from '../components/ui/Button.jsx';
 import PasswordInput from '../components/ui/PasswordInput.jsx';
 import { Field, Input } from '../components/ui/Field.jsx';
 import { useAuth } from '../identity/auth/AuthContext.jsx';
+import { notificationManager } from '../managers/NotificationManager.js';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -12,7 +13,6 @@ export default function Login() {
   const [isDark, setIsDark] = useState(false);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [registered, setRegistered] = useState(false);
@@ -42,14 +42,13 @@ export default function Login() {
 
   const submit = async (e) => {
     e.preventDefault();
-    setError('');
     setBusy(true);
     try {
       const res = await login(identifier.trim(), password);
       if (res.ok) navigate('/', { replace: true });
-      else setError(res.error || 'Sign in failed.');
+      else notificationManager.error(res.error || 'Sign in failed.');
     } catch {
-      setError('Sign in failed.');
+      notificationManager.error('Sign in failed.');
     } finally {
       setBusy(false);
     }
@@ -70,7 +69,6 @@ export default function Login() {
 
         {confirmed && <div className="alert alert-success alert--mb"><Icon name="check" size={16} />Email confirmed! Your account is ready. Please sign in with your credentials.</div>}
         {registered && <div className="alert alert-success alert--mb"><Icon name="check" size={16} />Account created successfully! Please sign in with your credentials.</div>}
-        {error && <div className="alert alert-danger alert--mb"><Icon name="alert" size={16} />{error}</div>}
 
         <form onSubmit={submit}>
           <Field label="Email / Username / Phone">

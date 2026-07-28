@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
 import Icon from '../ui/Icon.jsx';
-import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import Select from '../ui/Select.jsx';
 import { Field, Input } from '../ui/Field.jsx';
@@ -432,69 +431,76 @@ export default function CustomHeaderPanel({ open, onClose }) {
         </div>
       </div>
 
-      {/* Add / Edit Modal */}
-      <Modal
-        open={editOpen}
-        onClose={closeEdit}
-        title={editItem ? 'Edit Custom Header' : 'Add Custom Header'}
-        size="md"
-        footer={
-          <>
-            <Button variant="secondary" onClick={closeEdit}>Cancel</Button>
-            <Button onClick={saveEdit} loading={editSaving} icon="check">
-              {editItem ? 'Save Changes' : 'Add'}
-            </Button>
-          </>
-        }
-      >
-        <form className="inv-modal-form" onSubmit={(e) => { e.preventDefault(); saveEdit(); }}>
-          <Field label="Display Name" required>
-            <Input value={editForm.displayName} onChange={(e) => updateForm('displayName', e.target.value)} placeholder="e.g. Vehicle No" aria-invalid={!!editErrors.displayName} />
-            {editErrors.displayName && <span className="inv-field-error">{editErrors.displayName}</span>}
-          </Field>
-          <Field label="Internal Key" required>
-            <Input value={editForm.internalKey} onChange={(e) => updateForm('internalKey', e.target.value)} placeholder="e.g. vehicle_no" aria-invalid={!!editErrors.internalKey} />
-            {editErrors.internalKey && <span className="inv-field-error">{editErrors.internalKey}</span>}
-          </Field>
-          <Field label="Description">
-            <Input value={editForm.description} onChange={(e) => updateForm('description', e.target.value)} placeholder="Optional description" />
-          </Field>
-          <div className="inv-modal-row">
-            <Field label="Column Position">
-              <Select options={COLUMN_OPTIONS} value={editForm.columnPosition} onChange={(v) => updateForm('columnPosition', v)} />
-            </Field>
-            <Field label="Input Type">
-              <Select options={CUSTOM_HEADER_INPUT_TYPE_OPTIONS} value={editForm.inputType} onChange={(v) => updateForm('inputType', v)} />
-            </Field>
-            <Field label="Display Order">
-              <Input type="number" min="1" step="1" value={editForm.displayOrder} onChange={(e) => updateForm('displayOrder', e.target.value === '' ? '' : Number(e.target.value))} aria-invalid={!!editErrors.displayOrder} />
-              {editErrors.displayOrder && <span className="inv-field-error">{editErrors.displayOrder}</span>}
-            </Field>
+      {/* Add / Edit Nested Drawer */}
+      {editOpen && (
+        <>
+          <div className="ds-overlay ds-overlay--nested" onClick={closeEdit}>
+            <div className="ds-panel ds-panel--nested" onClick={(e) => e.stopPropagation()}>
+              <div className="ds-header">
+                <div className="ds-header-left">
+                  <button className="ds-close-btn" onClick={closeEdit}><Icon name="x" size={18} /></button>
+                  <h2>{editItem ? 'Edit Custom Header' : 'Add Custom Header'}</h2>
+                </div>
+              </div>
+              <div className="ds-body">
+                <form className="inv-modal-form" onSubmit={(e) => { e.preventDefault(); saveEdit(); }}>
+                  <Field label="Display Name" required>
+                    <Input value={editForm.displayName} onChange={(e) => updateForm('displayName', e.target.value)} placeholder="e.g. Vehicle No" aria-invalid={!!editErrors.displayName} />
+                    {editErrors.displayName && <span className="inv-field-error">{editErrors.displayName}</span>}
+                  </Field>
+                  <Field label="Internal Key" required>
+                    <Input value={editForm.internalKey} onChange={(e) => updateForm('internalKey', e.target.value)} placeholder="e.g. vehicle_no" aria-invalid={!!editErrors.internalKey} />
+                    {editErrors.internalKey && <span className="inv-field-error">{editErrors.internalKey}</span>}
+                  </Field>
+                  <Field label="Description">
+                    <Input value={editForm.description} onChange={(e) => updateForm('description', e.target.value)} placeholder="Optional description" />
+                  </Field>
+                  <div className="inv-modal-row">
+                    <Field label="Column Position">
+                      <Select options={COLUMN_OPTIONS} value={editForm.columnPosition} onChange={(v) => updateForm('columnPosition', v)} />
+                    </Field>
+                    <Field label="Input Type">
+                      <Select options={CUSTOM_HEADER_INPUT_TYPE_OPTIONS} value={editForm.inputType} onChange={(v) => updateForm('inputType', v)} />
+                    </Field>
+                    <Field label="Display Order">
+                      <Input type="number" min="1" step="1" value={editForm.displayOrder} onChange={(e) => updateForm('displayOrder', e.target.value === '' ? '' : Number(e.target.value))} aria-invalid={!!editErrors.displayOrder} />
+                      {editErrors.displayOrder && <span className="inv-field-error">{editErrors.displayOrder}</span>}
+                    </Field>
+                  </div>
+                  {(editForm.inputType === 'dropdown' || editForm.inputType === 'multi_select' || editForm.inputType === 'radio') && (
+                    <Field label="Options (comma-separated)" required>
+                      <Input value={editForm.options} onChange={(e) => updateForm('options', e.target.value)} placeholder="Option 1, Option 2, Option 3" aria-invalid={!!editErrors.options} />
+                      {editErrors.options && <span className="inv-field-error">{editErrors.options}</span>}
+                    </Field>
+                  )}
+                  <div className="inv-modal-row">
+                    <Field label="Placeholder">
+                      <Input value={editForm.placeholder} onChange={(e) => updateForm('placeholder', e.target.value)} placeholder="Placeholder text" />
+                    </Field>
+                    <Field label="Default Value">
+                      <Input value={editForm.defaultValue} onChange={(e) => updateForm('defaultValue', e.target.value)} placeholder="Default value" />
+                    </Field>
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 12 }}>
+                    <Checkbox checked={editForm.required} onChange={(v) => updateForm('required', v)} label="Required" />
+                    <Checkbox checked={editForm.readOnly} onChange={(v) => updateForm('readOnly', v)} label="Read Only" />
+                    <Checkbox checked={editForm.visible} onChange={(v) => updateForm('visible', v)} label="Visible" />
+                    <Checkbox checked={editForm.printable} onChange={(v) => updateForm('printable', v)} label="Printable" />
+                    <Checkbox checked={editForm.exportable} onChange={(v) => updateForm('exportable', v)} label="Exportable" />
+                    <Checkbox checked={editForm.active} onChange={(v) => updateForm('active', v)} label="Active" />
+                  </div>
+                </form>
+              </div>
+              <div className="ds-footer">
+                <button className="ds-btn ds-btn-primary" onClick={saveEdit} disabled={editSaving}>
+                  <Icon name="check" size={14} /> {editSaving ? 'Saving...' : (editItem ? 'Save Changes' : 'Add')}
+                </button>
+                <button className="ds-btn ds-btn-ghost" onClick={closeEdit}>Cancel</button>
+              </div>
+            </div>
           </div>
-          {(editForm.inputType === 'dropdown' || editForm.inputType === 'multi_select' || editForm.inputType === 'radio') && (
-            <Field label="Options (comma-separated)" required>
-              <Input value={editForm.options} onChange={(e) => updateForm('options', e.target.value)} placeholder="Option 1, Option 2, Option 3" aria-invalid={!!editErrors.options} />
-              {editErrors.options && <span className="inv-field-error">{editErrors.options}</span>}
-            </Field>
-          )}
-          <div className="inv-modal-row">
-            <Field label="Placeholder">
-              <Input value={editForm.placeholder} onChange={(e) => updateForm('placeholder', e.target.value)} placeholder="Placeholder text" />
-            </Field>
-            <Field label="Default Value">
-              <Input value={editForm.defaultValue} onChange={(e) => updateForm('defaultValue', e.target.value)} placeholder="Default value" />
-            </Field>
-          </div>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 12 }}>
-            <Checkbox checked={editForm.required} onChange={(v) => updateForm('required', v)} label="Required" />
-            <Checkbox checked={editForm.readOnly} onChange={(v) => updateForm('readOnly', v)} label="Read Only" />
-            <Checkbox checked={editForm.visible} onChange={(v) => updateForm('visible', v)} label="Visible" />
-            <Checkbox checked={editForm.printable} onChange={(v) => updateForm('printable', v)} label="Printable" />
-            <Checkbox checked={editForm.exportable} onChange={(v) => updateForm('exportable', v)} label="Exportable" />
-            <Checkbox checked={editForm.active} onChange={(v) => updateForm('active', v)} label="Active" />
-          </div>
-        </form>
-      </Modal>
+        </>
+      )}
 
       <ConfirmDialog
         open={!!deleteTarget}

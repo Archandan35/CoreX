@@ -11,15 +11,19 @@ function ToastItem({ notification, onDismiss }) {
   };
 
   useEffect(() => {
-    if (notification.duration > 0) {
+    if (notification.duration > 0 && !notification.loading) {
       const timer = setTimeout(() => onDismiss(notification.id), notification.duration);
       return () => clearTimeout(timer);
     }
-  }, [notification.id, notification.duration, onDismiss]);
+  }, [notification.id, notification.duration, notification.loading, onDismiss]);
 
   return (
-    <div className={`toast toast-${notification.type}`} role="alert">
-      <Icon name={icons[notification.type] || 'info'} size={16} />
+    <div className={`toast toast-${notification.type}${notification.loading ? ' toast-loading' : ''}`} role="alert">
+      {notification.loading ? (
+        <Icon name="spinner" size={16} />
+      ) : (
+        <Icon name={icons[notification.type] || 'info'} size={16} />
+      )}
       <div className="toast-content">
         {notification.title && <div className="toast-title">{notification.title}</div>}
         <div className="toast-message">{notification.message}</div>
