@@ -144,7 +144,6 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   margin-left: var(--sidebar-collapsed-w);
 }
 .page-area {
-  padding: 26px 32px 60px;
   width: 100%;
   margin: 0 auto;
 }
