@@ -28,6 +28,7 @@ import RoleShow from './pages/roles/RoleShow.jsx';
 import Settings from './pages/Settings.jsx';
 import CreateInvoice from './pages/invoices/CreateInvoice.jsx';
 import EditInvoice from './pages/invoices/EditInvoice.jsx';
+import InvoiceShow from './pages/invoices/InvoiceShow.jsx';
 import { PERMISSIONS } from './identity/rbac/permissions.js';
 import { api } from './services/api.js';
 import { isMissingTableError } from './utils/dbErrors.js';
@@ -99,7 +100,7 @@ function AppRoutes() {
           .order('applied_at', { ascending: false })
           .limit(1);
         if (!error && data && data.length > 0) everInstalled = true;
-      } catch {}
+      } catch { }
       return { compatible: false, missingCount: failedTables.length, everInstalled };
     }
 
@@ -161,13 +162,13 @@ function AppRoutes() {
       try {
         const { error: fnError } = await database.supabase.rpc('check_admin_exists');
         functionsOk = !fnError;
-      } catch {}
+      } catch { }
 
       let columnsOk = true;
       try {
         const { error: colError } = await database.supabase.from('users').select('id').limit(1);
         if (colError) columnsOk = false;
-      } catch {}
+      } catch { }
 
       if (!functionsOk) missingCount++;
       if (!columnsOk) missingCount++;
@@ -188,7 +189,7 @@ function AppRoutes() {
           description: `Auto-bumped from v${current} to v${required} (all schema objects present)`,
         });
         compatible = true;
-      } catch {}
+      } catch { }
     }
 
     return {
@@ -261,7 +262,7 @@ function AppRoutes() {
         try {
           const { data: rpcData, error: rpcError } = await database.supabase.rpc('check_admin_exists');
           if (!rpcError && rpcData !== null) adminFound = rpcData === true;
-        } catch {}
+        } catch { }
 
         if (!adminFound) {
           try {
@@ -270,7 +271,7 @@ function AppRoutes() {
               .select('*', { count: 'exact', head: true })
               .eq('full_access', true);
             if (!error) adminFound = (count || 0) > 0;
-          } catch {}
+          } catch { }
         }
 
         if (!adminFound) {
@@ -279,7 +280,7 @@ function AppRoutes() {
               `SELECT COUNT(*) as count FROM public.users WHERE full_access = true`
             );
             adminFound = parseInt(result?.[0]?.count || 0, 10) > 0;
-          } catch {}
+          } catch { }
         }
       } else {
         const result = await database.query(
@@ -307,7 +308,7 @@ function AppRoutes() {
           `INSERT INTO _schema_version (version, description) VALUES (${SCHEMAS.version || 1}, 'Setup completed via Setup Wizard') ON CONFLICT DO NOTHING`
         );
       }
-    } catch {}
+    } catch { }
   }
 
   // Reached when the wizard was opened because the database was INCOMPLETE
@@ -395,6 +396,7 @@ function AppRoutes() {
         <Route path="settings" element={<ProtectedRoute permission={PERMISSIONS.SETTINGS_READ}><Settings /></ProtectedRoute>} />
         <Route path="invoices/new" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_CREATE}><CreateInvoice /></ProtectedRoute>} />
         <Route path="invoices/:id/edit" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_UPDATE}><EditInvoice /></ProtectedRoute>} />
+        <Route path="invoices/:id" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_READ}><InvoiceShow /></ProtectedRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

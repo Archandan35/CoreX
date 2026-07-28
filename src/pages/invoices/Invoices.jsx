@@ -137,8 +137,8 @@ export default function Invoices({ variant = 'invoices' }) {
     return allInvoices.filter((inv) => {
       const statusMatch =
         activeTab === 'All' ? true
-        : activeTab === 'Drafts' ? inv.status === 'Draft'
-        : inv.status === activeTab;
+          : activeTab === 'Drafts' ? inv.status === 'Draft'
+            : inv.status === activeTab;
       const qMatch = !q
         || inv.billNo.toLowerCase().includes(q)
         || inv.customer.toLowerCase().includes(q)
@@ -208,7 +208,7 @@ export default function Invoices({ variant = 'invoices' }) {
       .then((data) => {
         setAllInvoices(Array.isArray(data) ? data.map(mapInvoice) : []);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
@@ -218,7 +218,7 @@ export default function Invoices({ variant = 'invoices' }) {
     if (!confirmed) return;
     let success = 0;
     for (const id of selectedIds) {
-      try { await invoiceService.deleteInvoice(id); success++; } catch {}
+      try { await invoiceService.deleteInvoice(id); success++; } catch { }
     }
     if (success > 0) notificationManager.success('Invoices', `${success} invoice(s) deleted.`);
     handleRefresh();
@@ -282,6 +282,73 @@ export default function Invoices({ variant = 'invoices' }) {
     window.print();
   }, []);
 
+  const handleLinkToSubscription = useCallback((inv, close) => {
+    close();
+    notificationManager.info('Subscription', `Link invoice ${inv.billNo} to a subscription — will be available in a future update.`);
+  }, []);
+
+  const handleDigitalSignPdf = useCallback((inv, close) => {
+    close();
+    notificationManager.info('Digital Sign', `Digital Sign PDF for ${inv.billNo} will be available in a future update.`);
+  }, []);
+
+  const handleBulkDownloadPdfs = useCallback((inv, close) => {
+    close();
+    notificationManager.info('Bulk Download', 'Bulk Download PDFs feature coming soon.');
+  }, []);
+
+  const handleDuplicate = useCallback((inv, close) => {
+    close();
+    notificationManager.info('Duplicate', `Duplicate invoice ${inv.billNo} (3/3 left) — coming soon.`);
+  }, []);
+
+  const handleThermalPrint = useCallback((inv, close) => {
+    close();
+    notificationManager.info('Thermal Print', `Thermal print for ${inv.billNo} will be available in a future update.`);
+  }, []);
+
+  const handleShippingLabel = useCallback((inv, close) => {
+    close();
+    notificationManager.info('Shipping Label', `Shipping label for ${inv.billNo} will be available in a future update.`);
+  }, []);
+
+  const handleDeliveryChallan = useCallback((inv, close) => {
+    close();
+    notificationManager.info('Delivery Challan', `Create Delivery Challan from ${inv.billNo} will be available in a future update.`);
+  }, []);
+
+  const handleCreatePackingList = useCallback((inv, close) => {
+    close();
+    notificationManager.info('Packing List', `Create Packing List from ${inv.billNo} (3/3 left) — coming soon.`);
+  }, []);
+
+  const handleCreateEwayBill = useCallback((inv, close) => {
+    close();
+    notificationManager.info('E-way Bill', `Create E-way Bill for ${inv.billNo} will be available in a future update.`);
+  }, []);
+
+  const handleCreateEInvoice = useCallback((inv, close) => {
+    close();
+    notificationManager.info('E-Invoice', `Create E-Invoice for ${inv.billNo} will be available in a future update.`);
+  }, []);
+
+  const handleConvert = useCallback((inv, close) => {
+    close();
+    notificationManager.info('Convert', `Convert invoice ${inv.billNo} — 3 conversions left. Coming soon.`);
+  }, []);
+
+  const handleCancelInvoice = useCallback(async (inv, close) => {
+    close();
+    if (!window.confirm(`Cancel invoice ${inv.billNo}? This will mark it as cancelled.`)) return;
+    try {
+      await invoiceService.deleteInvoice(inv.id);
+      notificationManager.success('Invoices', `Invoice ${inv.billNo} cancelled.`);
+      handleRefresh();
+    } catch (e) {
+      notificationManager.error('Cancel', e.message);
+    }
+  }, [handleRefresh]);
+
   const title = VARIANT_TITLES[variant] || 'Invoices';
 
   return (
@@ -309,258 +376,296 @@ export default function Invoices({ variant = 'invoices' }) {
       {/* Scrollable content area */}
       <div className="invoice-scrollable-content">
 
-      {/* Tabs */}
-      <div className="invoice-tabs" role="tablist">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab}
-            className={`invoice-tab ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => { setActiveTab(tab); setPage(1); }}
-          >
-            {tab}
-            <span className="invoice-tab__count">{counts[tab] ?? 0}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Toolbar */}
-      <div className="invoice-toolbar">
-        <div className="invoice-search">
-          <Icon name="search" size={17} />
-          <input
-            type="text"
-            placeholder="Search by transaction, customers, invoice etc..."
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-            aria-label="Search invoices"
-          />
-        </div>
-        <Dropdown
-          trigger={
-            <button type="button" className="invoice-btn invoice-btn--ghost invoice-btn--auto">
-              <Icon name="calendar" size={16} /> {DATE_RANGES.find((r) => r.key === dateRange)?.label || 'Date Range'} <Icon name="chevronDown" size={14} />
-            </button>
-          }
-        >
-          {(close) => (
-            <div style={{ minWidth: 160 }}>
-              {DATE_RANGES.map((r) => (
-                <DropdownItem key={r.key} onClick={() => { setDateRange(r.key); close(); }}>
-                  {r.label}
-                </DropdownItem>
-              ))}
-            </div>
-          )}
-        </Dropdown>
-        <Dropdown
-          trigger={
-            <button type="button" className="invoice-btn invoice-btn--ghost invoice-btn--auto">
-              Actions <Icon name="chevronDown" size={14} />
-            </button>
-          }
-        >
-          {(close) => (
-            <div style={{ minWidth: 180 }}>
-              {canExport && (
-                <DropdownItem onClick={() => handleExportCsv(close)}>
-                  <Icon name="download" size={14} /> Export CSV
-                </DropdownItem>
-              )}
-              {canExport && (
-                <DropdownItem onClick={() => handleExportPdf(close)}>
-                  <Icon name="file-text" size={14} /> Export PDF
-                </DropdownItem>
-              )}
-              <DropdownItem onClick={() => { close(); handleRefresh(); }}>
-                <Icon name="refresh-cw" size={14} /> Refresh
-              </DropdownItem>
-              <DropdownItem onClick={() => { close(); window.print(); }}>
-                <Icon name="print" size={14} /> Print
-              </DropdownItem>
-              {canDelete && selectedIds.length > 0 && (
-                <DropdownItem onClick={() => { close(); handleBulkDelete(); }}>
-                  <Icon name="trash" size={14} /> Delete ({selectedIds.length})
-                </DropdownItem>
-              )}
-            </div>
-          )}
-        </Dropdown>
-        <button
-          type="button"
-          className={`invoice-filter-btn${showFilters ? ' invoice-filter-btn--active' : ''}`}
-          onClick={() => setShowFilters((v) => !v)}
-          aria-label="Toggle filters"
-        >
-          <Icon name="sliders-horizontal" size={18} />
-        </button>
-      </div>
-
-      {/* Inline Filter Panel */}
-      {showFilters && (
-        <div className="invoice-filter-panel">
-          <div className="invoice-filter-row">
-            <label>Sort</label>
-            <select
-              value={`${sortField}-${sortDir}`}
-              onChange={(e) => {
-                const [f, d] = e.target.value.split('-');
-                setSortField(f);
-                setSortDir(d);
-              }}
-              className="form-input"
+        {/* Tabs */}
+        <div className="invoice-tabs" role="tablist">
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab}
+              className={`invoice-tab ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => { setActiveTab(tab); setPage(1); }}
             >
-              <option value="invoiceDate-desc">Date (newest)</option>
-              <option value="invoiceDate-asc">Date (oldest)</option>
-              <option value="amount-desc">Amount (high to low)</option>
-              <option value="amount-asc">Amount (low to high)</option>
-              <option value="billNo-asc">Bill # (A-Z)</option>
-              <option value="billNo-desc">Bill # (Z-A)</option>
-            </select>
+              {tab}
+              <span className="invoice-tab__count">{counts[tab] ?? 0}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Toolbar */}
+        <div className="invoice-toolbar">
+          <div className="invoice-search">
+            <Icon name="search" size={17} />
+            <input
+              type="text"
+              placeholder="Search by transaction, customers, invoice etc..."
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+              aria-label="Search invoices"
+            />
           </div>
-          <button type="button" className="invoice-btn invoice-btn--ghost" onClick={() => { setShowFilters(false); }}>
-            <Icon name="x" size={14} /> Close
+          <Dropdown
+            trigger={
+              <button type="button" className="invoice-btn invoice-btn--ghost invoice-btn--auto">
+                <Icon name="calendar" size={16} /> {DATE_RANGES.find((r) => r.key === dateRange)?.label || 'Date Range'} <Icon name="chevronDown" size={14} />
+              </button>
+            }
+          >
+            {(close) => (
+              <div style={{ minWidth: 160 }}>
+                {DATE_RANGES.map((r) => (
+                  <DropdownItem key={r.key} onClick={() => { setDateRange(r.key); close(); }}>
+                    {r.label}
+                  </DropdownItem>
+                ))}
+              </div>
+            )}
+          </Dropdown>
+          <Dropdown
+            trigger={
+              <button type="button" className="invoice-btn invoice-btn--ghost invoice-btn--auto">
+                Actions <Icon name="chevronDown" size={14} />
+              </button>
+            }
+          >
+            {(close) => (
+              <div style={{ minWidth: 180 }}>
+                {canExport && (
+                  <DropdownItem onClick={() => handleExportCsv(close)}>
+                    <Icon name="download" size={14} /> Export CSV
+                  </DropdownItem>
+                )}
+                {canExport && (
+                  <DropdownItem onClick={() => handleExportPdf(close)}>
+                    <Icon name="file-text" size={14} /> Export PDF
+                  </DropdownItem>
+                )}
+                <DropdownItem onClick={() => { close(); handleRefresh(); }}>
+                  <Icon name="refresh-cw" size={14} /> Refresh
+                </DropdownItem>
+                <DropdownItem onClick={() => { close(); window.print(); }}>
+                  <Icon name="print" size={14} /> Print
+                </DropdownItem>
+                {canDelete && selectedIds.length > 0 && (
+                  <DropdownItem onClick={() => { close(); handleBulkDelete(); }}>
+                    <Icon name="trash" size={14} /> Delete ({selectedIds.length})
+                  </DropdownItem>
+                )}
+              </div>
+            )}
+          </Dropdown>
+          <button
+            type="button"
+            className={`invoice-filter-btn${showFilters ? ' invoice-filter-btn--active' : ''}`}
+            onClick={() => setShowFilters((v) => !v)}
+            aria-label="Toggle filters"
+          >
+            <Icon name="sliders-horizontal" size={18} />
           </button>
         </div>
-      )}
 
-      {/* Table */}
-      <div className="invoice-table-wrap">
-        {loading ? (
-          <div className="invoice-empty" style={{ padding: '60px 20px' }}>
-            <div className="spinner" />
-            <p>Loading {title.toLowerCase()}...</p>
+        {/* Inline Filter Panel */}
+        {showFilters && (
+          <div className="invoice-filter-panel">
+            <div className="invoice-filter-row">
+              <label>Sort</label>
+              <select
+                value={`${sortField}-${sortDir}`}
+                onChange={(e) => {
+                  const [f, d] = e.target.value.split('-');
+                  setSortField(f);
+                  setSortDir(d);
+                }}
+                className="form-input"
+              >
+                <option value="invoiceDate-desc">Date (newest)</option>
+                <option value="invoiceDate-asc">Date (oldest)</option>
+                <option value="amount-desc">Amount (high to low)</option>
+                <option value="amount-asc">Amount (low to high)</option>
+                <option value="billNo-asc">Bill # (A-Z)</option>
+                <option value="billNo-desc">Bill # (Z-A)</option>
+              </select>
+            </div>
+            <button type="button" className="invoice-btn invoice-btn--ghost" onClick={() => { setShowFilters(false); }}>
+              <Icon name="x" size={14} /> Close
+            </button>
           </div>
-        ) : (
-          <table className="invoice-table">
-            <thead>
-              <tr>
-                <th style={{ width: 36 }}>
-                  <input type="checkbox" onChange={handleSelectAll} checked={selectedIds.length === pageRows.length && pageRows.length > 0} />
-                </th>
-                <th>
-                  <div className="invoice-th-flex" style={{ cursor: 'pointer' }} onClick={() => toggleSort('amount')}>
-                    Amount
-                    <Icon name={sortField === 'amount' && sortDir === 'asc' ? 'chevron-up' : sortField === 'amount' && sortDir === 'desc' ? 'chevron-down' : 'chevrons-up-down'} size={14} />
-                  </div>
-                </th>
-                <th>
-                  <div className="invoice-th-flex">
-                    Status
-                  </div>
-                </th>
-                <th>
-                  <div className="invoice-th-flex">
-                    Mode
-                  </div>
-                </th>
-                <th>
-                  <div className="invoice-th-flex" style={{ cursor: 'pointer' }} onClick={() => toggleSort('billNo')}>
-                    Bill #
-                    <Icon name={sortField === 'billNo' && sortDir === 'asc' ? 'chevron-up' : sortField === 'billNo' && sortDir === 'desc' ? 'chevron-down' : 'chevrons-up-down'} size={14} />
-                  </div>
-                </th>
-                <th>Customer</th>
-                <th>
-                  <div className="invoice-th-flex" style={{ cursor: 'pointer' }} onClick={() => toggleSort('invoiceDate')}>
-                    Date <Icon name={sortField === 'invoiceDate' && sortDir === 'asc' ? 'chevron-up' : sortField === 'invoiceDate' && sortDir === 'desc' ? 'chevron-down' : 'chevrons-up-down'} size={14} />
-                  </div>
-                  <div className="invoice-th-sub">Created time</div>
-                </th>
-                <th aria-label="Row actions" />
-              </tr>
-            </thead>
-            <tbody>
-              {pageRows.length === 0 && (
-                <tr className="invoice-table__empty">
-                  <td colSpan={8}>
-                    <div className="invoice-empty">
-                      <Icon name="search" size={22} />
-                      <p>No {title.toLowerCase()} match your filters.</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-              {pageRows.map((inv) => (
-                <tr key={inv.id}>
-                  <td style={{ width: 36 }}>
-                    <input type="checkbox" checked={selectedIds.includes(inv.id)} onChange={() => handleSelectOne(inv.id)} />
-                  </td>
-                  <td className="invoice-amount">{formatAmount(inv.amount)}</td>
-                  <td>
-                    <span className={`invoice-status invoice-status--${inv.status.toLowerCase()}`}>{inv.status}</span>
-                  </td>
-                  <td>
-                    <div className="invoice-mode">
-                      {inv.modes.map((m, i) => (
-                        <span key={i} className="invoice-mode-group">
-                          <span className={`invoice-status invoice-status--${m.kind}`}>{m.label}</span>
-                          {m.plus && <span className="invoice-plus">{m.plus}</span>}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td>
-                    <div className="invoice-bill">{inv.billNo}</div>
-                    <div className="invoice-bill-sub">{inv.createdBy}</div>
-                  </td>
-                  <td>
-                    <div className="invoice-customer">{inv.customer}</div>
-                    <div className="invoice-customer-sub">{inv.customerSub}</div>
-                  </td>
-                  <td>
-                    <div className="invoice-date">{inv.dateMain}</div>
-                    <div className="invoice-date-sub">{inv.dateSub}</div>
-                  </td>
-                  <td>
-                    <div className="invoice-row-actions">
-                      <button type="button" className="invoice-action invoice-action--view" title="View" onClick={() => handleView(inv.id)}>
-                        <Icon name="eye" size={14} /> View
-                      </button>
-                      <button type="button" className="invoice-action invoice-action--send" title="Send" onClick={() => handleSend(inv)}>
-                        <Icon name="send" size={14} /> Send
-                      </button>
-                      <Dropdown
-                        trigger={
-                          <button type="button" className="invoice-more" aria-label="More actions">
-                            <Icon name="more-vertical" size={16} />
-                          </button>
-                        }
-                      >
-                        {(close) => (
-                          <div style={{ minWidth: 160 }}>
-                            <DropdownItem onClick={() => handleDownloadPdf(inv, close)}>
-                              <Icon name="file-text" size={14} /> Download PDF
-                            </DropdownItem>
-                            <DropdownItem onClick={() => handlePrint(inv, close)}>
-<Icon name="print" size={14} /> Print
-                            </DropdownItem>
-                            <DropdownItem onClick={() => handleSend(inv, close)}>
-                              <Icon name="send" size={14} /> Send
-                            </DropdownItem>
-                            {canEdit && (
-                              <DropdownItem onClick={() => handleEdit(inv.id, close)}>
-                                <Icon name="edit" size={14} /> Edit
-                              </DropdownItem>
-                            )}
-                            {canDelete && (
-                              <DropdownItem onClick={() => handleDeleteOne(inv, close)}>
-                                <Icon name="trash" size={14} /> Delete
-                              </DropdownItem>
-                            )}
-                          </div>
-                        )}
-                      </Dropdown>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         )}
-      </div>
+
+        {/* Table */}
+        <div className="invoice-table-wrap">
+          {loading ? (
+            <div className="invoice-empty" style={{ padding: '60px 20px' }}>
+              <div className="spinner" />
+              <p>Loading {title.toLowerCase()}...</p>
+            </div>
+          ) : (
+            <table className="invoice-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 36 }}>
+                    <input type="checkbox" onChange={handleSelectAll} checked={selectedIds.length === pageRows.length && pageRows.length > 0} />
+                  </th>
+                  <th>
+                    <div className="invoice-th-flex" style={{ cursor: 'pointer' }} onClick={() => toggleSort('amount')}>
+                      Amount
+                      <Icon name={sortField === 'amount' && sortDir === 'asc' ? 'chevron-up' : sortField === 'amount' && sortDir === 'desc' ? 'chevron-down' : 'chevrons-up-down'} size={14} />
+                    </div>
+                  </th>
+                  <th>
+                    <div className="invoice-th-flex">
+                      Status
+                    </div>
+                  </th>
+                  <th>
+                    <div className="invoice-th-flex">
+                      Mode
+                    </div>
+                  </th>
+                  <th>
+                    <div className="invoice-th-flex" style={{ cursor: 'pointer' }} onClick={() => toggleSort('billNo')}>
+                      Bill #
+                      <Icon name={sortField === 'billNo' && sortDir === 'asc' ? 'chevron-up' : sortField === 'billNo' && sortDir === 'desc' ? 'chevron-down' : 'chevrons-up-down'} size={14} />
+                    </div>
+                  </th>
+                  <th>Customer</th>
+                  <th>
+                    <div className="invoice-th-flex" style={{ cursor: 'pointer' }} onClick={() => toggleSort('invoiceDate')}>
+                      Date <Icon name={sortField === 'invoiceDate' && sortDir === 'asc' ? 'chevron-up' : sortField === 'invoiceDate' && sortDir === 'desc' ? 'chevron-down' : 'chevrons-up-down'} size={14} />
+                    </div>
+                    <div className="invoice-th-sub">Created time</div>
+                  </th>
+                  <th aria-label="Row actions" />
+                </tr>
+              </thead>
+              <tbody>
+                {pageRows.length === 0 && (
+                  <tr className="invoice-table__empty">
+                    <td colSpan={8}>
+                      <div className="invoice-empty">
+                        <Icon name="search" size={22} />
+                        <p>No {title.toLowerCase()} match your filters.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {pageRows.map((inv) => (
+                  <tr key={inv.id}>
+                    <td style={{ width: 36 }}>
+                      <input type="checkbox" checked={selectedIds.includes(inv.id)} onChange={() => handleSelectOne(inv.id)} />
+                    </td>
+                    <td className="invoice-amount">{formatAmount(inv.amount)}</td>
+                    <td>
+                      <span className={`invoice-status invoice-status--${inv.status.toLowerCase()}`}>{inv.status}</span>
+                    </td>
+                    <td>
+                      <div className="invoice-mode">
+                        {inv.modes.map((m, i) => (
+                          <span key={i} className="invoice-mode-group">
+                            <span className={`invoice-status invoice-status--${m.kind}`}>{m.label}</span>
+                            {m.plus && <span className="invoice-plus">{m.plus}</span>}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="invoice-bill">{inv.billNo}</div>
+                      <div className="invoice-bill-sub">{inv.createdBy}</div>
+                    </td>
+                    <td>
+                      <div className="invoice-customer">{inv.customer}</div>
+                      <div className="invoice-customer-sub">{inv.customerSub}</div>
+                    </td>
+                    <td>
+                      <div className="invoice-date">{inv.dateMain}</div>
+                      <div className="invoice-date-sub">{inv.dateSub}</div>
+                    </td>
+                    <td>
+                      <div className="invoice-row-actions">
+                        <button type="button" className="invoice-action invoice-action--view" title="View" onClick={() => handleView(inv.id)}>
+                          <Icon name="eye" size={14} /> View
+                        </button>
+                        <button type="button" className="invoice-action invoice-action--send" title="Send" onClick={() => handleSend(inv)}>
+                          <Icon name="send" size={14} /> Send
+                        </button>
+                        <Dropdown
+                          trigger={
+                            <button type="button" className="invoice-more" aria-label="More actions">
+                              <Icon name="more-vertical" size={16} />
+                            </button>
+                          }
+                        >
+                          {(close) => (
+                            <div style={{ minWidth: 200, maxHeight: 360, overflowY: 'auto' }}>
+                              <DropdownItem onClick={() => handleDownloadPdf(inv, close)}>
+                                <Icon name="file-text" size={14} /> Download PDF
+                              </DropdownItem>
+                              <DropdownItem onClick={() => handlePrint(inv, close)}>
+                                <Icon name="print" size={14} /> Print
+                              </DropdownItem>
+                              <DropdownItem onClick={() => handleSend(inv, close)}>
+                                <Icon name="send" size={14} /> Send
+                              </DropdownItem>
+                              {canEdit && (
+                                <DropdownItem onClick={() => handleEdit(inv.id, close)}>
+                                  <Icon name="edit" size={14} /> Edit
+                                </DropdownItem>
+                              )}
+                              <DropdownItem onClick={() => handleLinkToSubscription(inv, close)}>
+                                <Icon name="link" size={14} /> Link to Subscription
+                              </DropdownItem>
+                              <DropdownItem onClick={() => handleDigitalSignPdf(inv, close)}>
+                                <Icon name="pen-tool" size={14} /> Digital Sign PDF
+                              </DropdownItem>
+                              <DropdownItem onClick={() => handleBulkDownloadPdfs(inv, close)}>
+                                <Icon name="download" size={14} /> Bulk Download PDFs
+                              </DropdownItem>
+                              <DropdownItem onClick={() => handleDuplicate(inv, close)}>
+                                <Icon name="copy" size={14} /> Duplicate (3/3 left)
+                              </DropdownItem>
+                              <DropdownItem onClick={() => handleThermalPrint(inv, close)}>
+                                <Icon name="printer" size={14} /> Thermal Print
+                              </DropdownItem>
+                              <DropdownItem onClick={() => handleShippingLabel(inv, close)}>
+                                <Icon name="package" size={14} /> Shipping Label
+                              </DropdownItem>
+                              <DropdownItem onClick={() => handleDeliveryChallan(inv, close)}>
+                                <Icon name="truck" size={14} /> Delivery Challan
+                              </DropdownItem>
+                              <DropdownItem onClick={() => handleCreatePackingList(inv, close)}>
+                                <Icon name="boxes" size={14} /> Create Packing List (3/3 left)
+                              </DropdownItem>
+                              <DropdownItem onClick={() => handleCreateEwayBill(inv, close)}>
+                                <Icon name="file-check" size={14} /> Create E-way Bill
+                              </DropdownItem>
+                              <DropdownItem onClick={() => handleCreateEInvoice(inv, close)}>
+                                <Icon name="file-text" size={14} /> Create E-Invoice
+                              </DropdownItem>
+                              <DropdownItem onClick={() => handleConvert(inv, close)}>
+                                <Icon name="shuffle" size={14} /> Convert (3 left)
+                              </DropdownItem>
+                              {canDelete && (
+                                <DropdownItem danger onClick={() => handleCancelInvoice(inv, close)}>
+                                  <Icon name="x-circle" size={14} /> Cancel Invoice
+                                </DropdownItem>
+                              )}
+                              {canDelete && (
+                                <DropdownItem danger onClick={() => handleDeleteOne(inv, close)}>
+                                  <Icon name="trash" size={14} /> Delete
+                                </DropdownItem>
+                              )}
+                            </div>
+                          )}
+                        </Dropdown>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
 
       </div>
 

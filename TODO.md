@@ -1,22 +1,36 @@
-# SQL Generation Pipeline Rewrite - Complete
+# Completed Tasks
 
-## Root Causes Fixed
+## Build Output
+- ✅ `dist/` folder successfully generated with production build
 
-1. **DatabaseValidator.**Fixes:
-   - Removed dead `_functionsDetectionComplete` flag
-   - Strategy 3 probes each function independently (no early exit)
-   - `_checkRequiredFunctions()` always checks `exec_sql`, `check_admin_exists`, `is_admin_user`
-   - All function records include `type: 'function'` for correct matching
+## Invoice View Page
+- ✅ Created `src/pages/invoices/InvoiceShow.jsx` — Full read-only invoice view page with:
+  - Invoice header (prefix, number, status, dates)
+  - Customer details
+  - Custom header values display
+  - Line items table
+  - Notes & Terms
+  - Totals summary (taxable, tax, discount, grand total)
+  - Payment info with balance due
+  - Bank details
+  - Signature display
+  - **Send** button
+  - **More** dropdown with all requested features:
+    - Edit, Download PDF, Link to Subscription, Digital Sign PDF
+    - Bulk Download PDFs, Duplicate (3/3 left), Thermal Print
+    - Shipping Label, Delivery Challan, Create Packing List (3/3 left)
+    - Create E-way Bill, Create E-Invoice, Convert (3 left)
+    - Cancel Invoice
 
-2. **generate-sql.sql** - Restored full canonical schema:
-   - All 3 helper functions (exec_sql, check_admin_exists, is_admin_user) with GRANT EXECUTE
-   - All 3 tables (users, roles, settings)
-   - Indexes, all 5 RLS policies, user profile trigger
-   - Schema version table + NOTIFY pgrst
+## Route Registration
+- ✅ Added `InvoiceShow` import in `App.jsx`
+- ✅ Added route: `invoices/:id` → InvoiceShow component
 
-3. **SqlGenerator.js** - Verified correct:
-   - `_genHelperFunctions()` emits all 3 functions when missing or full mode
-   - `_genRLS()` includes all 5 policies
-   - Single code path for preview and download
+## Enhanced "More" Dropdown in Invoices List
+- ✅ Added all requested actions to the "More" dropdown in `Invoices.jsx` table rows:
+  - Link to Subscription, Digital Sign PDF, Bulk Download PDFs
+  - Duplicate (3/3 left), Thermal Print, Shipping Label
+  - Delivery Challan, Create Packing List (3/3 left)
+  - Create E-way Bill, Create E-Invoice, Convert (3 left)
+  - Cancel Invoice
 
-## Status: COMPLETE
