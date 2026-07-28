@@ -1,48 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../../components/ui/Icon.jsx';
+import Dropdown, { DropdownItem } from '../../components/ui/Dropdown.jsx';
 import { usePermission } from '../../identity/authorization/PermissionContext.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
+import DocumentSettings from '../../components/invoice/DocumentSettings.jsx';
+import { invoiceService } from '../../services/invoice/index.js';
 
 const TABS = ['All', 'Pending', 'Paid', 'Cancelled', 'Drafts'];
-
-const SEED_INVOICES = [
-  {
-    id: 'INV-157',
-    amount: 180.0,
-    status: 'Paid',
-    modes: [{ label: 'Cash', kind: 'cash', plus: '+1' }],
-    billNo: 'INV-157',
-    createdBy: 'by Chandan',
-    customer: 'SATYAM LIFESTYLE',
-    customerSub: '+919668223676',
-    dateMain: '21 Jul 2026',
-    dateSub: 'Yesterday, 6:00 PM',
-    sortIndex: 0,
-  },
-];
-
-const BOTTOM_CARDS = [
-  {
-    icon: 'upload-cloud',
-    title: 'Bulk Upload Invoices',
-    desc: 'Upload invoices at once from Excel or CSV files.',
-  },
-  {
-    icon: 'list-tree',
-    title: 'Tally Integration',
-    desc: 'Automatically sync your Swipe data with Tally.',
-  },
-  {
-    icon: 'file-text',
-    title: 'E-Way Bills',
-    desc: 'Generate and manage e-way bills effortlessly.',
-  },
-];
-
-function formatAmount(n) {
-  return `₹ ${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
 
 const VARIANT_TITLES = {
   invoices: 'Invoices',
@@ -51,42 +16,118 @@ const VARIANT_TITLES = {
   subscriptions: 'Subscriptions',
 };
 
+function formatAmount(n) {
+  if (n == null || isNaN(n)) return '₹ 0.00';
+  return `₹ ${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return { main: '—', sub: '' };
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return { main: dateStr, sub: '' };
+  const main = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const now = new Date();
+  const diff = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+  let sub = '';
+  if (diff === 0) sub = 'Today';
+  else if (diff === 1) sub = 'Yesterday';
+  else if (diff < 7) sub = `${diff} days ago`;
+  else sub = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  return { main, sub };
+}
+
+function getPaymentModes(payments) {
+  if (!payments || !payments.length) return [{ label: '—', kind: 'draft', plus: null }];
+  return payments.map((p) => ({
+    label: p.mode || 'Other',
+    kind: (p.mode || '').toLowerCase().replace(/\s+/g, '-'),
+    plus: p.amount ? `+${Number(p.amount).toLocaleString('en-IN')}` : null,
+  }));
+}
+
+function mapInvoice(raw) {
+  const payments = raw.payments || [];
+  const totalPaid = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const balanceDue = (Number(raw.grandTotal) || 0) - totalPaid;
+  let status = (raw.status || 'draft').charAt(0).toUpperCase() + (raw.status || 'draft').slice(1);
+  if (status === 'Draft') status = 'Draft';
+  else if (status === 'Pending') status = 'Pending';
+  else if (totalPaid >= (Number(raw.grandTotal) || 0) && Number(raw.grandTotal) > 0) status = 'Paid';
+  else if (status === 'Cancelled') status = 'Cancelled';
+  else status = 'Pending';
+
+  const cust = raw.customer || {};
+  const dateInfo = formatDate(raw.invoiceDate);
+  const billNo = [raw.prefix, raw.invoiceNumber].filter(Boolean).join('-') || raw.id || '—';
+
+  return {
+    id: raw.id || billNo,
+    amount: Number(raw.grandTotal) || 0,
+    status,
+    modes: getPaymentModes(payments),
+    billNo,
+    createdBy: cust.name ? `by ${cust.name.split(' ')[0]}` : '',
+    customer: cust.name || '—',
+    customerSub: cust.phone || cust.email || '',
+    dateMain: dateInfo.main,
+    dateSub: dateInfo.sub,
+    balanceDue,
+    invoiceDate: raw.invoiceDate,
+    grandTotal: raw.grandTotal,
+    raw,
+  };
+}
+
 export default function Invoices({ variant = 'invoices' }) {
   const navigate = useNavigate();
   const { hasPermission } = usePermission();
   const canCreate = hasPermission(PERMISSIONS.INVOICE_CREATE);
+  const canExport = hasPermission(PERMISSIONS.INVOICE_READ);
+  const canDelete = hasPermission(PERMISSIONS.INVOICE_DELETE);
 
+  const [allInvoices, setAllInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
+  const [docSettingsOpen, setDocSettingsOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
   const pageSize = 10;
+
+  useEffect(() => {
+    setLoading(true);
+    invoiceService.listInvoices()
+      .then((data) => {
+        setAllInvoices(Array.isArray(data) ? data.map(mapInvoice) : []);
+      })
+      .catch(() => setAllInvoices([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return SEED_INVOICES.filter((inv) => {
+    return allInvoices.filter((inv) => {
       const statusMatch =
-        activeTab === 'All'
-          ? true
-          : activeTab === 'Drafts'
-          ? inv.status === 'Draft'
-          : inv.status === activeTab;
-      const qMatch =
-        !q ||
-        inv.billNo.toLowerCase().includes(q) ||
-        inv.customer.toLowerCase().includes(q) ||
-        inv.id.toLowerCase().includes(q);
+        activeTab === 'All' ? true
+        : activeTab === 'Drafts' ? inv.status === 'Draft'
+        : inv.status === activeTab;
+      const qMatch = !q
+        || inv.billNo.toLowerCase().includes(q)
+        || inv.customer.toLowerCase().includes(q)
+        || (inv.id || '').toLowerCase().includes(q)
+        || (inv.raw?.reference || '').toLowerCase().includes(q);
       return statusMatch && qMatch;
     });
-  }, [activeTab, query]);
+  }, [allInvoices, activeTab, query]);
 
   const counts = useMemo(() => {
-    const c = { All: SEED_INVOICES.length, Pending: 0, Paid: 0, Cancelled: 0, Drafts: 0 };
-    SEED_INVOICES.forEach((inv) => {
+    const c = { All: allInvoices.length, Pending: 0, Paid: 0, Cancelled: 0, Drafts: 0 };
+    allInvoices.forEach((inv) => {
       const key = inv.status === 'Draft' ? 'Drafts' : inv.status;
       if (c[key] !== undefined) c[key] += 1;
     });
     return c;
-  }, []);
+  }, [allInvoices]);
 
   const totals = useMemo(() => {
     const total = filtered.reduce((s, i) => s + i.amount, 0);
@@ -103,23 +144,57 @@ export default function Invoices({ variant = 'invoices' }) {
   const goNext = () => setPage((p) => Math.min(totalPages, p + 1));
   const onCreateInvoice = () => navigate('/invoices/new');
 
+  const handleSelectAll = useCallback((e) => {
+    if (e.target.checked) setSelectedIds(pageRows.map((r) => r.id));
+    else setSelectedIds([]);
+  }, [pageRows]);
+
+  const handleSelectOne = useCallback((id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    setLoading(true);
+    invoiceService.listInvoices()
+      .then((data) => {
+        setAllInvoices(Array.isArray(data) ? data.map(mapInvoice) : []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleBulkDelete = useCallback(async () => {
+    if (!selectedIds.length) return;
+    const confirmed = window.confirm(`Delete ${selectedIds.length} invoice(s)?`);
+    if (!confirmed) return;
+    for (const id of selectedIds) {
+      try { await invoiceService.deleteInvoice(id); } catch {}
+    }
+    handleRefresh();
+    setSelectedIds([]);
+  }, [selectedIds, handleRefresh]);
+
+  const title = VARIANT_TITLES[variant] || 'Invoices';
+
   return (
     <div className="invoice-page">
       {/* Page header */}
       <div className="invoice-header">
         <h1 className="invoice-header__title">
-          {VARIANT_TITLES[variant] || 'Invoices'}
+          {title}
           <span className="invoice-header__play-badge" aria-hidden="true">
             <Icon name="play" size={11} fill />
           </span>
         </h1>
         <div className="invoice-header__actions">
-          <button type="button" className="invoice-btn invoice-btn--ghost">
+          <button type="button" className="invoice-btn invoice-btn--ghost" onClick={() => setDocSettingsOpen(true)}>
             <Icon name="gear" size={17} /> Document Settings
           </button>
           {canCreate && variant === 'invoices' && (
             <button type="button" className="invoice-btn invoice-btn--primary" onClick={onCreateInvoice}>
-              <Icon name="plus" size={17} /> Create Invoice
+              <Icon name="plus" size={17} /> Create {variant === 'invoices' ? 'Invoice' : title}
             </button>
           )}
         </div>
@@ -154,12 +229,55 @@ export default function Invoices({ variant = 'invoices' }) {
             aria-label="Search invoices"
           />
         </div>
-        <button type="button" className="invoice-btn invoice-btn--ghost invoice-btn--auto">
-          <Icon name="calendar" size={16} /> This Year <Icon name="chevronDown" size={14} />
-        </button>
-        <button type="button" className="invoice-btn invoice-btn--ghost invoice-btn--auto">
-          Actions <Icon name="chevronDown" size={14} />
-        </button>
+        <Dropdown
+          trigger={
+            <button type="button" className="invoice-btn invoice-btn--ghost invoice-btn--auto">
+              <Icon name="calendar" size={16} /> This Year <Icon name="chevronDown" size={14} />
+            </button>
+          }
+        >
+          {(close) => (
+            <div style={{ minWidth: 160 }}>
+              <DropdownItem onClick={() => close()}>This Year</DropdownItem>
+              <DropdownItem onClick={() => close()}>This Quarter</DropdownItem>
+              <DropdownItem onClick={() => close()}>This Month</DropdownItem>
+              <DropdownItem onClick={() => close()}>Custom Range</DropdownItem>
+            </div>
+          )}
+        </Dropdown>
+        <Dropdown
+          trigger={
+            <button type="button" className="invoice-btn invoice-btn--ghost invoice-btn--auto">
+              Actions <Icon name="chevronDown" size={14} />
+            </button>
+          }
+        >
+          {(close) => (
+            <div style={{ minWidth: 180 }}>
+              {canExport && (
+                <DropdownItem onClick={() => { close(); }}>
+                  <Icon name="download" size={14} /> Export CSV
+                </DropdownItem>
+              )}
+              {canExport && (
+                <DropdownItem onClick={() => { close(); }}>
+                  <Icon name="file-text" size={14} /> Export PDF
+                </DropdownItem>
+              )}
+              <DropdownItem onClick={() => { close(); handleRefresh(); }}>
+                <Icon name="refresh-cw" size={14} /> Refresh
+              </DropdownItem>
+              <DropdownItem onClick={() => { close(); window.print(); }}>
+                <Icon name="printer" size={14} /> Print
+              </DropdownItem>
+              {canDelete && selectedIds.length > 0 && (
+                <DropdownItem onClick={() => { close(); handleBulkDelete(); }}>
+                  <Icon name="trash" size={14} /> Delete ({selectedIds.length})
+                </DropdownItem>
+              )}
+            </div>
+          )}
+        </Dropdown>
         <button type="button" className="invoice-filter-btn" aria-label="Filters">
           <Icon name="sliders-horizontal" size={18} />
         </button>
@@ -167,99 +285,135 @@ export default function Invoices({ variant = 'invoices' }) {
 
       {/* Table */}
       <div className="invoice-table-wrap">
-        <table className="invoice-table">
-          <thead>
-            <tr>
-              <th>
-                <div className="invoice-th-flex">
-                  Amount
-                  <Icon name="chevrons-up-down" size={14} />
-                  <Icon name="filter" size={14} />
-                </div>
-              </th>
-              <th>
-                <div className="invoice-th-flex">
-                  Status
-                  <Icon name="filter" size={14} />
-                </div>
-              </th>
-              <th>
-                <div className="invoice-th-flex">
-                  Mode
-                  <Icon name="filter" size={14} />
-                </div>
-              </th>
-              <th>
-                <div className="invoice-th-flex">
-                  Bill #
-                  <Icon name="chevrons-up-down" size={14} />
-                  <Icon name="filter" size={14} />
-                </div>
-              </th>
-              <th>Customer</th>
-              <th>
-                <div className="invoice-th-flex">Date <Icon name="chevrons-up-down" size={14} /></div>
-                <div className="invoice-th-sub">Created time</div>
-              </th>
-              <th aria-label="Row actions" />
-            </tr>
-          </thead>
-          <tbody>
-            {pageRows.length === 0 && (
-              <tr className="invoice-table__empty">
-                <td colSpan={7}>
-                  <div className="invoice-empty">
-                    <Icon name="search" size={22} />
-                    <p>No invoices match your filters.</p>
+        {loading ? (
+          <div className="invoice-empty" style={{ padding: '60px 20px' }}>
+            <div className="spinner" />
+            <p>Loading {title.toLowerCase()}...</p>
+          </div>
+        ) : (
+          <table className="invoice-table">
+            <thead>
+              <tr>
+                <th style={{ width: 36 }}>
+                  <input type="checkbox" onChange={handleSelectAll} checked={selectedIds.length === pageRows.length && pageRows.length > 0} />
+                </th>
+                <th>
+                  <div className="invoice-th-flex">
+                    Amount
+                    <Icon name="chevrons-up-down" size={14} />
+                    <Icon name="filter" size={14} />
                   </div>
-                </td>
+                </th>
+                <th>
+                  <div className="invoice-th-flex">
+                    Status
+                    <Icon name="filter" size={14} />
+                  </div>
+                </th>
+                <th>
+                  <div className="invoice-th-flex">
+                    Mode
+                    <Icon name="filter" size={14} />
+                  </div>
+                </th>
+                <th>
+                  <div className="invoice-th-flex">
+                    Bill #
+                    <Icon name="chevrons-up-down" size={14} />
+                    <Icon name="filter" size={14} />
+                  </div>
+                </th>
+                <th>Customer</th>
+                <th>
+                  <div className="invoice-th-flex">Date <Icon name="chevrons-up-down" size={14} /></div>
+                  <div className="invoice-th-sub">Created time</div>
+                </th>
+                <th aria-label="Row actions" />
               </tr>
-            )}
-            {pageRows.map((inv) => (
-              <tr key={inv.id}>
-                <td className="invoice-amount">{formatAmount(inv.amount)}</td>
-                <td>
-                  <span className={`invoice-status invoice-status--${inv.status.toLowerCase()}`}>{inv.status}</span>
-                </td>
-                <td>
-                  <div className="invoice-mode">
-                    {inv.modes.map((m, i) => (
-                      <span key={i} className="invoice-mode-group">
-                        <span className={`invoice-status invoice-status--${m.kind}`}>{m.label}</span>
-                        {m.plus && <span className="invoice-plus">{m.plus}</span>}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-                <td>
-                  <div className="invoice-bill">{inv.billNo}</div>
-                  <div className="invoice-bill-sub">{inv.createdBy}</div>
-                </td>
-                <td>
-                  <div className="invoice-customer">{inv.customer}</div>
-                  <div className="invoice-customer-sub">{inv.customerSub}</div>
-                </td>
-                <td>
-                  <div className="invoice-date">{inv.dateMain}</div>
-                  <div className="invoice-date-sub">{inv.dateSub}</div>
-                </td>
-                <td>
-                  <div className="invoice-row-actions">
-                    <button type="button" className="invoice-action invoice-action--view">
-                      <Icon name="eye" size={14} /> View
-                    </button>
-                    <button type="button" className="invoice-action invoice-action--send">
-                      <Icon name="send" size={14} /> Send
-                    </button>
-                    <button type="button" className="invoice-more" aria-label="More actions">
-                      <Icon name="more-vertical" size={16} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {pageRows.length === 0 && (
+                <tr className="invoice-table__empty">
+                  <td colSpan={8}>
+                    <div className="invoice-empty">
+                      <Icon name="search" size={22} />
+                      <p>No {title.toLowerCase()} match your filters.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {pageRows.map((inv) => (
+                <tr key={inv.id}>
+                  <td style={{ width: 36 }}>
+                    <input type="checkbox" checked={selectedIds.includes(inv.id)} onChange={() => handleSelectOne(inv.id)} />
+                  </td>
+                  <td className="invoice-amount">{formatAmount(inv.amount)}</td>
+                  <td>
+                    <span className={`invoice-status invoice-status--${inv.status.toLowerCase()}`}>{inv.status}</span>
+                  </td>
+                  <td>
+                    <div className="invoice-mode">
+                      {inv.modes.map((m, i) => (
+                        <span key={i} className="invoice-mode-group">
+                          <span className={`invoice-status invoice-status--${m.kind}`}>{m.label}</span>
+                          {m.plus && <span className="invoice-plus">{m.plus}</span>}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td>
+                    <div className="invoice-bill">{inv.billNo}</div>
+                    <div className="invoice-bill-sub">{inv.createdBy}</div>
+                  </td>
+                  <td>
+                    <div className="invoice-customer">{inv.customer}</div>
+                    <div className="invoice-customer-sub">{inv.customerSub}</div>
+                  </td>
+                  <td>
+                    <div className="invoice-date">{inv.dateMain}</div>
+                    <div className="invoice-date-sub">{inv.dateSub}</div>
+                  </td>
+                  <td>
+                    <div className="invoice-row-actions">
+                      <button type="button" className="invoice-action invoice-action--view" title="View">
+                        <Icon name="eye" size={14} /> View
+                      </button>
+                      <button type="button" className="invoice-action invoice-action--send" title="Send">
+                        <Icon name="send" size={14} /> Send
+                      </button>
+                      <Dropdown
+                        trigger={
+                          <button type="button" className="invoice-more" aria-label="More actions">
+                            <Icon name="more-vertical" size={16} />
+                          </button>
+                        }
+                      >
+                        {(close) => (
+                          <div style={{ minWidth: 160 }}>
+                            <DropdownItem onClick={() => close()}>
+                              <Icon name="file-text" size={14} /> Download PDF
+                            </DropdownItem>
+                            <DropdownItem onClick={() => close()}>
+                              <Icon name="printer" size={14} /> Print
+                            </DropdownItem>
+                            <DropdownItem onClick={() => close()}>
+                              <Icon name="copy" size={14} /> Duplicate
+                            </DropdownItem>
+                            {canDelete && (
+                              <DropdownItem onClick={() => { close(); }}>
+                                <Icon name="trash" size={14} /> Delete
+                              </DropdownItem>
+                            )}
+                          </div>
+                        )}
+                      </Dropdown>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Summary + pagination */}
@@ -286,6 +440,13 @@ export default function Invoices({ variant = 'invoices' }) {
               <span className="invoice-pill__amt">{formatAmount(totals.pending)}</span>
             </span>
           </div>
+          <div className="invoice-pill invoice-pill--total">
+            <span className="invoice-pill__icon"><Icon name="users" size={17} /></span>
+            <span className="invoice-pill__text">
+              <span className="invoice-pill__label">Count</span>
+              <span className="invoice-pill__amt">{filtered.length}</span>
+            </span>
+          </div>
         </div>
         <div className="invoice-pagination">
           <span>{safePage} / {totalPages}</span>
@@ -310,19 +471,8 @@ export default function Invoices({ variant = 'invoices' }) {
         </div>
       </div>
 
-      {/* Bottom info cards */}
-      <div className="invoice-bottom-cards">
-        {BOTTOM_CARDS.map((card) => (
-          <div className="invoice-info-card" key={card.title}>
-            <div className="invoice-info-card__icon"><Icon name={card.icon} size={22} /></div>
-            <h3>{card.title}</h3>
-            <p>{card.desc}</p>
-            <button type="button" className="invoice-talk-btn">
-              Talk to Specialist <Icon name="arrow-right" size={15} />
-            </button>
-          </div>
-        ))}
-      </div>
+      {/* Document Settings Panel */}
+      <DocumentSettings open={docSettingsOpen} onClose={() => setDocSettingsOpen(false)} />
     </div>
   );
 }
