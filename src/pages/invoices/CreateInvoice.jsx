@@ -26,7 +26,7 @@ import {
   validateInvoice, isValid, validateCustomer, validateProduct, validateBank,
 } from '../../business/invoice/validation.js';
 import {
-  DEFAULT_CUSTOM_HEADERS, DEFAULT_DUE_DATE_OFFSET_DAYS, PAYMENT_MODE_OPTIONS,
+  DEFAULT_DUE_DATE_OFFSET_DAYS, PAYMENT_MODE_OPTIONS,
 } from '../../constants/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
 
