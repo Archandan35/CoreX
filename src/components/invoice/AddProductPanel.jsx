@@ -7,6 +7,7 @@ import Checkbox from '../ui/Checkbox.jsx';
 import Textarea from '../ui/Textarea.jsx';
 import FileUpload from '../ui/FileUpload.jsx';
 import { invoiceService } from '../../services/invoice/index.js';
+import { notificationManager } from '../../managers/index.js';
 import { TAX_RATE_OPTIONS } from '../../constants/index.js';
 
 const EMPTY_PRODUCT = {
@@ -143,15 +144,18 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
       delete payload.opening_value;
       delete payload.low_stock_alert;
       delete payload.reorder_qty;
+      delete payload.media;
+      delete payload.attachments;
       const product = await invoiceService.createProduct(payload);
       if (priceListRows.length) {
         await invoiceService.saveProductPriceLists(product.id, priceListRows.map(r => ({
           ...r, selling_price: parseFloat(r.selling_price) || 0,
         })));
       }
+      notificationManager.success('Product', `${product.name} added.`);
       onSubmit?.(product);
     } catch (e) {
-      setErrors({ submit: e.message || 'Failed to save product.' });
+      notificationManager.error('Product', e.message || 'Failed to save product.');
     } finally {
       setBusy(false);
     }
