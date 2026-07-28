@@ -4,7 +4,6 @@ import Button from '../ui/Button.jsx';
 import Select from '../ui/Select.jsx';
 import { Field, Input } from '../ui/Field.jsx';
 import Checkbox from '../ui/Checkbox.jsx';
-import Toggle from '../ui/Toggle.jsx';
 import Textarea from '../ui/Textarea.jsx';
 import FileUpload from '../ui/FileUpload.jsx';
 import { invoiceService } from '../../services/invoice/index.js';
@@ -284,7 +283,7 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
                     <div className="inv-toggle-row">
                       <span>Inventory Tracking</span>
                       <div className="inv-toggle-spacer">
-                        <Toggle checked={form.inventory_tracking} onChange={set('inventory_tracking')} label="Inventory Tracking" />
+                        <button className={`inv-switch${form.inventory_tracking ? ' inv-on' : ''}`} onClick={() => setForm(p => ({ ...p, inventory_tracking: !p.inventory_tracking }))} aria-label="Inventory Tracking" />
                       </div>
                     </div>
                     {form.inventory_tracking && (
@@ -296,43 +295,43 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
                     <div className="inv-toggle-row">
                       <span>Show in Online Store</span>
                       <div className="inv-toggle-spacer">
-                        <Toggle checked={form.show_online} onChange={set('show_online')} label="Show in Online Store" />
+                        <button className={`inv-switch${form.show_online ? ' inv-on' : ''}`} onClick={() => setForm(p => ({ ...p, show_online: !p.show_online }))} aria-label="Show in Online Store" />
                       </div>
                     </div>
                     <div className="inv-toggle-row">
                       <span>Not for Sale</span>
                       <div className="inv-toggle-spacer">
-                        <Toggle checked={form.not_for_sale} onChange={set('not_for_sale')} label="Not for Sale" />
+                        <button className={`inv-switch${form.not_for_sale ? ' inv-on' : ''}`} onClick={() => setForm(p => ({ ...p, not_for_sale: !p.not_for_sale }))} aria-label="Not for Sale" />
                       </div>
                     </div>
                     <div className="inv-toggle-row">
                       <span>Featured Item</span>
                       <div className="inv-toggle-spacer">
-                        <Toggle checked={form.featured} onChange={set('featured')} label="Featured Item" />
+                        <button className={`inv-switch${form.featured ? ' inv-on' : ''}`} onClick={() => setForm(p => ({ ...p, featured: !p.featured }))} aria-label="Featured Item" />
                       </div>
                     </div>
                     <div className="inv-toggle-row">
                       <span>Allow Negative Stock</span>
                       <div className="inv-toggle-spacer">
-                        <Toggle checked={form.allow_negative} onChange={set('allow_negative')} label="Allow Negative Stock" />
+                        <button className={`inv-switch${form.allow_negative ? ' inv-on' : ''}`} onClick={() => setForm(p => ({ ...p, allow_negative: !p.allow_negative }))} aria-label="Allow Negative Stock" />
                       </div>
                     </div>
                     <div className="inv-toggle-row">
                       <span>Track Serial Number</span>
                       <div className="inv-toggle-spacer">
-                        <Toggle checked={form.track_serial} onChange={set('track_serial')} label="Track Serial Number" />
+                        <button className={`inv-switch${form.track_serial ? ' inv-on' : ''}`} onClick={() => setForm(p => ({ ...p, track_serial: !p.track_serial }))} aria-label="Track Serial Number" />
                       </div>
                     </div>
                     <div className="inv-toggle-row">
                       <span>Track Batch Number</span>
                       <div className="inv-toggle-spacer">
-                        <Toggle checked={form.track_batch} onChange={set('track_batch')} label="Track Batch Number" />
+                        <button className={`inv-switch${form.track_batch ? ' inv-on' : ''}`} onClick={() => setForm(p => ({ ...p, track_batch: !p.track_batch }))} aria-label="Track Batch Number" />
                       </div>
                     </div>
                     <div className="inv-toggle-row">
                       <span>Expiry Date Tracking</span>
                       <div className="inv-toggle-spacer">
-                        <Toggle checked={form.track_expiry} onChange={set('track_expiry')} label="Expiry Date Tracking" />
+                        <button className={`inv-switch${form.track_expiry ? ' inv-on' : ''}`} onClick={() => setForm(p => ({ ...p, track_expiry: !p.track_expiry }))} aria-label="Expiry Date Tracking" />
                       </div>
                     </div>
                   </div>
