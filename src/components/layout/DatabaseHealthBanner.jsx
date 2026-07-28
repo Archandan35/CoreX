@@ -5,7 +5,7 @@ import { useApp } from '../../state/AppContext.jsx';
 
 export default function DatabaseHealthBanner() {
   const { hasFullAccess } = useAuth();
-  const { dbHealth, openSetupWizard } = useApp();
+  const { adminExists, dbHealth, openSetupWizard } = useApp();
   const [dismissed, setDismissed] = useState(false);
 
   // Dismissing only hides the banner visually — it never clears the
@@ -16,8 +16,11 @@ export default function DatabaseHealthBanner() {
   // Visibility is gated exclusively on user.full_access === true. Role
   // names (Admin, Owner, System Administrator, etc.) must never be used to
   // decide whether this banner is shown.
+  // Suppress when no admin exists yet — AdminSetupBanner takes precedence
+  // in that case to avoid showing two banners at once.
   if (!hasFullAccess) return null;
   if (!dbHealth || dbHealth.compatible) return null;
+  if (adminExists === false) return null;
   if (dismissed) return null;
 
   const count = dbHealth.missingCount || 0;

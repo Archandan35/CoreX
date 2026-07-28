@@ -13,7 +13,7 @@ export const NAV_GROUPS = [
     label: 'Sales',
     icon: 'shopping-bag',
     children: [
-      { to: '/sales', label: 'Invoices', icon: 'receipt', end: true, permission: PERMISSIONS.INVOICE_READ },
+      { to: '/sales/invoices', label: 'Invoices', icon: 'receipt', end: true, permission: PERMISSIONS.INVOICE_READ },
       { to: '/sales/credit-notes', label: 'Credit Notes', icon: 'file-text', permission: PERMISSIONS.INVOICE_READ },
       { to: '/sales/e-invoices', label: 'E-Invoices', icon: 'file-check', permission: PERMISSIONS.INVOICE_READ },
       { to: '/sales/subscriptions', label: 'Subscriptions', icon: 'refresh-cw', permission: PERMISSIONS.INVOICE_READ },
