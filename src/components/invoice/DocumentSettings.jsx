@@ -32,8 +32,16 @@ export const DEFAULT_DOCUMENT_SETTINGS = {
 
   hideHsnSac: false,
   showCompanyDetails: true,
+  showBrandName: false,
   showHsnSacSummary: false,
   hsnSacSummaryOn: '+10...',
+
+  pdfFooter: '',
+  thermalFooter: '',
+  headerImage: '',
+  footerImage: '',
+  bannerImageTop: '',
+  bannerImageBottom: '',
 
   pdfLanguage: 'English (Default)',
   pdfFontStyle: 'Stylish',
@@ -362,6 +370,7 @@ export default function DocumentSettings({ open, onClose }) {
                     <div className="ds-grid-2">
                       <ToggleItem label="Hide HSN/SAC" desc="Hide HSN/SAC on PDFs." checked={settings.hideHsnSac} onChange={(v) => update('hideHsnSac', v)} />
                       <ToggleItem label="Show Company Details" desc="Off hides your company block on PDFs (for printed letterhead)." checked={settings.showCompanyDetails} onChange={(v) => update('showCompanyDetails', v)} />
+                      <ToggleItem label="Show Brand Name" desc="Brand Name will be shown below the Company Name in PDFs if this is enabled." checked={settings.showBrandName} onChange={(v) => update('showBrandName', v)} />
                       <ToggleItem label="Show HSN/SAC Summary" desc="HSN/SAC summary on PDFs." checked={settings.showHsnSacSummary} onChange={(v) => update('showHsnSacSummary', v)} />
                       <SelectField label="Show HSN/SAC Summary on" desc="Choose which document types display the HSN/SAC summary table in PDFs." options={['+10...', 'All', 'Invoices only', 'Credit Notes only']} value={settings.hsnSacSummaryOn} onChange={(v) => update('hsnSacSummaryOn', v)} />
                     </div>
@@ -466,6 +475,65 @@ export default function DocumentSettings({ open, onClose }) {
                         <div className="ds-field-label">Social Links</div>
                         <div className="ds-setting-desc">Website and social media URLs for PDF footer.</div>
                         <input type="text" className="ds-input" placeholder="https://example.com" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="ds-card">
+                    <div className="ds-card-title">Footer Text</div>
+                    <div className="ds-field-group" style={{ marginBottom: 12 }}>
+                      <div className="ds-field-label">PDF footer</div>
+                      <div className="ds-setting-desc">Up to 255 characters on PDFs.</div>
+                      <input type="text" className="ds-input" value={settings.pdfFooter} onChange={(e) => update('pdfFooter', e.target.value)} placeholder="Swipe | Simple Invoicing, Billing and Payments | Visit getswipe.in" maxLength={255} />
+                    </div>
+                    <div className="ds-field-group">
+                      <div className="ds-field-label">Thermal Print Footer</div>
+                      <div className="ds-setting-desc">Up to 255 characters on PDFs.</div>
+                      <input type="text" className="ds-input" value={settings.thermalFooter} onChange={(e) => update('thermalFooter', e.target.value)} placeholder="Powered by Swipe POS, https://getSwipe.in" maxLength={255} />
+                    </div>
+                  </div>
+                  <div className="ds-card">
+                    <div className="ds-card-title">Header &amp; Footer Images</div>
+                    <div className="ds-grid-2">
+                      <div className="ds-field-group">
+                        <div className="ds-field-label">Header</div>
+                        <div className="ds-setting-desc">PNG or JPEG, 1000x125 wide strip. First PDF page only.</div>
+                        <div className="ds-file-upload">
+                          <button type="button" className="ds-btn ds-btn-secondary" onClick={() => notificationManager.info('Upload', 'Header image upload will be available in a future update.')}>
+                            <Icon name="upload" size={14} /> Upload
+                          </button>
+                        </div>
+                      </div>
+                      <div className="ds-field-group">
+                        <div className="ds-field-label">Footer</div>
+                        <div className="ds-setting-desc">PNG or JPEG, 1000x125 wide strip.</div>
+                        <div className="ds-file-upload">
+                          <button type="button" className="ds-btn ds-btn-secondary" onClick={() => notificationManager.info('Upload', 'Footer image upload will be available in a future update.')}>
+                            <Icon name="upload" size={14} /> Upload
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="ds-card">
+                    <div className="ds-card-title">Banner Images</div>
+                    <div className="ds-grid-2">
+                      <div className="ds-field-group">
+                        <div className="ds-field-label">Banner Image — Top</div>
+                        <div className="ds-setting-desc">PNG or JPEG, 1000x125. Above line items on PDFs.</div>
+                        <div className="ds-file-upload">
+                          <button type="button" className="ds-btn ds-btn-secondary" onClick={() => notificationManager.info('Upload', 'Banner image upload will be available in a future update.')}>
+                            <Icon name="upload" size={14} /> Upload
+                          </button>
+                        </div>
+                      </div>
+                      <div className="ds-field-group">
+                        <div className="ds-field-label">Banner Image — Bottom</div>
+                        <div className="ds-setting-desc">PNG or JPEG, 1000x125. Below line items on PDFs.</div>
+                        <div className="ds-file-upload">
+                          <button type="button" className="ds-btn ds-btn-secondary" onClick={() => notificationManager.info('Upload', 'Banner image upload will be available in a future update.')}>
+                            <Icon name="upload" size={14} /> Upload
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
