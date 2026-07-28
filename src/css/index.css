@@ -5962,9 +5962,15 @@ select.form-input { cursor: pointer; appearance: auto; }
 .ps-doc-type-tabs {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  white-space: nowrap;
   margin-bottom: 16px;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
 }
+.ps-doc-type-tabs::-webkit-scrollbar { height: 4px; }
+.ps-doc-type-tabs::-webkit-scrollbar-thumb { background: var(--invoice-border); border-radius: 4px; }
 .ps-doc-type-tab {
   padding: 5px 12px;
   font: inherit;

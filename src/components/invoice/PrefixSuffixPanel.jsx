@@ -1,9 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Icon from '../ui/Icon.jsx';
-import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import { Field, Input } from '../ui/Field.jsx';
-import Checkbox from '../ui/Checkbox.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import Pagination from '../ui/Pagination.jsx';
 import PermissionGate from '../ui/PermissionGate.jsx';
@@ -521,78 +519,85 @@ export default function PrefixSuffixPanel({ open, onClose }) {
         </div>
       </div>
 
-      {/* Add / Edit Modal */}
-      <Modal
-        open={editOpen}
-        onClose={closeEdit}
-        title={editItem ? `Edit ${isPrefix ? 'Prefix' : 'Suffix'}` : `Add ${isPrefix ? 'Prefix' : 'Suffix'}`}
-        size="sm"
-        footer={
-          <>
-            <Button variant="secondary" onClick={closeEdit}>Cancel</Button>
-            <Button onClick={saveEdit} loading={editSaving} icon="check">
-              {editItem ? 'Save Changes' : 'Add'}
-            </Button>
-          </>
-        }
-      >
-        <form className="inv-modal-form" onSubmit={(e) => { e.preventDefault(); saveEdit(); }}>
-          <div style={{ marginBottom: 12 }}>
-            <strong style={{ fontSize: 13, color: 'var(--inv-text-sub)' }}>Document Type:</strong>{' '}
-            <span style={{ fontSize: 13, fontWeight: 600 }}>{docType}</span>
+      {/* Add / Edit Nested Drawer */}
+      {editOpen && (
+        <>
+          <div className="ds-overlay ds-overlay--nested" onClick={closeEdit}>
+            <div className="ds-panel ds-panel--nested" onClick={(e) => e.stopPropagation()}>
+              <div className="ds-header">
+                <div className="ds-header-left">
+                  <button className="ds-close-btn" onClick={closeEdit}><Icon name="x" size={18} /></button>
+                  <h2>{editItem ? `Edit ${isPrefix ? 'Prefix' : 'Suffix'}` : `Add ${isPrefix ? 'Prefix' : 'Suffix'}`}</h2>
+                </div>
+              </div>
+              <div className="ds-body">
+                <form className="inv-modal-form" onSubmit={(e) => { e.preventDefault(); saveEdit(); }}>
+                  <div style={{ marginBottom: 12 }}>
+                    <strong style={{ fontSize: 13, color: 'var(--inv-text-sub)' }}>Document Type:</strong>{' '}
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{docType}</span>
+                  </div>
+
+                  <Field label={isPrefix ? 'Prefix Value' : 'Suffix Value'} required>
+                    <Input
+                      value={editForm.value}
+                      onChange={(e) => setEditForm((p) => ({ ...p, value: e.target.value }))}
+                      placeholder={isPrefix ? 'e.g. INV-' : 'e.g. -A'}
+                      aria-invalid={!!editErrors.value}
+                    />
+                    {editErrors.value && <span className="inv-field-error">{editErrors.value}</span>}
+                  </Field>
+
+                  <Field label="Description">
+                    <Input
+                      value={editForm.description}
+                      onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
+                      placeholder="Optional description"
+                    />
+                  </Field>
+
+                  <Field label="Sequence Order">
+                    <Input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={editForm.sequenceOrder}
+                      onChange={(e) => setEditForm((p) => ({ ...p, sequenceOrder: e.target.value === '' ? '' : Number(e.target.value) }))}
+                      placeholder="1"
+                      aria-invalid={!!editErrors.sequenceOrder}
+                    />
+                    {editErrors.sequenceOrder && <span className="inv-field-error">{editErrors.sequenceOrder}</span>}
+                  </Field>
+
+                  <div style={{ display: 'flex', gap: 20, marginTop: 12 }}>
+                    <label className="ps-toggle-label">
+                      <input type="checkbox" checked={editForm.isActive} onChange={(v) => setEditForm((p) => ({ ...p, isActive: v }))} />
+                      <span className={`ps-toggle-slider${editForm.isActive ? ' on' : ''}`} />
+                    </label>
+                    <span style={{ fontSize: 13 }}>Active</span>
+                    <label className="ps-toggle-label">
+                      <input type="checkbox" checked={editForm.isDefault} onChange={(v) => setEditForm((p) => ({ ...p, isDefault: v }))} />
+                      <span className={`ps-toggle-slider${editForm.isDefault ? ' on' : ''}`} />
+                    </label>
+                    <span style={{ fontSize: 13 }}>Default</span>
+                  </div>
+
+                  {/* Live Preview */}
+                  <div className="ps-preview" style={{ marginTop: 16 }}>
+                    <div className="ps-preview-label">Live Preview</div>
+                    {formatPreview(editForm.value)}
+                  </div>
+                </form>
+              </div>
+              <div className="ds-footer">
+                <button className="ds-btn ds-btn-primary" onClick={saveEdit} disabled={editSaving}>
+                  <Icon name="check" size={14} /> {editSaving ? 'Saving...' : (editItem ? 'Save Changes' : 'Add')}
+                </button>
+                <button className="ds-btn ds-btn-ghost" onClick={closeEdit}>Cancel</button>
+              </div>
+            </div>
           </div>
-
-          <Field label={isPrefix ? 'Prefix Value' : 'Suffix Value'} required>
-            <Input
-              value={editForm.value}
-              onChange={(e) => setEditForm((p) => ({ ...p, value: e.target.value }))}
-              placeholder={isPrefix ? 'e.g. INV-' : 'e.g. -A'}
-              aria-invalid={!!editErrors.value}
-            />
-            {editErrors.value && <span className="inv-field-error">{editErrors.value}</span>}
-          </Field>
-
-          <Field label="Description">
-            <Input
-              value={editForm.description}
-              onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
-              placeholder="Optional description"
-            />
-          </Field>
-
-          <Field label="Sequence Order">
-            <Input
-              type="number"
-              min="1"
-              step="1"
-              value={editForm.sequenceOrder}
-              onChange={(e) => setEditForm((p) => ({ ...p, sequenceOrder: e.target.value === '' ? '' : Number(e.target.value) }))}
-              placeholder="1"
-              aria-invalid={!!editErrors.sequenceOrder}
-            />
-            {editErrors.sequenceOrder && <span className="inv-field-error">{editErrors.sequenceOrder}</span>}
-          </Field>
-
-          <div style={{ display: 'flex', gap: 20, marginTop: 12 }}>
-            <Checkbox
-              checked={editForm.isActive}
-              onChange={(v) => setEditForm((p) => ({ ...p, isActive: v }))}
-              label="Active"
-            />
-            <Checkbox
-              checked={editForm.isDefault}
-              onChange={(v) => setEditForm((p) => ({ ...p, isDefault: v }))}
-              label="Default"
-            />
-          </div>
-
-          {/* Live Preview */}
-          <div className="ps-preview" style={{ marginTop: 16 }}>
-            <div className="ps-preview-label">Live Preview</div>
-            {formatPreview(editForm.value)}
-          </div>
-        </form>
-      </Modal>
+        </>
+      )}
 
       {/* Delete Confirmation */}
       <ConfirmDialog
