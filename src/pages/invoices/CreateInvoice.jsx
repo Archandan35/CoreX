@@ -13,7 +13,10 @@ import CustomerModal from '../../components/invoice/CustomerModal.jsx';
 import AddCustomerPanel from '../../components/invoice/AddCustomerPanel.jsx';
 import AddProductPanel from '../../components/invoice/AddProductPanel.jsx';
 import DocumentSettings from '../../components/invoice/DocumentSettings.jsx';
+import InvoiceTypeSelector from '../../components/invoice/InvoiceTypeSelector.jsx';
+import CustomHeaderPanel from '../../components/invoice/CustomHeaderPanel.jsx';
 import Modal from '../../components/ui/Modal.jsx';
+import Dropdown from '../../components/ui/Dropdown.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
 
@@ -27,6 +30,7 @@ import {
 } from '../../business/invoice/validation.js';
 import {
   DEFAULT_DUE_DATE_OFFSET_DAYS, PAYMENT_MODE_OPTIONS,
+  INVOICE_TABLE_COLUMNS, COLUMN_STORAGE_KEY,
 } from '../../constants/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
 
@@ -57,8 +61,10 @@ export default function CreateInvoice() {
   const [reference, setReference] = useState('');
 
   // --- Headers ---
+  const [docType, setDocType] = useState('');
   const [customHeaderValues, setCustomHeaderValues] = useState({});
   const [docSettingsOpen, setDocSettingsOpen] = useState(false);
+  const [customHeaderSettingsOpen, setCustomHeaderSettingsOpen] = useState(false);
 
   // --- Products ---
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -67,6 +73,31 @@ export default function CreateInvoice() {
   const [items, setItems] = useState([]);
   const [showDescription, setShowDescription] = useState(true);
   const [aiBusy, setAiBusy] = useState(false);
+
+  const defaultColumnKeys = INVOICE_TABLE_COLUMNS.filter((c) => c.always || c.defaultVisible).map((c) => c.key);
+  const [visibleColumns, setVisibleColumnsState] = useState(() => {
+    try {
+      const saved = localStorage.getItem(COLUMN_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : defaultColumnKeys;
+    } catch {
+      return defaultColumnKeys;
+    }
+  });
+
+  const setVisibleColumns = useCallback((keys) => {
+    setVisibleColumnsState(keys);
+    localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(keys));
+  }, []);
+
+  const toggleColumn = useCallback((key) => {
+    const col = INVOICE_TABLE_COLUMNS.find((c) => c.key === key);
+    if (col?.always) return;
+    if (visibleColumns.includes(key)) {
+      setVisibleColumns(visibleColumns.filter((k) => k !== key));
+    } else {
+      setVisibleColumns([...visibleColumns, key]);
+    }
+  }, [visibleColumns, setVisibleColumns]);
 
   // --- Discount ---
   const [extraDiscountType, setExtraDiscountType] = useState('percent');
@@ -316,8 +347,9 @@ export default function CreateInvoice() {
     enableTds, enableTcs, roundOff,
     bankId: selectedBank?.id, payments,
     signatureId: selectedSignature?.id, status,
+    customFieldValues: customHeaderValues,
     ...computed,
-  }), [prefix, invoiceNumber, invoiceDate, dueDate, reference, selectedCustomer, items, extraDiscountType, extraDiscountValue, additionalCharges, notes, terms, reverseCharge, eWaybill, eInvoice, enableTds, enableTcs, roundOff, selectedBank, payments, selectedSignature, computed]);
+  }), [prefix, invoiceNumber, invoiceDate, dueDate, reference, selectedCustomer, items, extraDiscountType, extraDiscountValue, additionalCharges, notes, terms, reverseCharge, eWaybill, eInvoice, enableTds, enableTcs, roundOff, selectedBank, payments, selectedSignature, customHeaderValues, computed]);
 
   const validate = useCallback((strict) => {
     const errs = validateInvoice(buildPayload(strict ? 'pending' : 'draft'), { strict });
@@ -357,14 +389,9 @@ export default function CreateInvoice() {
       <div className="inv-subbar">
         <div className="inv-subbar-left">
           <span className="inv-label">Type</span>
-          <div className="inv-type-select">
-            Regular <Icon name="chevron-down" size={14} />
-          </div>
+          <InvoiceTypeSelector value={docType} onChange={setDocType} />
         </div>
         <div className="inv-subbar-right">
-          <button className="inv-link-action" onClick={() => setHeaderSettingsOpen(true)}>
-            <Icon name="info" size={14} /> Custom Headers
-          </button>
           <button className="inv-link-action" onClick={() => setDocSettingsOpen(true)}>
             <Icon name="gear" size={14} /> Settings
           </button>
@@ -386,7 +413,9 @@ export default function CreateInvoice() {
       <DynamicCustomHeaders
         values={customHeaderValues}
         onChange={(key, value) => setCustomHeaderValues((prev) => ({ ...prev, [key]: value }))}
-        docType="invoices"
+        docType={docType}
+        chipMode
+        onOpenSettings={() => setCustomHeaderSettingsOpen(true)}
       />
 
       {/* Products & Services */}
@@ -403,11 +432,35 @@ export default function CreateInvoice() {
           disabledAdd={!productQuery.trim()}
           onAddNewProduct={() => setAddProductPanelOpen(true)}
         />
+        <div style={{ position: 'relative', float: 'right', margin: '8px 0' }}>
+          <Dropdown
+            trigger={
+              <button className="inv-icon-btn" aria-label="Column settings">
+                <Icon name="sliders-horizontal" size={14} />
+              </button>
+            }
+          >
+            <div style={{ padding: '8px 12px', minWidth: 200 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--inv-text-primary)' }}>Column Visibility</div>
+              {INVOICE_TABLE_COLUMNS.filter((c) => !c.always).map((col) => (
+                <label key={col.key} className="inv-checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={visibleColumns.includes(col.key)}
+                    onChange={() => toggleColumn(col.key)}
+                  />
+                  <span style={{ fontSize: 13 }}>{col.label}</span>
+                </label>
+              ))}
+            </div>
+          </Dropdown>
+        </div>
 
         <InvoiceTable
           items={items} onChangeItem={onChangeItem}
           onRemoveItem={onRemoveItem} showDescription={showDescription}
           onAddNewProduct={addNewProductLine}
+          visibleColumns={INVOICE_TABLE_COLUMNS.filter((c) => visibleColumns.includes(c.key))}
         />
 
         <InvoiceDiscount
@@ -530,6 +583,8 @@ export default function CreateInvoice() {
       <AddProductPanel open={addProductPanelOpen} onClose={closeAddProductPanel} onSubmit={handleAddProduct} />
 
       <DocumentSettings open={docSettingsOpen} onClose={() => setDocSettingsOpen(false)} />
+
+      <CustomHeaderPanel open={customHeaderSettingsOpen} onClose={() => setCustomHeaderSettingsOpen(false)} />
 
       <ConfirmDialog
         open={showConfirm}

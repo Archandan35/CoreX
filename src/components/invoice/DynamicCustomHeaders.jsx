@@ -1,8 +1,12 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { invoiceService } from '../../services/invoice/index.js';
 import { Field, Input } from '../ui/Field.jsx';
 import Select from '../ui/Select.jsx';
 import Checkbox from '../ui/Checkbox.jsx';
+import Icon from '../ui/Icon.jsx';
+import Button from '../ui/Button.jsx';
+import PermissionGate from '../ui/PermissionGate.jsx';
+import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 
 const INPUT_TYPE_RENDERERS = {
   text: ({ value, onChange, placeholder, readOnly }) => <Input value={value ?? ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} readOnly={readOnly} />,
@@ -27,62 +31,156 @@ const INPUT_TYPE_RENDERERS = {
   ),
 };
 
-// Dropdown, multi-select, and radio are rendered in the main component because
-// they need the `options` field parsed from the header config.
-
-export default function DynamicCustomHeaders({ values, onChange, docType }) {
+export default function DynamicCustomHeaders({ values, onChange, docType, chipMode, onOpenSettings, expandedKeys: controlledExpanded, onExpandedChange }) {
   const [headers, setHeaders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [internalExpanded, setInternalExpanded] = useState(new Set());
+  const seededExpanded = useRef(false);
+
+  const expanded = controlledExpanded || internalExpanded;
+  const setExpanded = onExpandedChange || setInternalExpanded;
 
   useEffect(() => {
     setLoading(true);
-    invoiceService.listCustomHeaders({ active: 'true', pageSize: '200', sortField: 'displayOrder', sortDir: 'asc' })
+    seededExpanded.current = false;
+    const params = { active: 'true', pageSize: '200', sortField: 'displayOrder', sortDir: 'asc' };
+    if (docType) params.docType = docType;
+    invoiceService.listCustomHeaders(params)
       .then((data) => {
         const all = data.items || [];
-        // Optionally filter by docType match if docTypes field is populated
         setHeaders(all);
       })
       .catch(() => setHeaders([]))
       .finally(() => setLoading(false));
   }, [docType]);
 
-  // Group headers by column position
-  const columns = [1, 2, 3, 4].map((colNum) => ({
-    colNum,
-    headers: headers.filter((h) => {
-      const cp = Number(h.columnPosition || h.column || 1);
-      return cp === colNum && (h.visible !== false);
-    }),
-  })).filter((col) => col.headers.length > 0);
+  // Seed expanded set from existing values once when headers load (edit mode)
+  useEffect(() => {
+    if (!chipMode || loading || seededExpanded.current) return;
+    if (!values || typeof values !== 'object') return;
+    const savedKeys = Object.keys(values).filter((k) => values[k] !== '' && values[k] != null);
+    if (savedKeys.length === 0) return;
+    seededExpanded.current = true;
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      savedKeys.forEach((k) => next.add(k));
+      return next;
+    });
+  }, [chipMode, loading, values, setExpanded]);
 
   const handleChange = useCallback((header, val) => {
     onChange(header.internalKey, val);
   }, [onChange]);
 
+  const toggleHeader = useCallback((header) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(header.internalKey)) next.delete(header.internalKey);
+      else next.add(header.internalKey);
+      return next;
+    });
+  }, [setExpanded]);
+
+  // Filter headers: visible, active, and matching docType
+  const visibleHeaders = headers.filter((h) => {
+    if (h.visible === false) return false;
+    if (h.active === false) return false;
+    if (docType && h.docTypes && h.docTypes.length > 0 && !h.docTypes.includes(docType)) return false;
+    return true;
+  });
+
   if (loading) return null;
-  if (headers.length === 0) return null;
+
+  if (visibleHeaders.length === 0) {
+    if (chipMode) {
+      return (
+        <section className="inv-card">
+          <div className="inv-custom-headers">
+            <h3>Custom Headers</h3>
+            <div className="inv-ch-empty">
+              <p>No custom headers have been configured.</p>
+              <p className="inv-ch-empty-sub">Create custom headers from: Document Settings → Custom Headers.</p>
+              <PermissionGate permission={PERMISSIONS.SETTINGS_UPDATE}>
+                <Button variant="secondary" size="small" icon="gear" onClick={onOpenSettings}>Configure Custom Headers</Button>
+              </PermissionGate>
+            </div>
+          </div>
+        </section>
+      );
+    }
+    return null;
+  }
+
+  // Split headers into expanded and collapsed
+  const expandedList = visibleHeaders.filter((h) => expanded.has(h.internalKey));
+  const collapsedList = visibleHeaders.filter((h) => !expanded.has(h.internalKey));
+
+  // Group headers by column position
+  const groupByColumn = (headers) => [1, 2, 3, 4].map((colNum) => ({
+    colNum,
+    headers: headers.filter((h) => {
+      const cp = Number(h.columnPosition || h.column || 1);
+      return cp === colNum;
+    }),
+  })).filter((col) => col.headers.length > 0);
+
+  // In non-chip mode, show ALL visible headers
+  const allColumns = groupByColumn(visibleHeaders);
+  // In chip mode, show only expanded headers
+  const expandedColumns = groupByColumn(expandedList);
+
+  const gridColumns = chipMode ? expandedColumns : allColumns;
 
   return (
     <section className="inv-card">
-      <div className="inv-dynamic-headers">
-        <h3>Custom Fields</h3>
-        <div className="inv-dynamic-header-grid">
-          {columns.map((col) => (
-            <div key={col.colNum} className="inv-dynamic-header-col">
-              {col.headers.map((header) => (
-                <div className="inv-dynamic-header-field" key={header.id || header.internalKey}>
-                  <label className="inv-dynamic-header-label">
-                    {header.displayName || header.internalKey}
-                    {header.required && <span className="inv-required-dot" style={{ color: 'var(--inv-red-dot)', marginLeft: 2 }}>*</span>}
-                  </label>
-                  <div className="inv-dynamic-header-input">
-                    {renderField(header, values[header.internalKey] ?? header.defaultValue ?? '', (val) => handleChange(header, val))}
+      <div className="inv-custom-headers">
+        <h3>Custom Headers</h3>
+
+        {/* Header fields in column grid */}
+        {gridColumns.length > 0 && (
+          <div className="inv-ch-grid inv-ch-grid--cols">
+            {gridColumns.map((col) => (
+              <div key={col.colNum} className="inv-ch-col">
+                {col.headers.map((header) => (
+                  <div className="inv-ch-field" key={header.id || header.internalKey}>
+                    <div className="inv-ch-field-head">
+                      <label className="inv-ch-field-label">
+                        {header.displayName || header.internalKey}
+                        {header.required && <span className="inv-required-dot">*</span>}
+                      </label>
+                      {chipMode && (
+                        <button type="button" className="inv-ch-remove-btn" onClick={() => toggleHeader(header)} aria-label={`Remove ${header.displayName || header.internalKey}`}>
+                          <Icon name="x" size={12} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="inv-ch-field-input">
+                      {renderField(header, values[header.internalKey] ?? header.defaultValue ?? '', (val) => handleChange(header, val))}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Collapsed header chips */}
+        {chipMode && collapsedList.length > 0 && (
+          <div className="inv-chip-row" style={{ marginTop: gridColumns.length > 0 ? 12 : 0 }}>
+            {collapsedList.map((header) => (
+              <button
+                type="button"
+                className="inv-chip"
+                key={header.id || header.internalKey}
+                onClick={() => toggleHeader(header)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleHeader(header); } }}
+                aria-label={`Add ${header.displayName || header.internalKey}`}
+              >
+                <Icon name="plus" size={12} /> {header.displayName || header.internalKey}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -95,14 +193,12 @@ function renderField(header, value, onChange) {
   const label = header.displayName || header.internalKey;
   const options = header.options ? header.options.split(',').map((s) => s.trim()).filter(Boolean) : [];
 
-  // Standard renderers
   if (INPUT_TYPE_RENDERERS[type]) {
     if (type === 'checkbox') return INPUT_TYPE_RENDERERS.checkbox({ value, onChange, label });
     if (type === 'toggle') return INPUT_TYPE_RENDERERS.toggle({ value, onChange, label });
     return INPUT_TYPE_RENDERERS[type]({ value, onChange, placeholder, readOnly, label });
   }
 
-  // Dropdown
   if (type === 'dropdown') {
     return (
       <select className="form-input" value={value ?? ''} onChange={(e) => onChange(e.target.value)} disabled={readOnly}
@@ -113,7 +209,6 @@ function renderField(header, value, onChange) {
     );
   }
 
-  // Multi select
   if (type === 'multi_select') {
     const selected = Array.isArray(value) ? value : value ? value.split(',').map((s) => s.trim()).filter(Boolean) : [];
     return (
@@ -134,7 +229,6 @@ function renderField(header, value, onChange) {
     );
   }
 
-  // Radio
   if (type === 'radio') {
     return (
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -151,6 +245,5 @@ function renderField(header, value, onChange) {
     );
   }
 
-  // Fallback to text
   return <Input value={value ?? ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} readOnly={readOnly} />;
 }

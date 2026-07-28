@@ -166,34 +166,34 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
     <div className="ds-overlay" onClick={onClose}>
       <div className="ds-panel ds-panel--wide" onClick={e => e.stopPropagation()}>
         <div className="ds-header">
-          <button className="ds-header__close" onClick={onClose} aria-label="Close">
-            <Icon name="x" size={20} />
-          </button>
-          <span className="ds-header__title">Add Item</span>
-          <button className="ds-header__action" onClick={handleSubmit} disabled={busy}>
-            <Icon name="plus" size={16} /> Add Item
-          </button>
-        </div>
-
-        <div className="ap-tabs">
-          <button className={`ap-tab${tab === 'details' ? ' active' : ''}`} onClick={() => setTab('details')}>Details</button>
-          <button className={`ap-tab${tab === 'prices' ? ' active' : ''}`} onClick={() => setTab('prices')}>Price Lists</button>
-          <button className={`ap-tab${tab === 'attachments' ? ' active' : ''}`} onClick={() => setTab('attachments')}>Attachments</button>
+          <div className="ds-header-left">
+            <button className="ds-close-btn" onClick={onClose}><Icon name="x" size={18} /></button>
+            <h2>Add Item</h2>
+          </div>
+          <Button onClick={handleSubmit} loading={busy} icon="package">Add Item</Button>
         </div>
 
         <div className="ds-body">
+          <div className="ps-primary-tabs">
+            <button className={`ps-primary-tab${tab === 'details' ? ' active' : ''}`} onClick={() => setTab('details')}>Details</button>
+            <button className={`ps-primary-tab${tab === 'prices' ? ' active' : ''}`} onClick={() => setTab('prices')}>Price Lists</button>
+            <button className={`ps-primary-tab${tab === 'attachments' ? ' active' : ''}`} onClick={() => setTab('attachments')}>Attachments</button>
+          </div>
+
           {tab === 'details' && (
-            <div className="ap-body">
-              <div className="ap-section">
+            <>
+              <div className="ds-section">
                 <div className="ap-segmented">
                   <button className={`ap-seg-btn${!form.is_service ? ' active' : ''}`} onClick={() => setForm(p => ({ ...p, is_service: false }))}>Product</button>
                   <button className={`ap-seg-btn${form.is_service ? ' active' : ''}`} onClick={() => setForm(p => ({ ...p, is_service: true }))}>Service</button>
                 </div>
               </div>
 
-              <div className="ap-section">
-                <h3 className="ap-section-title">Basic Details</h3>
-                <div className="ap-grid">
+              <div className="ds-section">
+                <div className="ds-section-header">
+                  <h3 className="ds-section-title">Basic Details</h3>
+                </div>
+                <div className="ds-grid-2">
                   <Field label="Product Name" required>
                     <Input className={inputClass('name')} value={form.name} onChange={set('name')} placeholder="e.g. Web Hosting (1 yr)" />
                     {errors.name && <span className="inv-field-error">{errors.name}</span>}
@@ -213,9 +213,11 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
                 </div>
               </div>
 
-              <div className="ap-section">
-                <h3 className="ap-section-title">Additional Information</h3>
-                <div className="ap-grid ap-grid-3">
+              <div className="ds-section">
+                <div className="ds-section-header">
+                  <h3 className="ds-section-title">Additional Information</h3>
+                </div>
+                <div className="ds-grid-2">
                   <Field label="HSN / SAC"><Input value={form.hsn_sac} onChange={set('hsn_sac')} placeholder="HSN code" /></Field>
                   <Field label="Purchase Price"><Input type="number" min="0" step="0.01" value={form.purchase_price} onChange={setNumeric('purchase_price')} placeholder="0.00" /></Field>
                   <Field label="Barcode"><Input value={form.barcode} onChange={set('barcode')} placeholder="Barcode" /></Field>
@@ -235,28 +237,25 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
                 </div>
               </div>
 
-              <div className="ap-section">
-                <h3 className="ap-section-title">Product Images & Videos</h3>
+              <div className="ds-section">
+                <div className="ds-section-header">
+                  <h3 className="ds-section-title">Product Images & Videos</h3>
+                </div>
                 <FileUpload accept={validTypes.join(',')} maxSize={10 * 1024 * 1024} maxFiles={10} files={form.media} onAdd={addMedia} onRemove={removeMedia} />
               </div>
 
-              <div className="ap-section">
-                <h3 className="ap-section-title">Description</h3>
-                <div className="ap-editor-toolbar">
-                  <button type="button" className="ap-editor-btn" onClick={() => {}} title="Bold"><b>B</b></button>
-                  <button type="button" className="ap-editor-btn" onClick={() => {}} title="Italic"><i>I</i></button>
-                  <button type="button" className="ap-editor-btn" onClick={() => {}} title="Underline"><u>U</u></button>
-                  <button type="button" className="ap-editor-btn" onClick={() => {}} title="Strike"><s>S</s></button>
-                  <button type="button" className="ap-editor-btn" onClick={() => {}} title="Ordered List">OL</button>
-                  <button type="button" className="ap-editor-btn" onClick={() => {}} title="Unordered List">UL</button>
-                  <button type="button" className="ap-editor-btn" onClick={() => {}} title="Clear Formatting">Tx</button>
+              <div className="ds-section">
+                <div className="ds-section-header">
+                  <h3 className="ds-section-title">Description</h3>
                 </div>
-                <Textarea className="ap-editor" value={form.description} onChange={set('description')} placeholder="Product description..." rows={5} />
+                <Textarea value={form.description} onChange={set('description')} placeholder="Product description..." rows={5} />
               </div>
 
-              <div className="ap-section">
-                <h3 className="ap-section-title">Opening Stock</h3>
-                <div className="ap-grid ap-grid-3">
+              <div className="ds-section">
+                <div className="ds-section-header">
+                  <h3 className="ds-section-title">Opening Stock</h3>
+                </div>
+                <div className="ds-grid-2">
                   <Field label="Opening Quantity"><Input type="number" min="0" value={form.opening_qty} onChange={setNumeric('opening_qty')} placeholder="0" /></Field>
                   <Field label="Purchase Price"><Input type="number" min="0" step="0.01" value={form.opening_price} onChange={setNumeric('opening_price')} placeholder="0.00" /></Field>
                   <Field label="Opening Stock Value"><Input value={openingValue} readOnly className="ap-readonly" /></Field>
@@ -267,14 +266,14 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
                 </div>
               </div>
 
-              <div className="ap-section">
+              <div className="ds-section">
                 <button className="ap-more-toggle" onClick={() => setMoreOpen(o => !o)}>
                   <Icon name={moreOpen ? 'chevronUp' : 'chevronDown'} size={14} />
                   <span>More Details</span>
                 </button>
                 {moreOpen && (
                   <div className="ap-more-body">
-                    <div className="ap-grid ap-grid-3">
+                    <div className="ds-grid-2">
                       <Field label="Discount %"><Input type="number" min="0" max="100" value={form.discount} onChange={setNumeric('discount')} placeholder="0" /></Field>
                       <Field label="Discount Type">
                         <Select options={[{ value: 'percent', label: 'Percentage' }, { value: 'fixed', label: 'Fixed' }]} value={form.discount_type} onChange={set('discount_type')} />
@@ -282,94 +281,106 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
                       <Field label="Max Discount Allowed"><Input type="number" min="0" value={form.max_discount} onChange={setNumeric('max_discount')} placeholder="0" /></Field>
                       <Field label="Cess %"><Input type="number" min="0" step="0.01" value={form.cess} onChange={setNumeric('cess')} placeholder="0" /></Field>
                     </div>
-                    <div className="ap-toggle-grid">
-                      <label className="ap-toggle-row">
+                    <div className="inv-toggle-row">
+                      <span>Inventory Tracking</span>
+                      <div className="inv-toggle-spacer">
                         <Toggle checked={form.inventory_tracking} onChange={set('inventory_tracking')} label="Inventory Tracking" />
-                        <span>Inventory Tracking</span>
-                      </label>
-                      {form.inventory_tracking && (
-                        <>
-                          <Field label="Low Stock Alert"><Input type="number" min="0" value={form.low_stock_alert} onChange={setNumeric('low_stock_alert')} placeholder="0" /></Field>
-                          <Field label="Reorder Quantity"><Input type="number" min="0" value={form.reorder_qty} onChange={setNumeric('reorder_qty')} placeholder="0" /></Field>
-                        </>
-                      )}
-                      <label className="ap-toggle-row">
+                      </div>
+                    </div>
+                    {form.inventory_tracking && (
+                      <div className="ds-grid-2" style={{ marginTop: 12 }}>
+                        <Field label="Low Stock Alert"><Input type="number" min="0" value={form.low_stock_alert} onChange={setNumeric('low_stock_alert')} placeholder="0" /></Field>
+                        <Field label="Reorder Quantity"><Input type="number" min="0" value={form.reorder_qty} onChange={setNumeric('reorder_qty')} placeholder="0" /></Field>
+                      </div>
+                    )}
+                    <div className="inv-toggle-row">
+                      <span>Show in Online Store</span>
+                      <div className="inv-toggle-spacer">
                         <Toggle checked={form.show_online} onChange={set('show_online')} label="Show in Online Store" />
-                        <span>Show in Online Store</span>
-                      </label>
-                      <label className="ap-toggle-row">
+                      </div>
+                    </div>
+                    <div className="inv-toggle-row">
+                      <span>Not for Sale</span>
+                      <div className="inv-toggle-spacer">
                         <Toggle checked={form.not_for_sale} onChange={set('not_for_sale')} label="Not for Sale" />
-                        <span>Not for Sale</span>
-                      </label>
-                      <label className="ap-toggle-row">
+                      </div>
+                    </div>
+                    <div className="inv-toggle-row">
+                      <span>Featured Item</span>
+                      <div className="inv-toggle-spacer">
                         <Toggle checked={form.featured} onChange={set('featured')} label="Featured Item" />
-                        <span>Featured Item</span>
-                      </label>
-                      <label className="ap-toggle-row">
+                      </div>
+                    </div>
+                    <div className="inv-toggle-row">
+                      <span>Allow Negative Stock</span>
+                      <div className="inv-toggle-spacer">
                         <Toggle checked={form.allow_negative} onChange={set('allow_negative')} label="Allow Negative Stock" />
-                        <span>Allow Negative Stock</span>
-                      </label>
-                      <label className="ap-toggle-row">
+                      </div>
+                    </div>
+                    <div className="inv-toggle-row">
+                      <span>Track Serial Number</span>
+                      <div className="inv-toggle-spacer">
                         <Toggle checked={form.track_serial} onChange={set('track_serial')} label="Track Serial Number" />
-                        <span>Track Serial Number</span>
-                      </label>
-                      <label className="ap-toggle-row">
+                      </div>
+                    </div>
+                    <div className="inv-toggle-row">
+                      <span>Track Batch Number</span>
+                      <div className="inv-toggle-spacer">
                         <Toggle checked={form.track_batch} onChange={set('track_batch')} label="Track Batch Number" />
-                        <span>Track Batch Number</span>
-                      </label>
-                      <label className="ap-toggle-row">
+                      </div>
+                    </div>
+                    <div className="inv-toggle-row">
+                      <span>Expiry Date Tracking</span>
+                      <div className="inv-toggle-spacer">
                         <Toggle checked={form.track_expiry} onChange={set('track_expiry')} label="Expiry Date Tracking" />
-                        <span>Expiry Date Tracking</span>
-                      </label>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
-            </div>
+            </>
           )}
 
           {tab === 'prices' && (
-            <div className="ap-body">
-              <div className="ap-section">
-                <div className="ap-section-title-row">
-                  <h3 className="ap-section-title">Price Lists</h3>
-                  <button className="inv-link-action" onClick={addPriceListRow}><Icon name="plus" size={14} /> Add Row</button>
-                </div>
-                {priceListRows.length === 0 ? (
-                  <div className="ap-empty">No price lists configured. Click "Add Row" to set pricing for specific lists.</div>
-                ) : (
-                  <div className="ap-price-table">
-                    <div className="ap-price-header">
-                      <span>Price List</span>
-                      <span>Selling Price</span>
-                      <span>Currency</span>
-                      <span>Effective Date</span>
-                      <span>Expiry Date</span>
-                      <span></span>
-                    </div>
-                    {priceListRows.map((row, i) => (
-                      <div key={i} className="ap-price-row">
-                        <Select options={[{ value: '', label: 'Select' }, ...configPriceLists.map(p => ({ value: p.id || p.name, label: p.name }))]} value={row.price_list_id} onChange={updatePriceListRow(i, 'price_list_id')} />
-                        <Input type="number" min="0" step="0.01" value={row.selling_price} onChange={updatePriceListRow(i, 'selling_price')} placeholder="0.00" />
-                        <Select options={[{ value: 'INR', label: 'INR' }, { value: 'USD', label: 'USD' }]} value={row.currency} onChange={updatePriceListRow(i, 'currency')} />
-                        <Input type="date" value={row.effective_date} onChange={updatePriceListRow(i, 'effective_date')} />
-                        <Input type="date" value={row.expiry_date} onChange={updatePriceListRow(i, 'expiry_date')} />
-                        <button className="inv-icon-btn ap-remove" onClick={() => removePriceListRow(i)}><Icon name="trash" size={14} /></button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+            <div className="ds-section">
+              <div className="ap-section-title-row">
+                <h3 className="ds-section-title">Price Lists</h3>
+                <button className="inv-link-action" onClick={addPriceListRow}><Icon name="plus" size={14} /> Add Row</button>
               </div>
+              {priceListRows.length === 0 ? (
+                <div className="ap-empty">No price lists configured. Click "Add Row" to set pricing for specific lists.</div>
+              ) : (
+                <div className="ap-price-table">
+                  <div className="ap-price-header">
+                    <span>Price List</span>
+                    <span>Selling Price</span>
+                    <span>Currency</span>
+                    <span>Effective Date</span>
+                    <span>Expiry Date</span>
+                    <span></span>
+                  </div>
+                  {priceListRows.map((row, i) => (
+                    <div key={i} className="ap-price-row">
+                      <Select options={[{ value: '', label: 'Select' }, ...configPriceLists.map(p => ({ value: p.id || p.name, label: p.name }))]} value={row.price_list_id} onChange={updatePriceListRow(i, 'price_list_id')} />
+                      <Input type="number" min="0" step="0.01" value={row.selling_price} onChange={updatePriceListRow(i, 'selling_price')} placeholder="0.00" />
+                      <Select options={[{ value: 'INR', label: 'INR' }, { value: 'USD', label: 'USD' }]} value={row.currency} onChange={updatePriceListRow(i, 'currency')} />
+                      <Input type="date" value={row.effective_date} onChange={updatePriceListRow(i, 'effective_date')} />
+                      <Input type="date" value={row.expiry_date} onChange={updatePriceListRow(i, 'expiry_date')} />
+                      <button className="inv-icon-btn ap-remove" onClick={() => removePriceListRow(i)}><Icon name="trash" size={14} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
           {tab === 'attachments' && (
-            <div className="ap-body">
-              <div className="ap-section">
-                <h3 className="ap-section-title">Attachments</h3>
-                <p className="ap-section-desc">Upload product images, PDFs, manuals, warranty files, certificates, and other documents.</p>
-                <FileUpload accept="*" maxSize={20 * 1024 * 1024} maxFiles={20} files={form.attachments} onAdd={addAttachment} onRemove={removeAttachment} />
+            <div className="ds-section">
+              <div className="ds-section-header">
+                <h3 className="ds-section-title">Attachments</h3>
+                <p className="ds-section-desc">Upload product images, PDFs, manuals, warranty files, certificates, and other documents.</p>
               </div>
+              <FileUpload accept="*" maxSize={20 * 1024 * 1024} maxFiles={20} files={form.attachments} onAdd={addAttachment} onRemove={removeAttachment} />
             </div>
           )}
         </div>

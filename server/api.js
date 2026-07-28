@@ -208,6 +208,90 @@ async function handleInvoiceMemory(db, path, method, parsed, send, currentUser) 
     return true;
   };
 
+  // Document types — return the default set. In production (Supabase) these
+  // are managed through the document_type_master table.
+  if (method === 'GET' && path === '/api/document-types') {
+    return send(200, { types: ['Regular', 'Bill of Supply', 'Export / SEZ', 'Multi Currency'] });
+  }
+
+  // Custom headers — persisted via settings in memory mode.
+  if (path === '/api/custom-headers' || path.startsWith('/api/custom-headers/')) {
+    const HEADER_STORE_KEY = '_custom_headers';
+    const loadHeaders = async () => {
+      if (db.settings) {
+        const all = await db.settings.getAll();
+        const raw = all[HEADER_STORE_KEY];
+        if (raw) {
+          try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch {}
+        }
+      }
+      return [];
+    };
+    const saveHeaders = async (items) => {
+      if (db.settings) {
+        await db.settings.update({ [HEADER_STORE_KEY]: JSON.stringify(items) });
+      }
+    };
+
+    if (method === 'GET') {
+      if (!cp('settings:read')) return true;
+      let items = await loadHeaders();
+      // Apply filters
+      if (parsed.active === 'true') items = items.filter(h => h.active !== false);
+      if (parsed.visible === 'true') items = items.filter(h => h.visible !== false);
+      if (parsed.docType) items = items.filter(h => !h.docTypes || h.docTypes.includes(parsed.docType));
+      const sortField = parsed.sortField || 'displayOrder';
+      const sortDir = parsed.sortDir || 'asc';
+      items = [...items].sort((a, b) => {
+        const va = a[sortField] ?? 0;
+        const vb = b[sortField] ?? 0;
+        return sortDir === 'desc' ? vb - va : va - vb;
+      });
+      const pageSize = parseInt(parsed.pageSize, 10) || 200;
+      const page = parseInt(parsed.page, 10) || 1;
+      const total = items.length;
+      const paged = items.slice((page - 1) * pageSize, page * pageSize);
+      return send(200, { items: paged, total });
+    }
+
+    if (method === 'POST') {
+      if (!cp('settings:update')) return true;
+      const items = await loadHeaders();
+      const header = {
+        ...parsed,
+        id: parsed.id || crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2),
+        createdAt: new Date().toISOString(),
+      };
+      items.push(header);
+      await saveHeaders(items);
+      return send(201, { header });
+    }
+
+    const idMatch = path.match(/^\/api\/custom-headers\/(.+)$/);
+    if (idMatch) {
+      const id = idMatch[1];
+      if (method === 'PUT') {
+        if (!cp('settings:update')) return true;
+        const items = await loadHeaders();
+        const idx = items.findIndex(h => h.id === id);
+        if (idx === -1) return send(404, { error: 'Custom header not found.' });
+        items[idx] = { ...items[idx], ...parsed, id };
+        await saveHeaders(items);
+        return send(200, { header: items[idx] });
+      }
+      if (method === 'DELETE') {
+        if (!cp('settings:update')) return true;
+        const items = await loadHeaders();
+        const idx = items.findIndex(h => h.id === id);
+        if (idx === -1) return send(404, { error: 'Custom header not found.' });
+        items.splice(idx, 1);
+        await saveHeaders(items);
+        return send(200, { ok: true });
+      }
+    }
+    return send(404, { error: 'Not found.' });
+  }
+
   // Does this request belong to the invoice domain at all? If not, return
   // false so the dispatcher falls through to the generic memory handlers.
   const isCustomer = path === '/api/customers' || path.startsWith('/api/customers/');
@@ -436,6 +520,51 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
       if (error) return send(500, { error: error.message });
     }
     return send(200, { ok: true });
+  }
+
+  // ===== Document Types & Custom Headers (Supabase) =====
+  if (method === 'GET' && path === '/api/document-types') {
+    const { data, error } = await adminClient.from('document_type_master').select('name').order('name', { ascending: true });
+    if (error) return send(500, { error: error.message });
+    return send(200, { types: (data || []).map(r => r.name) });
+  }
+
+  if (method === 'GET' && path === '/api/custom-headers') {
+    if (!cp('settings:read')) return;
+    let query = adminClient.from('custom_headers').select('*').order('display_order', { ascending: true });
+    if (parsed.active === 'true') query = query.eq('active', true);
+    if (parsed.visible === 'true') query = query.eq('visible', true);
+    if (parsed.docType) query = query.contains('doc_types', [parsed.docType]);
+    const { data, error } = await query;
+    if (error) return send(500, { error: error.message });
+    const pageSize = parseInt(parsed.pageSize, 10) || 200;
+    const page = parseInt(parsed.page, 10) || 1;
+    const all = data || [];
+    const total = all.length;
+    const paged = all.slice((page - 1) * pageSize, page * pageSize);
+    return send(200, { items: paged, total });
+  }
+  if (method === 'POST' && path === '/api/custom-headers') {
+    if (!cp('settings:update')) return;
+    const { data, error } = await adminClient.from('custom_headers').insert(parsed).select().single();
+    if (error) return send(500, { error: error.message });
+    return send(201, { header: data });
+  }
+  const chMatch = path.match(/^\/api\/custom-headers\/(.+)$/);
+  if (chMatch) {
+    const id = chMatch[1];
+    if (method === 'PUT') {
+      if (!cp('settings:update')) return;
+      const { data, error } = await adminClient.from('custom_headers').update(parsed).eq('id', id).select().single();
+      if (error || !data) return send(404, { error: 'Custom header not found.' });
+      return send(200, { header: data });
+    }
+    if (method === 'DELETE') {
+      if (!cp('settings:update')) return;
+      const { error } = await adminClient.from('custom_headers').delete().eq('id', id);
+      if (error) return send(500, { error: error.message });
+      return send(200, { ok: true });
+    }
   }
 
   // ===== Invoice domain (Supabase) =====

@@ -3435,6 +3435,98 @@ select.form-input { cursor: pointer; appearance: auto; }
   background: var(--inv-indigo-pale);
 }
 
+/* ===== CUSTOM HEADERS DYNAMIC GRID ===== */
+.inv-ch-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.inv-ch-grid--cols {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 1024px) {
+  .inv-ch-grid--cols { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .inv-ch-grid--cols { grid-template-columns: 1fr; }
+}
+
+.inv-ch-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.inv-ch-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inv-ch-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.inv-ch-field-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--inv-text-label);
+}
+
+.inv-ch-field-label .inv-required-dot {
+  color: var(--inv-red-dot);
+  margin-left: 2px;
+}
+
+.inv-ch-field-input {
+  width: 100%;
+}
+
+.inv-ch-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--inv-text-sub);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.inv-ch-remove-btn:hover {
+  background: var(--inv-indigo-pale);
+  color: var(--inv-red-dot);
+}
+
+.inv-ch-empty {
+  text-align: center;
+  padding: 20px 0;
+  color: var(--inv-text-sub);
+  font-size: 13px;
+}
+
+.inv-ch-empty p {
+  margin: 0 0 6px;
+}
+
+.inv-ch-empty-sub {
+  font-size: 12px;
+  font-style: italic;
+  margin-bottom: 12px !important;
+}
+
 /* ===== PRODUCTS & SERVICES ===== */
 .inv-ps-head {
   display: flex;

@@ -163,3 +163,30 @@ export const CUSTOM_HEADER_INPUT_TYPE_OPTIONS = Object.freeze([
   { value: 'toggle', label: 'Toggle' },
   { value: 'textarea', label: 'Text Area' },
 ]);
+
+// LocalStorage key for persisting visible invoice table columns.
+export const COLUMN_STORAGE_KEY = 'corex_invoice_table_columns';
+
+// Column definitions for the invoice line-item table. The `key` must match a
+// COLUMN_RENDERERS entry in InvoiceTable.jsx; `always` columns are always
+// shown regardless of user preferences; `defaultVisible` columns are on by
+// default but can be toggled via column visibility controls.
+export const INVOICE_TABLE_COLUMNS = Object.freeze([
+  { key: 'lineNo', label: '#', always: true, width: 32 },
+  { key: 'productName', label: 'Product Name', always: true },
+  { key: 'description', label: 'Description', defaultVisible: false },
+  { key: 'quantity', label: 'Qty', always: true },
+  { key: 'freeQty', label: 'Free Qty', defaultVisible: false },
+  { key: 'unit', label: 'Unit', defaultVisible: false },
+  { key: 'unitPrice', label: 'Rate', always: true },
+  { key: 'priceWithTax', label: 'Price with Tax', defaultVisible: false },
+  { key: 'discount', label: 'Discount', always: true },
+  { key: 'discountPct', label: 'Disc %', defaultVisible: false },
+  { key: 'taxRate', label: 'Tax %', always: true },
+  { key: 'taxAmount', label: 'Tax Amt', defaultVisible: false },
+  { key: 'hsnSac', label: 'HSN/SAC', defaultVisible: false },
+  { key: 'batch', label: 'Batch', defaultVisible: false },
+  { key: 'warehouse', label: 'Warehouse', defaultVisible: false },
+  { key: 'lineTotal', label: 'Total', always: true },
+  { key: 'actions', label: '', always: true, width: 40 },
+]);
