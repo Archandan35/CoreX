@@ -178,7 +178,11 @@ async function handleMemory(db, path, method, parsed, send, currentUser) {
 
   if (method === 'PUT' && path === '/api/settings') {
     if (!checkPermission('settings:update')) return;
-    await db.settings.update(parsed);
+    const stringified = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      stringified[key] = typeof value === 'string' ? value : JSON.stringify(value);
+    }
+    await db.settings.update(stringified);
     return send(200, { ok: true });
   }
 
@@ -425,7 +429,11 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
   if (method === 'PUT' && path === '/api/settings') {
     if (!cp('settings:update')) return;
     for (const [key, value] of Object.entries(parsed)) {
-      await adminClient.from('settings').upsert({ key, value }, { onConflict: 'key' });
+      const { error } = await adminClient.from('settings').upsert(
+        { key, value: typeof value === 'string' ? value : JSON.stringify(value) },
+        { onConflict: 'key' }
+      );
+      if (error) return send(500, { error: error.message });
     }
     return send(200, { ok: true });
   }

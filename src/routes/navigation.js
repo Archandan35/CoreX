@@ -5,7 +5,7 @@ export const NAV_GROUPS = [
   {
     label: '',
     items: [
-      { to: '/', label: 'Dashboard', icon: 'grid', end: true },
+      { to: '/', label: 'Dashboard', icon: 'home', end: true },
     ],
   },
   { type: 'heading', label: 'SALES' },

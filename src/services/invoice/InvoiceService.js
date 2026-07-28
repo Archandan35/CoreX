@@ -142,12 +142,6 @@ export class InvoiceService {
     if (!r.ok) throw new Error(r.data?.error || 'PDF export failed.');
     return r.data;
   }
-  async duplicateInvoice(id) {
-    const r = await asJson(await api(`/api/invoices/${id}/duplicate`, { method: 'POST' }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to duplicate invoice.');
-    return r.data.invoice;
-  }
-
   async suggestNote(existingNotes, intent) {
     const res = await aiService.chat([
       { role: 'system', content: 'Write a concise professional invoice note.' },
@@ -161,7 +155,8 @@ export class InvoiceService {
   // generic /api/settings endpoint so we don't need a new backend route.
   async getDocumentSettings() {
     const all = await settingsApiService.getAll();
-    let doc = all?.documentSettings || {};
+    const raw = all?.settings?.documentSettings ?? all?.documentSettings;
+    let doc = raw || {};
     if (typeof doc === 'string') {
       try { doc = JSON.parse(doc); } catch { doc = {}; }
     }
@@ -173,6 +168,88 @@ export class InvoiceService {
       body: JSON.stringify({ documentSettings: updates }),
     }));
     if (!r.ok) throw new Error(r.data?.error || 'Failed to save document settings.');
+    return true;
+  }
+
+  // --- Document types (from master config) ------------------------------
+  async listDocumentTypes() {
+    const r = await asJson(await api('/api/document-types'));
+    return r.ok ? (r.data.types || r.data || []) : [];
+  }
+
+  // --- Prefixes ---------------------------------------------------------
+  async listPrefixes(params = {}) {
+    const q = Object.keys(params).length ? `?${new URLSearchParams(params)}` : '';
+    const r = await asJson(await api(`/api/prefix-settings${q}`));
+    return r.ok ? r.data : { items: [], total: 0 };
+  }
+  async createPrefix(payload) {
+    const r = await asJson(await api('/api/prefix-settings', { method: 'POST', body: JSON.stringify(payload) }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to create prefix.');
+    return r.data.prefix;
+  }
+  async updatePrefix(id, payload) {
+    const r = await asJson(await api(`/api/prefix-settings/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to update prefix.');
+    return r.data.prefix;
+  }
+  async deletePrefix(id) {
+    const r = await asJson(await api(`/api/prefix-settings/${id}`, { method: 'DELETE' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to delete prefix.');
+    return true;
+  }
+  async setDefaultPrefix(id) {
+    const r = await asJson(await api(`/api/prefix-settings/${id}/default`, { method: 'POST' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to set default prefix.');
+    return r.data.prefix;
+  }
+
+  // --- Suffixes ---------------------------------------------------------
+  async listSuffixes(params = {}) {
+    const q = Object.keys(params).length ? `?${new URLSearchParams(params)}` : '';
+    const r = await asJson(await api(`/api/suffix-settings${q}`));
+    return r.ok ? r.data : { items: [], total: 0 };
+  }
+  async createSuffix(payload) {
+    const r = await asJson(await api('/api/suffix-settings', { method: 'POST', body: JSON.stringify(payload) }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to create suffix.');
+    return r.data.suffix;
+  }
+  async updateSuffix(id, payload) {
+    const r = await asJson(await api(`/api/suffix-settings/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to update suffix.');
+    return r.data.suffix;
+  }
+  async deleteSuffix(id) {
+    const r = await asJson(await api(`/api/suffix-settings/${id}`, { method: 'DELETE' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to delete suffix.');
+    return true;
+  }
+  async setDefaultSuffix(id) {
+    const r = await asJson(await api(`/api/suffix-settings/${id}/default`, { method: 'POST' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to set default suffix.');
+    return r.data.suffix;
+  }
+
+  // --- Custom Headers ---------------------------------------------------
+  async listCustomHeaders(params = {}) {
+    const q = Object.keys(params).length ? `?${new URLSearchParams(params)}` : '';
+    const r = await asJson(await api(`/api/custom-headers${q}`));
+    return r.ok ? r.data : { items: [], total: 0 };
+  }
+  async createCustomHeader(payload) {
+    const r = await asJson(await api('/api/custom-headers', { method: 'POST', body: JSON.stringify(payload) }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to create custom header.');
+    return r.data.header;
+  }
+  async updateCustomHeader(id, payload) {
+    const r = await asJson(await api(`/api/custom-headers/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to update custom header.');
+    return r.data.header;
+  }
+  async deleteCustomHeader(id) {
+    const r = await asJson(await api(`/api/custom-headers/${id}`, { method: 'DELETE' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to delete custom header.');
     return true;
   }
 }

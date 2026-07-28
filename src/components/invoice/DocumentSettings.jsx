@@ -4,6 +4,8 @@ import PermissionGate from '../ui/PermissionGate.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
 import { invoiceService } from '../../services/invoice/index.js';
+import PrefixSuffixPanel from './PrefixSuffixPanel.jsx';
+import CustomHeaderPanel from './CustomHeaderPanel.jsx';
 
 export const DEFAULT_DOCUMENT_SETTINGS = {
   invoiceTemplate: 'classic',
@@ -114,6 +116,8 @@ export default function DocumentSettings({ open, onClose }) {
   const [activeSection, setActiveSection] = useState('display');
   const [emailPreview, setEmailPreview] = useState(false);
   const [whatsappPreview, setWhatsappPreview] = useState(false);
+  const [prefixSuffixOpen, setPrefixSuffixOpen] = useState(false);
+  const [customHeaderOpen, setCustomHeaderOpen] = useState(false);
   const scrollRef = useRef(null);
   const sectionRefs = useRef({});
   const observerRef = useRef(null);
@@ -291,17 +295,27 @@ export default function DocumentSettings({ open, onClose }) {
                         <div className="ds-qa-icon"><Icon name={qa.icon} size={16} /></div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                           <span className="ds-qa-title">{qa.title}</span>
-                          {qa.type === 'toggle' ? (
+                          {qa.type === 'toggle' && qa.key !== 'customFieldsEnabled' ? (
                             <span className="ds-switch">
                               <input type="checkbox" checked={!!settings[qa.key]} onChange={(e) => update(qa.key, e.target.checked)} onClick={(e) => e.stopPropagation()} />
                               <span className={`ds-slider${settings[qa.key] ? ' on' : ''}`} />
                             </span>
+                          ) : qa.key === 'customFieldsEnabled' ? (
+                            <button className="ds-btn ds-btn-secondary" style={{ fontSize: 11, padding: '2px 8px', height: 'auto' }}
+                              onClick={(e) => { e.stopPropagation(); setCustomHeaderOpen(true); }}>
+                              <Icon name="arrow-right" size={12} /> Open
+                            </button>
                           ) : qa.type === 'select' ? (
                             <select className="ds-select" style={{ width: 100, fontSize: 11 }} value={settings[qa.key] || 'classic'}
                               onChange={(e) => { e.stopPropagation(); update(qa.key, e.target.value); }}
                               onClick={(e) => e.stopPropagation()}>
                               {qa.options.map((opt) => <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>)}
                             </select>
+                          ) : qa.type === 'group' && qa.title === 'Prefixes / suffixes' ? (
+                            <button className="ds-btn ds-btn-secondary" style={{ fontSize: 11, padding: '2px 8px', height: 'auto' }}
+                              onClick={(e) => { e.stopPropagation(); setPrefixSuffixOpen(true); }}>
+                              <Icon name="arrow-right" size={12} /> Open
+                            </button>
                           ) : qa.locked && <Icon name="lock" size={12} className="ds-lock" />}
                         </div>
                         <div className="ds-qa-desc">{qa.desc}</div>
@@ -552,6 +566,9 @@ export default function DocumentSettings({ open, onClose }) {
           <button className="ds-btn ds-btn-secondary" onClick={onClose}>Cancel</button>
         </div>
       </div>
+
+      <PrefixSuffixPanel open={prefixSuffixOpen} onClose={() => setPrefixSuffixOpen(false)} />
+      <CustomHeaderPanel open={customHeaderOpen} onClose={() => setCustomHeaderOpen(false)} />
     </div>
   );
 }

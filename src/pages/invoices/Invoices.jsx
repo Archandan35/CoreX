@@ -107,6 +107,7 @@ export default function Invoices({ variant = 'invoices' }) {
   const canCreate = hasPermission(PERMISSIONS.INVOICE_CREATE);
   const canExport = hasPermission(PERMISSIONS.INVOICE_READ);
   const canDelete = hasPermission(PERMISSIONS.INVOICE_DELETE);
+  const canEdit = hasPermission(PERMISSIONS.INVOICE_UPDATE);
 
   const [allInvoices, setAllInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -248,6 +249,11 @@ export default function Invoices({ variant = 'invoices' }) {
     navigate(`/invoices/${id}`);
   }, [navigate]);
 
+  const handleEdit = useCallback((id, close) => {
+    close?.();
+    navigate(`/invoices/${id}/edit`);
+  }, [navigate]);
+
   const handleSend = useCallback((inv, close) => {
     close?.();
     notificationManager.info('Send', `Send invoice ${inv.billNo} — email service will be available soon.`);
@@ -260,17 +266,6 @@ export default function Invoices({ variant = 'invoices' }) {
     try {
       await invoiceService.deleteInvoice(inv.id);
       notificationManager.success('Invoices', `Invoice ${inv.billNo} deleted.`);
-      handleRefresh();
-    } catch (e) {
-      notificationManager.error('Invoices', e.message);
-    }
-  }, [handleRefresh]);
-
-  const handleDuplicate = useCallback(async (inv, close) => {
-    close();
-    try {
-      const dup = await invoiceService.duplicateInvoice(inv.id);
-      notificationManager.success('Invoices', `Invoice duplicated as ${[dup.prefix, dup.invoiceNumber].filter(Boolean).join('-')}`);
       handleRefresh();
     } catch (e) {
       notificationManager.error('Invoices', e.message);
@@ -380,11 +375,11 @@ export default function Invoices({ variant = 'invoices' }) {
                 <Icon name="refresh-cw" size={14} /> Refresh
               </DropdownItem>
               <DropdownItem onClick={() => { close(); window.print(); }}>
-                <Icon name="printer" size={14} /> Print
+                <Icon name="print" size={14} /> Print
               </DropdownItem>
               {canDelete && selectedIds.length > 0 && (
                 <DropdownItem onClick={() => { close(); handleBulkDelete(); }}>
-                  <Icon name="trash-2" size={14} /> Delete ({selectedIds.length})
+                  <Icon name="trash" size={14} /> Delete ({selectedIds.length})
                 </DropdownItem>
               )}
             </div>
@@ -537,17 +532,19 @@ export default function Invoices({ variant = 'invoices' }) {
                               <Icon name="file-text" size={14} /> Download PDF
                             </DropdownItem>
                             <DropdownItem onClick={() => handlePrint(inv, close)}>
-                              <Icon name="printer" size={14} /> Print
-                            </DropdownItem>
-                            <DropdownItem onClick={() => handleDuplicate(inv, close)}>
-                              <Icon name="copy" size={14} /> Duplicate
+<Icon name="print" size={14} /> Print
                             </DropdownItem>
                             <DropdownItem onClick={() => handleSend(inv, close)}>
                               <Icon name="send" size={14} /> Send
                             </DropdownItem>
+                            {canEdit && (
+                              <DropdownItem onClick={() => handleEdit(inv.id, close)}>
+                                <Icon name="edit" size={14} /> Edit
+                              </DropdownItem>
+                            )}
                             {canDelete && (
                               <DropdownItem onClick={() => handleDeleteOne(inv, close)}>
-                                <Icon name="trash-2" size={14} /> Delete
+                                <Icon name="trash" size={14} /> Delete
                               </DropdownItem>
                             )}
                           </div>

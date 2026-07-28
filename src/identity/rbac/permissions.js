@@ -16,6 +16,23 @@ export const PERMISSIONS = Object.freeze({
   INVOICE_READ: 'invoice:read',
   INVOICE_UPDATE: 'invoice:update',
   INVOICE_DELETE: 'invoice:delete',
+
+  PREFIX_VIEW: 'prefix:view',
+  PREFIX_CREATE: 'prefix:create',
+  PREFIX_UPDATE: 'prefix:update',
+  PREFIX_DELETE: 'prefix:delete',
+
+  SUFFIX_VIEW: 'suffix:view',
+  SUFFIX_CREATE: 'suffix:create',
+  SUFFIX_UPDATE: 'suffix:update',
+  SUFFIX_DELETE: 'suffix:delete',
+
+  DOCUMENT_TYPE_VIEW: 'document_type:view',
+
+  CUSTOM_HEADER_VIEW: 'custom_header:view',
+  CUSTOM_HEADER_CREATE: 'custom_header:create',
+  CUSTOM_HEADER_UPDATE: 'custom_header:update',
+  CUSTOM_HEADER_DELETE: 'custom_header:delete',
   CUSTOMER_CREATE: 'customer:create',
   CUSTOMER_READ: 'customer:read',
   CUSTOMER_UPDATE: 'customer:update',

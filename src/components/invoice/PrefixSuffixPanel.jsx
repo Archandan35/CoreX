@@ -1,0 +1,610 @@
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import Icon from '../ui/Icon.jsx';
+import Modal from '../ui/Modal.jsx';
+import Button from '../ui/Button.jsx';
+import { Field, Input } from '../ui/Field.jsx';
+import Checkbox from '../ui/Checkbox.jsx';
+import EmptyState from '../ui/EmptyState.jsx';
+import Pagination from '../ui/Pagination.jsx';
+import PermissionGate from '../ui/PermissionGate.jsx';
+import ConfirmDialog from '../ui/ConfirmDialog.jsx';
+import { PERMISSIONS } from '../../identity/rbac/permissions.js';
+import { invoiceService } from '../../services/invoice/index.js';
+import { notificationManager } from '../../managers/NotificationManager.js';
+
+const PAGE_SIZE = 10;
+
+function validateValue(val, existing, currentId) {
+  if (!val.trim()) return 'Value is required.';
+  if (val.trim().length > 50) return 'Maximum 50 characters.';
+  if (!/^[A-Za-z0-9_\-./\s]+$/.test(val)) return 'Invalid characters. Use letters, numbers, hyphens, underscores, dots, or slashes.';
+  const dup = existing.find((r) => r.value === val.trim() && r.id !== currentId);
+  if (dup) return 'This value already exists for the selected document type.';
+  return '';
+}
+
+export default function PrefixSuffixPanel({ open, onClose }) {
+  const [tab, setTab] = useState('prefixes');
+  const [docType, setDocType] = useState('Invoice');
+  const [docTypes, setDocTypes] = useState([]);
+  const [items, setItems] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filterActive, setFilterActive] = useState(null); // null=all, true=active, false=inactive
+  const [filterDefault, setFilterDefault] = useState(null); // null=all, true=default, false=non-default
+  const [sortField, setSortField] = useState('sequenceOrder');
+  const [sortDir, setSortDir] = useState('asc');
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  // Edit modal state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [editForm, setEditForm] = useState({ value: '', description: '', sequenceOrder: 1, isActive: true, isDefault: false });
+  const [editErrors, setEditErrors] = useState({});
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Delete confirm
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const isPrefix = tab === 'prefixes';
+
+  // Load document types
+  useEffect(() => {
+    if (!open) return;
+    invoiceService.listDocumentTypes()
+      .then((types) => {
+        if (types && types.length > 0) {
+          setDocTypes(types);
+          if (!types.includes(docType)) setDocType(types[0]);
+        }
+      })
+      .catch(() => {});
+  }, [open]);
+
+  // Load items
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    const params = { docType, page: String(page), pageSize: String(PAGE_SIZE), sortField, sortDir };
+    if (search.trim()) params.q = search.trim();
+    if (filterActive !== null) params.active = String(filterActive);
+    if (filterDefault !== null) params.default = String(filterDefault);
+
+    const loader = isPrefix ? invoiceService.listPrefixes(params) : invoiceService.listSuffixes(params);
+    loader
+      .then((data) => {
+        setItems(data.items || []);
+        setTotal(data.total || 0);
+      })
+      .catch(() => { setItems([]); setTotal(0); })
+      .finally(() => setLoading(false));
+  }, [open, tab, docType, page, search, filterActive, filterDefault, sortField, sortDir, isPrefix]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // Reset page when filters change
+  useEffect(() => { setPage(1); }, [tab, docType, search, filterActive, filterDefault, sortField, sortDir]);
+
+  const toggleSort = useCallback((field) => {
+    setSortField((prev) => {
+      if (prev === field) { setSortDir((d) => (d === 'asc' ? 'desc' : 'asc')); return prev; }
+      setSortDir('asc');
+      return field;
+    });
+  }, []);
+
+  const openAdd = useCallback(() => {
+    setEditItem(null);
+    setEditForm({ value: '', description: '', sequenceOrder: 1, isActive: true, isDefault: false });
+    setEditErrors({});
+    setEditOpen(true);
+  }, []);
+
+  const openEdit = useCallback((item) => {
+    setEditItem(item);
+    setEditForm({
+      value: item.value || '',
+      description: item.description || '',
+      sequenceOrder: item.sequenceOrder ?? item.order ?? 1,
+      isActive: item.isActive ?? item.active ?? true,
+      isDefault: item.isDefault ?? item.default ?? false,
+    });
+    setEditErrors({});
+    setEditOpen(true);
+  }, []);
+
+  const closeEdit = useCallback(() => {
+    setEditOpen(false);
+    setEditItem(null);
+  }, []);
+
+  const saveEdit = useCallback(async () => {
+    const errs = {};
+    const valErr = validateValue(editForm.value, items, editItem?.id);
+    if (valErr) errs.value = valErr;
+
+    if (!editForm.sequenceOrder || editForm.sequenceOrder < 1) errs.sequenceOrder = 'Must be at least 1.';
+    if (Object.keys(errs).length) { setEditErrors(errs); return; }
+
+    setEditSaving(true);
+    try {
+      const payload = {
+        docType,
+        value: editForm.value.trim(),
+        description: editForm.description.trim(),
+        sequenceOrder: Number(editForm.sequenceOrder),
+        isActive: editForm.isActive,
+        isDefault: editForm.isDefault,
+      };
+
+      const label = isPrefix ? 'Prefix' : 'Suffix';
+
+      if (editItem) {
+        const updater = isPrefix ? invoiceService.updatePrefix(editItem.id, payload) : invoiceService.updateSuffix(editItem.id, payload);
+        await updater;
+        notificationManager.success(label, `${label} updated.`);
+      } else {
+        const creator = isPrefix ? invoiceService.createPrefix(payload) : invoiceService.createSuffix(payload);
+        await creator;
+        notificationManager.success(label, `${label} created.`);
+      }
+
+      closeEdit();
+      // Reload current page
+      const params = { docType, page: String(page), pageSize: String(PAGE_SIZE) };
+      if (search.trim()) params.q = search.trim();
+      const loader = isPrefix ? invoiceService.listPrefixes(params) : invoiceService.listSuffixes(params);
+      loader.then((data) => { setItems(data.items || []); setTotal(data.total || 0); }).catch(() => {});
+    } catch (e) {
+      notificationManager.error('Save', e.message);
+    } finally {
+      setEditSaving(false);
+    }
+  }, [editForm, editItem, isPrefix, docType, page, search, items]);
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    try {
+      const deleter = isPrefix ? invoiceService.deletePrefix(deleteTarget.id) : invoiceService.deleteSuffix(deleteTarget.id);
+      await deleter;
+      notificationManager.success('Delete', `${isPrefix ? 'Prefix' : 'Suffix'} deleted.`);
+      setDeleteTarget(null);
+      const params = { docType, page: String(page), pageSize: String(PAGE_SIZE) };
+      if (search.trim()) params.q = search.trim();
+      const loader = isPrefix ? invoiceService.listPrefixes(params) : invoiceService.listSuffixes(params);
+      loader.then((data) => { setItems(data.items || []); setTotal(data.total || 0); }).catch(() => {});
+    } catch (e) {
+      notificationManager.error('Delete', e.message);
+    }
+  }, [deleteTarget, isPrefix, docType, page, search]);
+
+  const toggleActive = useCallback(async (item) => {
+    const updater = isPrefix ? invoiceService.updatePrefix(item.id, { ...item, isActive: !item.isActive }) : invoiceService.updateSuffix(item.id, { ...item, isActive: !item.isActive });
+    try {
+      await updater;
+      setItems((prev) => prev.map((r) => r.id === item.id ? { ...r, isActive: !r.isActive } : r));
+    } catch (e) {
+      notificationManager.error('Update', e.message);
+    }
+  }, [isPrefix]);
+
+  const toggleDefault = useCallback(async (item) => {
+    const newDefault = !(item.isDefault ?? item.default ?? false);
+    try {
+      if (newDefault) {
+        const setter = isPrefix ? invoiceService.setDefaultPrefix(item.id) : invoiceService.setDefaultSuffix(item.id);
+        await setter;
+      } else {
+        // If unsetting default, just update the record
+        const updater = isPrefix ? invoiceService.updatePrefix(item.id, { ...item, isDefault: false }) : invoiceService.updateSuffix(item.id, { ...item, isDefault: false });
+        await updater;
+      }
+      setItems((prev) => prev.map((r) => ({ ...r, isDefault: r.id === item.id ? newDefault : (newDefault ? false : r.isDefault) })));
+    } catch (e) {
+      notificationManager.error('Update', e.message);
+    }
+  }, [isPrefix]);
+
+  const handleReset = useCallback(() => {
+    setPage(1);
+    setSearch('');
+    setFilterActive(null);
+    setFilterDefault(null);
+    setSelectedIds([]);
+  }, []);
+
+  const handleSelectAll = useCallback((e) => {
+    if (e.target.checked) setSelectedIds(items.map((r) => r.id));
+    else setSelectedIds([]);
+  }, [items]);
+
+  const handleSelectOne = useCallback((id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }, []);
+
+  const reloadItems = useCallback(() => {
+    const params = { docType, page: String(page), pageSize: String(PAGE_SIZE), sortField, sortDir };
+    if (search.trim()) params.q = search.trim();
+    if (filterActive !== null) params.active = String(filterActive);
+    if (filterDefault !== null) params.default = String(filterDefault);
+    const loader = isPrefix ? invoiceService.listPrefixes(params) : invoiceService.listSuffixes(params);
+    loader.then((data) => { setItems(data.items || []); setTotal(data.total || 0); }).catch(() => {});
+  }, [docType, page, search, filterActive, filterDefault, sortField, sortDir, isPrefix]);
+
+  const handleBulkActivate = useCallback(async (active) => {
+    const ids = selectedIds;
+    if (!ids.length) return;
+    let success = 0;
+    for (const id of ids) {
+      try {
+        const updater = isPrefix ? invoiceService.updatePrefix(id, { isActive: active }) : invoiceService.updateSuffix(id, { isActive: active });
+        await updater;
+        success++;
+      } catch {}
+    }
+    if (success > 0) notificationManager.success('Bulk Update', `${success} record(s) ${active ? 'activated' : 'deactivated'}.`);
+    setSelectedIds([]);
+    reloadItems();
+  }, [selectedIds, isPrefix, reloadItems]);
+
+  const handleBulkDelete = useCallback(async () => {
+    const ids = selectedIds;
+    if (!ids.length) return;
+    if (!window.confirm(`Delete ${ids.length} selected record(s)?`)) return;
+    let success = 0;
+    for (const id of ids) {
+      try {
+        const deleter = isPrefix ? invoiceService.deletePrefix(id) : invoiceService.deleteSuffix(id);
+        await deleter;
+        success++;
+      } catch {}
+    }
+    if (success > 0) notificationManager.success('Bulk Delete', `${success} record(s) deleted.`);
+    setSelectedIds([]);
+    reloadItems();
+  }, [selectedIds, isPrefix, reloadItems]);
+
+  const formatPreview = useCallback((val) => {
+    if (!val) return 'Select a prefix/suffix first';
+    if (isPrefix) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
+          <span>{val.trim()}-000001</span>
+          <span>{val.trim()}-2026-000001</span>
+          <span>COMP-{val.trim()}-001</span>
+        </div>
+      );
+    }
+    return <span>INV-000001{val ? `-${val.trim()}` : ''}</span>;
+  }, [isPrefix]);
+
+  if (!open) return null;
+
+  const renderTable = () => {
+    if (loading) {
+      return (
+        <div className="ps-loading">
+          <div className="spinner" />
+          <p>Loading {tab}...</p>
+        </div>
+      );
+    }
+
+    const bulkBar = selectedIds.length > 0 ? (
+      <div className="ps-bulk-bar">
+        <span className="ps-bulk-count">{selectedIds.length} selected</span>
+        <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_UPDATE : PERMISSIONS.SUFFIX_UPDATE}>
+          <button className="ps-bulk-btn ps-bulk-btn--activate" onClick={() => handleBulkActivate(true)}>
+            <Icon name="check" size={14} /> Activate
+          </button>
+          <button className="ps-bulk-btn ps-bulk-btn--deactivate" onClick={() => handleBulkActivate(false)}>
+            <Icon name="x" size={14} /> Deactivate
+          </button>
+        </PermissionGate>
+        <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_DELETE : PERMISSIONS.SUFFIX_DELETE}>
+          <button className="ps-bulk-btn ps-bulk-btn--delete" onClick={handleBulkDelete}>
+            <Icon name="trash" size={14} /> Delete
+          </button>
+        </PermissionGate>
+        <button className="ps-bulk-btn" onClick={() => setSelectedIds([])}>
+          <Icon name="x" size={14} /> Clear
+        </button>
+      </div>
+    ) : null;
+
+    if (items.length === 0) {
+      return (
+        <EmptyState
+          icon={isPrefix ? 'list' : 'list'}
+          title={`No ${tab} found`}
+          message={search ? 'Try a different search term.' : `Add a ${isPrefix ? 'prefix' : 'suffix'} to get started.`}
+          action={
+            <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_CREATE : PERMISSIONS.SUFFIX_CREATE}>
+              <Button icon="plus" onClick={openAdd}>Add {isPrefix ? 'Prefix' : 'Suffix'}</Button>
+            </PermissionGate>
+          }
+        />
+      );
+    }
+
+    const SortIcon = ({ field }) => (
+      <Icon name={sortField === field ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'chevrons-up-down'} size={12} />
+    );
+
+    return (
+      <>
+        {bulkBar}
+        <table className="ps-table">
+          <thead>
+            <tr>
+              <th style={{ width: 36 }}>
+                <input type="checkbox" onChange={handleSelectAll} checked={selectedIds.length === items.length && items.length > 0} />
+              </th>
+              <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('value')}>
+                {isPrefix ? 'Prefix' : 'Suffix'} <SortIcon field="value" />
+              </th>
+              <th>Description</th>
+              <th style={{ width: 80, cursor: 'pointer' }} onClick={() => toggleSort('isDefault')}>
+                Default <SortIcon field="isDefault" />
+              </th>
+              <th style={{ width: 80, cursor: 'pointer' }} onClick={() => toggleSort('isActive')}>
+                Active <SortIcon field="isActive" />
+              </th>
+              <th style={{ width: 70, cursor: 'pointer' }} onClick={() => toggleSort('sequenceOrder')}>
+                Order <SortIcon field="sequenceOrder" />
+              </th>
+              <th style={{ width: 100 }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.id}>
+                <td style={{ width: 36 }}>
+                  <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => handleSelectOne(item.id)} />
+                </td>
+                <td className="ps-value">{item.value}</td>
+                <td className="ps-desc">{item.description || '—'}</td>
+                <td>
+                  <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_UPDATE : PERMISSIONS.SUFFIX_UPDATE}>
+                    <label className="ps-toggle-label" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={!!(item.isDefault ?? item.default ?? false)}
+                        onChange={() => toggleDefault(item)}
+                      />
+                      <span className={`ps-toggle-slider${(item.isDefault ?? item.default ?? false) ? ' on' : ''}`} />
+                    </label>
+                  </PermissionGate>
+                </td>
+                <td>
+                  <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_UPDATE : PERMISSIONS.SUFFIX_UPDATE}>
+                    <label className="ps-toggle-label" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={!!(item.isActive ?? item.active ?? true)}
+                        onChange={() => toggleActive(item)}
+                      />
+                      <span className={`ps-toggle-slider${(item.isActive ?? item.active ?? true) ? ' on' : ''}`} />
+                    </label>
+                  </PermissionGate>
+                </td>
+                <td className="ps-order">{item.sequenceOrder ?? item.order ?? '-'}</td>
+                <td>
+                  <div className="ps-actions">
+                    <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_UPDATE : PERMISSIONS.SUFFIX_UPDATE}>
+                      <button type="button" className="ps-action-btn" onClick={() => openEdit(item)} title="Edit">
+                        <Icon name="edit" size={14} />
+                      </button>
+                    </PermissionGate>
+                    <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_DELETE : PERMISSIONS.SUFFIX_DELETE}>
+                      <button type="button" className="ps-action-btn ps-action-btn--danger" onClick={() => setDeleteTarget(item)} title="Delete">
+                        <Icon name="trash" size={14} />
+                      </button>
+                    </PermissionGate>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </>
+    );
+  };
+
+  return (
+    <>
+      <div className="ds-overlay ds-overlay--nested" onClick={onClose}>
+        <div className="ds-panel ds-panel--nested" onClick={(e) => e.stopPropagation()}>
+          {/* Header */}
+          <div className="ds-header">
+            <div className="ds-header-left">
+              <button className="ds-close-btn" onClick={onClose}><Icon name="x" size={18} /></button>
+              <h2>Prefix &amp; Suffix Management</h2>
+            </div>
+            <button className="ds-btn ds-btn-ghost" title="Help" onClick={() => notificationManager.info('Help', 'Manage document prefixes and suffixes. Each document type can have multiple prefixes/suffixes, but only one default.')}>
+              <Icon name="help-circle" size={18} />
+            </button>
+          </div>
+
+          <div className="ds-body">
+            {/* Primary Tabs */}
+            <div className="ps-primary-tabs">
+              <button className={`ps-primary-tab${tab === 'prefixes' ? ' active' : ''}`} onClick={() => setTab('prefixes')}>
+                Prefixes
+              </button>
+              <button className={`ps-primary-tab${tab === 'suffixes' ? ' active' : ''}`} onClick={() => setTab('suffixes')}>
+                Suffixes
+              </button>
+            </div>
+
+            {/* Document Type Tabs */}
+            <div className="ps-doc-type-tabs">
+              {docTypes.map((dt) => (
+                <button
+                  key={dt}
+                  className={`ps-doc-type-tab${docType === dt ? ' active' : ''}`}
+                  onClick={() => setDocType(dt)}
+                >
+                  {dt}
+                </button>
+              ))}
+            </div>
+
+            {/* Toolbar */}
+            <div className="ps-toolbar">
+              <div className="ps-search">
+                <Icon name="search" size={14} />
+                <input
+                  type="text"
+                  placeholder={`Search ${tab}...`}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <select
+                className="ps-filter-select"
+                value={filterActive === null ? 'all' : filterActive ? 'active' : 'inactive'}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setFilterActive(v === 'all' ? null : v === 'active');
+                }}
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <select
+                className="ps-filter-select"
+                value={filterDefault === null ? 'all' : filterDefault ? 'default' : 'non-default'}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setFilterDefault(v === 'all' ? null : v === 'default');
+                }}
+              >
+                <option value="all">All Defaults</option>
+                <option value="default">Default</option>
+                <option value="non-default">Non-default</option>
+              </select>
+              <div className="ps-toolbar-actions">
+                <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_CREATE : PERMISSIONS.SUFFIX_CREATE}>
+                  <button className="ds-btn ds-btn-primary" onClick={openAdd}>
+                    <Icon name="plus" size={14} /> Add {isPrefix ? 'Prefix' : 'Suffix'}
+                  </button>
+                </PermissionGate>
+                <button className="ps-toolbar-refresh" onClick={() => { setPage(1); }} title="Refresh">
+                  <Icon name="refresh-cw" size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Data Table */}
+            <div className="ps-table-wrap">
+              {renderTable()}
+            </div>
+
+            {/* Pagination */}
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          </div>
+
+          {/* Footer */}
+          <div className="ds-footer">
+            <button className="ds-btn ds-btn-primary" onClick={onClose}>Done</button>
+            <button className="ds-btn ds-btn-ghost" onClick={onClose}>Cancel</button>
+            <button className="ds-btn ds-btn-secondary" onClick={handleReset}>
+              <Icon name="refresh-cw" size={14} /> Reset
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Add / Edit Modal */}
+      <Modal
+        open={editOpen}
+        onClose={closeEdit}
+        title={editItem ? `Edit ${isPrefix ? 'Prefix' : 'Suffix'}` : `Add ${isPrefix ? 'Prefix' : 'Suffix'}`}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={closeEdit}>Cancel</Button>
+            <Button onClick={saveEdit} loading={editSaving} icon="check">
+              {editItem ? 'Save Changes' : 'Add'}
+            </Button>
+          </>
+        }
+      >
+        <form className="inv-modal-form" onSubmit={(e) => { e.preventDefault(); saveEdit(); }}>
+          <div style={{ marginBottom: 12 }}>
+            <strong style={{ fontSize: 13, color: 'var(--inv-text-sub)' }}>Document Type:</strong>{' '}
+            <span style={{ fontSize: 13, fontWeight: 600 }}>{docType}</span>
+          </div>
+
+          <Field label={isPrefix ? 'Prefix Value' : 'Suffix Value'} required>
+            <Input
+              value={editForm.value}
+              onChange={(e) => setEditForm((p) => ({ ...p, value: e.target.value }))}
+              placeholder={isPrefix ? 'e.g. INV-' : 'e.g. -A'}
+              aria-invalid={!!editErrors.value}
+            />
+            {editErrors.value && <span className="inv-field-error">{editErrors.value}</span>}
+          </Field>
+
+          <Field label="Description">
+            <Input
+              value={editForm.description}
+              onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
+              placeholder="Optional description"
+            />
+          </Field>
+
+          <Field label="Sequence Order">
+            <Input
+              type="number"
+              min="1"
+              step="1"
+              value={editForm.sequenceOrder}
+              onChange={(e) => setEditForm((p) => ({ ...p, sequenceOrder: e.target.value === '' ? '' : Number(e.target.value) }))}
+              placeholder="1"
+              aria-invalid={!!editErrors.sequenceOrder}
+            />
+            {editErrors.sequenceOrder && <span className="inv-field-error">{editErrors.sequenceOrder}</span>}
+          </Field>
+
+          <div style={{ display: 'flex', gap: 20, marginTop: 12 }}>
+            <Checkbox
+              checked={editForm.isActive}
+              onChange={(v) => setEditForm((p) => ({ ...p, isActive: v }))}
+              label="Active"
+            />
+            <Checkbox
+              checked={editForm.isDefault}
+              onChange={(v) => setEditForm((p) => ({ ...p, isDefault: v }))}
+              label="Default"
+            />
+          </div>
+
+          {/* Live Preview */}
+          <div className="ps-preview" style={{ marginTop: 16 }}>
+            <div className="ps-preview-label">Live Preview</div>
+            {formatPreview(editForm.value)}
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Record"
+        message={`Are you sure you want to delete ${isPrefix ? 'prefix' : 'suffix'} "${deleteTarget?.value}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
+    </>
+  );
+}

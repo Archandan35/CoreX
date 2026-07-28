@@ -8,7 +8,7 @@ import { INVOICE_PREFIXES } from '../../constants/index.js';
 export default function InvoiceHeader({
   prefix, invoiceNumber, onPrefixChange, onInvoiceNumberChange,
   onSave, onDraft,
-  saving, canSave,
+  saving, canSave, title = 'Create Invoice',
 }) {
   const navigate = useNavigate();
 
@@ -20,7 +20,7 @@ export default function InvoiceHeader({
             <Icon name="chevron-left" size={20} />
           </button>
           <div className="inv-topbar-title">
-            <h1>Create Invoice</h1>
+            <h1>{title}</h1>
             <span>MARUF DRESSES</span>
           </div>
         </div>

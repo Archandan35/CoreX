@@ -125,3 +125,41 @@ export const INVOICE_SETTING_KEYS = Object.freeze({
   DEFAULT_SIGNATURE: 'invoice.default_signature',
   DEFAULT_BANK: 'invoice.default_bank',
 });
+
+// Input types supported by custom headers. Extensible by adding entries here
+// and handling the new type in DynamicCustomHeaders render logic.
+export const CUSTOM_HEADER_INPUT_TYPES = Object.freeze({
+  TEXT: 'text',
+  NUMBER: 'number',
+  CURRENCY: 'currency',
+  DATE: 'date',
+  TIME: 'time',
+  DATETIME: 'datetime',
+  EMAIL: 'email',
+  PHONE: 'phone',
+  URL: 'url',
+  DROPDOWN: 'dropdown',
+  MULTI_SELECT: 'multi_select',
+  CHECKBOX: 'checkbox',
+  RADIO: 'radio',
+  TOGGLE: 'toggle',
+  TEXTAREA: 'textarea',
+});
+
+export const CUSTOM_HEADER_INPUT_TYPE_OPTIONS = Object.freeze([
+  { value: 'text', label: 'Text' },
+  { value: 'number', label: 'Number' },
+  { value: 'currency', label: 'Currency' },
+  { value: 'date', label: 'Date' },
+  { value: 'time', label: 'Time' },
+  { value: 'datetime', label: 'Date & Time' },
+  { value: 'email', label: 'Email' },
+  { value: 'phone', label: 'Phone' },
+  { value: 'url', label: 'URL' },
+  { value: 'dropdown', label: 'Dropdown' },
+  { value: 'multi_select', label: 'Multi Select' },
+  { value: 'checkbox', label: 'Checkbox' },
+  { value: 'radio', label: 'Radio' },
+  { value: 'toggle', label: 'Toggle' },
+  { value: 'textarea', label: 'Text Area' },
+]);

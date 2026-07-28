@@ -22,7 +22,7 @@ export default function InvoiceNotes({
 
       <div className="inv-field-row-head">
         <div className="inv-row-label">
-          <Icon name="square-pen" size={15} /> Notes <Icon name="info" size={13} />
+          <Icon name="edit" size={15} /> Notes <Icon name="info" size={13} />
         </div>
         <button className="inv-btn-link-outline" onClick={onAddNote}>
           <Icon name="plus" size={12} /> New Note

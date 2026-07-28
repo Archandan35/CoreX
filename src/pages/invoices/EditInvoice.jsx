@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import InvoiceHeader from '../../components/invoice/InvoiceHeader.jsx';
 import InvoiceDetails from '../../components/invoice/InvoiceDetails.jsx';
 import DynamicCustomHeaders from '../../components/invoice/DynamicCustomHeaders.jsx';
@@ -22,10 +22,10 @@ import useUnsavedChanges from '../../hooks/useUnsavedChanges.js';
 import { invoiceService } from '../../services/invoice/index.js';
 import { computeInvoice } from '../../business/invoice/calculations.js';
 import {
-  validateInvoice, isValid, validateCustomer, validateProduct, validateBank,
+  validateInvoice, validateCustomer, validateProduct, validateBank,
 } from '../../business/invoice/validation.js';
 import {
-  DEFAULT_CUSTOM_HEADERS, DEFAULT_DUE_DATE_OFFSET_DAYS, PAYMENT_MODE_OPTIONS,
+  DEFAULT_DUE_DATE_OFFSET_DAYS, PAYMENT_MODE_OPTIONS,
 } from '../../constants/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
 
@@ -33,8 +33,23 @@ function generateKey() {
   return Math.random().toString(36).substring(2, 10);
 }
 
-export default function CreateInvoice() {
+function toNoteArray(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val.map((n) => typeof n === 'string' ? { id: generateKey(), text: n } : { id: n.id || generateKey(), text: n.text || '' });
+  return [];
+}
+
+function toPaymentArray(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val.map((p) => ({ id: p.id || generateKey(), notes: p.notes || '', amount: Number(p.amount) || 0, paymentDate: p.paymentDate || new Date().toISOString().split('T')[0], mode: p.mode || '' }));
+  return [];
+}
+
+export default function EditInvoice() {
+  const { id } = useParams();
   const navigate = useNavigate();
+
+  const [loadingInvoice, setLoadingInvoice] = useState(true);
 
   // --- Data ---
   const [customers, setCustomers] = useState([]);
@@ -51,7 +66,7 @@ export default function CreateInvoice() {
   // --- Customer ---
   const [customerQuery, setCustomerQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState('');
   const [reference, setReference] = useState('');
 
@@ -106,44 +121,61 @@ export default function CreateInvoice() {
 
   // --- Validation ---
   const [errors, setErrors] = useState({});
+  const loadedRef = useRef(false);
   const initialized = useRef(false);
 
-  // --- Load data ---
+  // --- Load invoice + reference data ---
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
+    if (!id) return;
     Promise.all([
-      invoiceService.listCustomers().then(d => setCustomers(Array.isArray(d) ? d : [])).catch(() => {}),
+      invoiceService.getInvoice(id),
+      invoiceService.listCustomers().then(d => { if (!loadedRef.current) setCustomers(Array.isArray(d) ? d : []); }).catch(() => {}),
       invoiceService.listProducts().then(d => {
+        if (loadedRef.current) return;
         const pd = d || {};
         setProducts(Array.isArray(pd.products) ? pd.products : []);
         setCategories(Array.isArray(pd.categories) ? pd.categories : []);
       }).catch(() => {}),
-      invoiceService.listBanks().then(d => setBanks(Array.isArray(d) ? d : [])).catch(() => {}),
-      invoiceService.listSignatures().then(d => setSignatures(Array.isArray(d) ? d : [])).catch(() => {}),
-    ]);
-  }, []);
-
-  // --- Fetch next invoice number ---
-  useEffect(() => {
-    invoiceService.nextInvoiceNumber(prefix).then(n => { if (n) setInvoiceNumber(n); }).catch(() => {});
-  }, [prefix]);
-
-  // --- Auto due date ---
-  useEffect(() => {
-    if (invoiceDate && !dueDate) {
-      const d = new Date(invoiceDate);
-      d.setDate(d.getDate() + DEFAULT_DUE_DATE_OFFSET_DAYS);
-      setDueDate(d.toISOString().split('T')[0]);
-    }
-  }, [invoiceDate, dueDate]);
-
-  const autoDueDate = useCallback((invDate) => {
-    if (!invDate) return;
-    const d = new Date(invDate);
-    d.setDate(d.getDate() + DEFAULT_DUE_DATE_OFFSET_DAYS);
-    setDueDate(d.toISOString().split('T')[0]);
-  }, []);
+      invoiceService.listBanks().then(d => { if (!loadedRef.current) setBanks(Array.isArray(d) ? d : []); }).catch(() => {}),
+      invoiceService.listSignatures().then(d => { if (!loadedRef.current) setSignatures(Array.isArray(d) ? d : []); }).catch(() => {}),
+    ]).then(([invoice]) => {
+      if (!invoice) return;
+      loadedRef.current = true;
+      setPrefix(invoice.prefix || 'INV');
+      setInvoiceNumber(invoice.invoiceNumber || invoice.invoice_number || '');
+      setInvoiceDate(invoice.invoiceDate || invoice.invoice_date || new Date().toISOString().split('T')[0]);
+      setDueDate(invoice.dueDate || invoice.due_date || '');
+      setReference(invoice.reference || '');
+      if (invoice.customer || invoice.customerId) {
+        setSelectedCustomer(invoice.customer || { id: invoice.customerId });
+      }
+      setItems(Array.isArray(invoice.items) ? invoice.items.map(it => ({ ...it, _key: it._key || generateKey() })) : []);
+      setNotes(toNoteArray(invoice.notes));
+      setTerms(toNoteArray(invoice.terms));
+      setExtraDiscountType(invoice.extraDiscountType || 'percent');
+      setExtraDiscountValue(Number(invoice.extraDiscountValue) || 0);
+      setAdditionalCharges(Array.isArray(invoice.additionalCharges) ? invoice.additionalCharges : []);
+      setReverseCharge(!!invoice.reverseCharge);
+      setEWaybill(!!invoice.eWaybill);
+      setEInvoice(!!invoice.eInvoice);
+      setEnableTds(!!invoice.enableTds);
+      setEnableTcs(!!invoice.enableTcs);
+      setRoundOff(!!invoice.roundOff);
+      setCustomHeaderValues(invoice.customFieldValues || invoice.customHeaderValues || {});
+      if (invoice.bank || invoice.bankId) {
+        setSelectedBank(invoice.bank || { id: invoice.bankId });
+      }
+      setPayments(toPaymentArray(invoice.payments));
+      if (invoice.signature || invoice.signatureId) {
+        setSelectedSignature(invoice.signature || { id: invoice.signatureId });
+      }
+      initialized.current = true;
+      setLoadingInvoice(false);
+    }).catch((e) => {
+      notificationManager.error('Invoice', e.message || 'Failed to load invoice.');
+      navigate('/sales/invoices');
+    });
+  }, [id, navigate]);
 
   // --- Computed totals ---
   const computed = useMemo(() => {
@@ -234,7 +266,7 @@ export default function CreateInvoice() {
   const draftWithAI = useCallback(async () => {
     setAiBusy(true);
     try {
-      const ctx = `Create an invoice with ${items.length} items. ${selectedCustomer ? `Customer: ${selectedCustomer.name}` : ''}`;
+      const ctx = `Edit invoice with ${items.length} items. ${selectedCustomer ? `Customer: ${selectedCustomer.name}` : ''}`;
       const result = await invoiceService.draftInvoiceWithAI(ctx);
       if (result?.items) {
         setItems(result.items.map(it => ({
@@ -245,7 +277,7 @@ export default function CreateInvoice() {
       }
       if (result?.notes) setNotes(p => [...p, { id: generateKey(), text: result.notes }]);
       if (result?.terms) setTerms(p => [...p, { id: generateKey(), text: result.terms }]);
-      notificationManager.success('AI Draft', 'Invoice draft generated.');
+      notificationManager.success('AI Draft', 'Invoice draft updated.');
     } catch (e) {
       notificationManager.error('AI Draft', e.message || 'Failed.');
     } finally { setAiBusy(false); }
@@ -290,15 +322,16 @@ export default function CreateInvoice() {
 
   // --- Save ---
   const buildPayload = useCallback((status) => ({
-    prefix, invoiceNumber, invoiceDate, dueDate, reference,
+    id, prefix, invoiceNumber, invoiceDate, dueDate, reference,
     customerId: selectedCustomer?.id, customer: selectedCustomer,
     items, extraDiscountType, extraDiscountValue, additionalCharges,
     notes, terms, reverseCharge, eWaybill, eInvoice,
     enableTds, enableTcs, roundOff,
     bankId: selectedBank?.id, payments,
     signatureId: selectedSignature?.id, status,
+    customFieldValues: customHeaderValues,
     ...computed,
-  }), [prefix, invoiceNumber, invoiceDate, dueDate, reference, selectedCustomer, items, extraDiscountType, extraDiscountValue, additionalCharges, notes, terms, reverseCharge, eWaybill, eInvoice, enableTds, enableTcs, roundOff, selectedBank, payments, selectedSignature, computed]);
+  }), [id, prefix, invoiceNumber, invoiceDate, dueDate, reference, selectedCustomer, items, extraDiscountType, extraDiscountValue, additionalCharges, notes, terms, reverseCharge, eWaybill, eInvoice, enableTds, enableTcs, roundOff, selectedBank, payments, selectedSignature, customHeaderValues, computed]);
 
   const validate = useCallback((strict) => {
     const errs = validateInvoice(buildPayload(strict ? 'pending' : 'draft'), { strict });
@@ -314,16 +347,24 @@ export default function CreateInvoice() {
     setSaving(true);
     try {
       await invoiceService.saveInvoice(buildPayload(status));
-      notificationManager.success('Invoice', `Invoice ${status === 'draft' ? 'draft saved' : 'saved'}.`);
-      safeNavigate('/');
+      notificationManager.success('Invoice', `Invoice ${status === 'draft' ? 'draft saved' : 'updated'}.`);
+      safeNavigate('/sales/invoices');
     } catch (e) {
       notificationManager.error('Invoice', e.message || 'Failed.');
     } finally { setSaving(false); }
-  }, [buildPayload, validate, navigate]);
+  }, [buildPayload, validate, safeNavigate]);
 
   const saveInvoice = useCallback(() => save('pending'), [save]);
   const saveDraft = useCallback(() => save('draft'), [save]);
   const canSave = items.length > 0 && !!selectedCustomer;
+
+  if (loadingInvoice) {
+    return (
+      <div className="inv-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+        <div>Loading invoice...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="inv-page">
@@ -332,6 +373,7 @@ export default function CreateInvoice() {
         onPrefixChange={setPrefix} onInvoiceNumberChange={setInvoiceNumber}
         onSave={saveInvoice} onDraft={saveDraft}
         saving={saving} canSave={canSave}
+        title="Edit Invoice"
       />
 
       {/* Subbar */}
@@ -343,9 +385,6 @@ export default function CreateInvoice() {
           </div>
         </div>
         <div className="inv-subbar-right">
-          <button className="inv-link-action" onClick={() => setHeaderSettingsOpen(true)}>
-            <Icon name="info" size={14} /> Custom Headers
-          </button>
           <button className="inv-link-action" onClick={() => setDocSettingsOpen(true)}>
             <Icon name="gear" size={14} /> Settings
           </button>
@@ -359,7 +398,7 @@ export default function CreateInvoice() {
         invoiceDate={invoiceDate} dueDate={dueDate}
         onInvoiceDate={setInvoiceDate} onDueDate={setDueDate}
         reference={reference} onReference={setReference}
-        dueDateOffset={DEFAULT_DUE_DATE_OFFSET_DAYS} onAutoDueDate={autoDueDate}
+        dueDateOffset={DEFAULT_DUE_DATE_OFFSET_DAYS}
         onOpenCreateCustomer={openCreateCustomer}
         errors={errors}
       />

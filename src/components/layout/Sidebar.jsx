@@ -113,7 +113,7 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle }) {
           <Icon name={collapsed ? 'chevron' : 'chevronLeft'} size={18} />
         </button>
         <div className="sidebar__logo">
-          <Icon name="grid" size={22} />
+          <Icon name="home" size={22} />
         </div>
       </div>
 
