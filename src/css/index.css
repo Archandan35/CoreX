@@ -5963,14 +5963,10 @@ select.form-input { cursor: pointer; appearance: auto; }
   display: flex;
   gap: 6px;
   flex-wrap: nowrap;
-  overflow-x: auto;
-  white-space: nowrap;
+  overflow: hidden;
   margin-bottom: 16px;
-  padding-bottom: 4px;
-  scrollbar-width: thin;
+  align-items: center;
 }
-.ps-doc-type-tabs::-webkit-scrollbar { height: 4px; }
-.ps-doc-type-tabs::-webkit-scrollbar-thumb { background: var(--invoice-border); border-radius: 4px; }
 .ps-doc-type-tab {
   padding: 5px 12px;
   font: inherit;
@@ -5982,6 +5978,7 @@ select.form-input { cursor: pointer; appearance: auto; }
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.15s;
+  flex-shrink: 0;
 }
 .ps-doc-type-tab.active {
   color: #fff;
@@ -5991,6 +5988,26 @@ select.form-input { cursor: pointer; appearance: auto; }
 .ps-doc-type-tab:hover:not(.active) {
   color: var(--invoice-text);
   background: #eee;
+}
+.ps-doc-type-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--invoice-indigo);
+  background: transparent;
+  border: 1px dashed var(--invoice-border);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.ps-doc-type-more:hover {
+  background: var(--invoice-indigo-bg);
+  border-color: var(--invoice-indigo);
 }
 
 /* Toolbar */

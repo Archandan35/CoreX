@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import Icon from '../ui/Icon.jsx';
 import Button from '../ui/Button.jsx';
+import Dropdown, { DropdownItem } from '../ui/Dropdown.jsx';
 import { Field, Input } from '../ui/Field.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import Pagination from '../ui/Pagination.jsx';
@@ -47,6 +48,55 @@ export default function PrefixSuffixPanel({ open, onClose }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const isPrefix = tab === 'prefixes';
+
+  // Overflow measurement for doc type tabs
+  const tabsRef = useRef(null);
+  const [visibleCount, setVisibleCount] = useState(docTypes.length);
+
+  useLayoutEffect(() => {
+    if (!tabsRef.current || docTypes.length === 0) return;
+    const container = tabsRef.current;
+    const containerWidth = container.clientWidth;
+    const gap = 6;
+    const moreWidth = 64;
+    const tabEls = container.querySelectorAll('.ps-doc-type-tab');
+    if (tabEls.length === 0) { setVisibleCount(docTypes.length); return; }
+    let used = moreWidth;
+    let count = 0;
+    for (let i = 0; i < tabEls.length; i++) {
+      used += tabEls[i].offsetWidth + gap;
+      if (used > containerWidth) break;
+      count++;
+    }
+    setVisibleCount(Math.max(1, Math.min(count, docTypes.length)));
+  }, [docTypes]);
+
+  // Recalculate on resize
+  useEffect(() => {
+    if (!tabsRef.current) return;
+    const ro = new ResizeObserver(() => {
+      if (!tabsRef.current) return;
+      const container = tabsRef.current;
+      const containerWidth = container.clientWidth;
+      const gap = 6;
+      const moreWidth = 64;
+      const tabEls = container.querySelectorAll('.ps-doc-type-tab');
+      if (tabEls.length === 0) { setVisibleCount(docTypes.length); return; }
+      let used = moreWidth;
+      let count = 0;
+      for (let i = 0; i < tabEls.length; i++) {
+        used += tabEls[i].offsetWidth + gap;
+        if (used > containerWidth) break;
+        count++;
+      }
+      setVisibleCount(Math.max(1, Math.min(count, docTypes.length)));
+    });
+    ro.observe(tabsRef.current);
+    return () => ro.disconnect();
+  }, [docTypes]);
+
+  const visibleDocTypes = docTypes.slice(0, visibleCount);
+  const hiddenDocTypes = docTypes.slice(visibleCount);
 
   // Load document types
   useEffect(() => {
@@ -440,8 +490,8 @@ export default function PrefixSuffixPanel({ open, onClose }) {
             </div>
 
             {/* Document Type Tabs */}
-            <div className="ps-doc-type-tabs">
-              {docTypes.map((dt) => (
+            <div className="ps-doc-type-tabs" ref={tabsRef}>
+              {visibleDocTypes.map((dt) => (
                 <button
                   key={dt}
                   className={`ps-doc-type-tab${docType === dt ? ' active' : ''}`}
@@ -450,6 +500,29 @@ export default function PrefixSuffixPanel({ open, onClose }) {
                   {dt}
                 </button>
               ))}
+              {hiddenDocTypes.length > 0 && (
+                <Dropdown
+                  trigger={
+                    <button className="ps-doc-type-more" aria-label="More document types">
+                      <Icon name="more-horizontal" size={16} /> More
+                    </button>
+                  }
+                  align="left"
+                >
+                  {(close) => (
+                    <div style={{ minWidth: 160, maxHeight: 260, overflowY: 'auto' }}>
+                      {hiddenDocTypes.map((dt) => (
+                        <DropdownItem key={dt} onClick={() => { setDocType(dt); close(); }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {docType === dt && <Icon name="check" size={14} />}
+                            <span style={docType === dt ? { fontWeight: 600 } : {}}>{dt}</span>
+                          </span>
+                        </DropdownItem>
+                      ))}
+                    </div>
+                  )}
+                </Dropdown>
+              )}
             </div>
 
             {/* Toolbar */}
