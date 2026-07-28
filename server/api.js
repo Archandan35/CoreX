@@ -178,12 +178,52 @@ async function handleMemory(db, path, method, parsed, send, currentUser) {
 
   if (method === 'PUT' && path === '/api/settings') {
     if (!checkPermission('settings:update')) return;
+    const oldSettings = await db.settings.getAll();
     const stringified = {};
     for (const [key, value] of Object.entries(parsed)) {
       stringified[key] = typeof value === 'string' ? value : JSON.stringify(value);
     }
     await db.settings.update(stringified);
+    // Audit log each changed setting
+    for (const [key, value] of Object.entries(parsed)) {
+      const oldVal = oldSettings?.[key];
+      if (oldVal !== undefined && oldVal !== value) {
+        try {
+          const { auditService } = await import('../src/audit/AuditService.js');
+          await auditService.logChange({ setting: key, oldValue: oldVal, newValue: value, userId: currentUser?.id });
+        } catch {}
+      }
+    }
     return send(200, { ok: true });
+  }
+
+  if (method === 'GET' && path === '/api/languages') {
+    return send(200, {
+      languages: [
+        { code: 'en', name: 'English', nativeName: 'English' },
+        { code: 'es', name: 'Spanish', nativeName: 'Español' },
+        { code: 'fr', name: 'French', nativeName: 'Français' },
+        { code: 'de', name: 'German', nativeName: 'Deutsch' },
+        { code: 'pt', name: 'Portuguese', nativeName: 'Português' },
+        { code: 'it', name: 'Italian', nativeName: 'Italiano' },
+        { code: 'nl', name: 'Dutch', nativeName: 'Nederlands' },
+        { code: 'pl', name: 'Polish', nativeName: 'Polski' },
+        { code: 'ru', name: 'Russian', nativeName: 'Русский' },
+        { code: 'ja', name: 'Japanese', nativeName: '日本語' },
+        { code: 'ko', name: 'Korean', nativeName: '한국어' },
+        { code: 'zh', name: 'Chinese (Simplified)', nativeName: '简体中文' },
+        { code: 'ar', name: 'Arabic', nativeName: 'العربية' },
+        { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' },
+        { code: 'bn', name: 'Bengali', nativeName: 'বাংলা' },
+      ],
+    });
+  }
+
+  if (method === 'POST' && path === '/api/settings/logo') {
+    if (!checkPermission('settings:update')) return;
+    if (!parsed.fileData) return send(400, { error: 'No file data provided.' });
+    await db.settings.update({ logo: parsed.fileData });
+    return send(200, { ok: true, logo: parsed.fileData });
   }
 
   return send(404, { error: 'Not found.' });
@@ -512,6 +552,10 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
 
   if (method === 'PUT' && path === '/api/settings') {
     if (!cp('settings:update')) return;
+    const { data: oldData, error: oldError } = await adminClient.from('settings').select('*');
+    const oldSettings = {};
+    if (!oldError && oldData) oldData.forEach((row) => { oldSettings[row.key] = row.value; });
+
     for (const [key, value] of Object.entries(parsed)) {
       const { error } = await adminClient.from('settings').upsert(
         { key, value: typeof value === 'string' ? value : JSON.stringify(value) },
@@ -519,7 +563,50 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
       );
       if (error) return send(500, { error: error.message });
     }
+
+    // Audit log each changed setting
+    for (const [key, value] of Object.entries(parsed)) {
+      const oldVal = oldSettings?.[key];
+      if (oldVal !== undefined && oldVal !== value) {
+        await createAuditLog('settings', key, 'updated', { [key]: oldVal }, { [key]: value }, currentUser?.id);
+      }
+    }
+
     return send(200, { ok: true });
+  }
+
+  if (method === 'GET' && path === '/api/languages') {
+    return send(200, {
+      languages: [
+        { code: 'en', name: 'English', nativeName: 'English' },
+        { code: 'es', name: 'Spanish', nativeName: 'Español' },
+        { code: 'fr', name: 'French', nativeName: 'Français' },
+        { code: 'de', name: 'German', nativeName: 'Deutsch' },
+        { code: 'pt', name: 'Portuguese', nativeName: 'Português' },
+        { code: 'it', name: 'Italian', nativeName: 'Italiano' },
+        { code: 'nl', name: 'Dutch', nativeName: 'Nederlands' },
+        { code: 'pl', name: 'Polish', nativeName: 'Polski' },
+        { code: 'ru', name: 'Russian', nativeName: 'Русский' },
+        { code: 'ja', name: 'Japanese', nativeName: '日本語' },
+        { code: 'ko', name: 'Korean', nativeName: '한국어' },
+        { code: 'zh', name: 'Chinese (Simplified)', nativeName: '简体中文' },
+        { code: 'ar', name: 'Arabic', nativeName: 'العربية' },
+        { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' },
+        { code: 'bn', name: 'Bengali', nativeName: 'বাংলা' },
+      ],
+    });
+  }
+
+  if (method === 'POST' && path === '/api/settings/logo') {
+    if (!cp('settings:update')) return;
+    if (!parsed.fileData) return send(400, { error: 'No file data provided.' });
+    const { error } = await adminClient.from('settings').upsert(
+      { key: 'logo', value: parsed.fileData },
+      { onConflict: 'key' }
+    );
+    if (error) return send(500, { error: error.message });
+    await createAuditLog('settings', 'logo', 'updated', null, { logo: '(image data)' }, currentUser?.id);
+    return send(200, { ok: true, logo: parsed.fileData });
   }
 
   // ===== Document Types & Custom Headers (Supabase) =====

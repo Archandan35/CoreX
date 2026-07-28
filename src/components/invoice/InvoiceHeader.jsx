@@ -3,16 +3,15 @@ import Icon from '../ui/Icon.jsx';
 import PermissionGate from '../ui/PermissionGate.jsx';
 import Dropdown, { DropdownItem } from '../ui/Dropdown.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
-import { INVOICE_PREFIXES } from '../../constants/index.js';
 
 export default function InvoiceHeader({
   prefix, invoiceNumber, onPrefixChange, onInvoiceNumberChange,
   onSave, onDraft,
   saving, canSave, title = 'Create Invoice',
-  prefixes,
+  prefixes = []
 }) {
   const navigate = useNavigate();
-  const items = prefixes && prefixes.length > 0 ? prefixes : INVOICE_PREFIXES;
+  const items = prefixes && prefixes.length > 0 ? prefixes : [];
 
   return (
     <section className="inv-topbar-section">
@@ -27,18 +26,20 @@ export default function InvoiceHeader({
           </div>
         </div>
         <div className="inv-topbar-right">
-          <Dropdown
-            trigger={
-              <div className="inv-prefix-select">
-                {prefix} <Icon name="chevron-down" size={14} />
-              </div>
-            }
-          >
-            <DropdownItem onClick={() => onPrefixChange(prefix)}>{prefix}</DropdownItem>
-            {items.filter(p => p.value !== prefix).map(p => (
-              <DropdownItem key={p.value} onClick={() => onPrefixChange(p.value)}>{p.label}</DropdownItem>
-            ))}
-          </Dropdown>
+          {items.length > 0 && (
+            <Dropdown
+              trigger={
+                <div className="inv-prefix-select">
+                  {prefix} <Icon name="chevron-down" size={14} />
+                </div>
+              }
+            >
+              <DropdownItem onClick={() => onPrefixChange(prefix)}>{prefix}</DropdownItem>
+              {items.filter(p => p.value !== prefix).map(p => (
+                <DropdownItem key={p.value} onClick={() => onPrefixChange(p.value)}>{p.label}</DropdownItem>
+              ))}
+            </Dropdown>
+          )}
           <input
             className="inv-number-input"
             type="text"

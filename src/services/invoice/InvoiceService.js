@@ -9,6 +9,7 @@
 import { api } from '../api.js';
 import { aiService } from '../ai/AiService.js';
 import { settingsApiService } from '../settings/SettingsApiService.js';
+import { auditService } from '../../audit/AuditService.js';
 
 async function asJson(res) {
   let data = null;
@@ -140,6 +141,12 @@ export class InvoiceService {
       { method: isEdit ? 'PUT' : 'POST', body: JSON.stringify(invoice) }
     ));
     if (!r.ok) throw new Error(r.data?.error || 'Failed to save invoice.');
+    if (isEdit) {
+      const before = await this.getInvoice(invoice.id);
+      await auditService.logChange({ setting: 'invoice', oldValue: before, newValue: invoice, userId: null });
+    } else {
+      await auditService.logChange({ setting: 'invoice', oldValue: null, newValue: invoice, userId: null });
+    }
     return r.data.invoice;
   }
   async deleteInvoice(id) {

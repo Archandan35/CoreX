@@ -160,12 +160,16 @@ export default function CreateInvoice() {
       invoiceService.listSignatures().then(d => setSignatures(Array.isArray(d) ? d : [])).catch(() => {}),
       invoiceService.listPrefixes({ docType: 'invoice' }).then(d => {
         const items = d?.items || [];
+        // Store prefixes in a format accessible to InvoiceHeader
         setPrefixes(items.filter(p => p.isActive !== false));
       }).catch(() => {}),
       invoiceService.listUnits().then(d => setUnits(Array.isArray(d) ? d : [])).catch(() => {}),
       invoiceService.listWarehouses().then(d => setWarehouses(Array.isArray(d) ? d : [])).catch(() => {}),
       invoiceService.getDocumentSettings().then(d => {
         if (d?.default_due_days) setDueDateOffset(Number(d.default_due_days));
+      }).catch(() => {}),
+      invoiceService.getDocumentSettings().then(d => {
+        if (d?.default_prefix) setPrefix(d.default_prefix || '');
       }).catch(() => {}),
     ]);
   }, []);
