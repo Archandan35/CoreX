@@ -361,6 +361,7 @@ export default function Settings() {
         <div className="settings-layout">
           {/* Left Navigation - Desktop */}
           <nav className="settings-left-nav" aria-label="Settings sections">
+            <div className="settings-left-nav__title">Settings Menu</div>
             <div className="settings-left-nav__items">
               {SECTIONS.map((s) => (
                 <button
