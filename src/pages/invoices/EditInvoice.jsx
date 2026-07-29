@@ -195,6 +195,7 @@ export default function EditInvoice() {
       setEnableTds(!!invoice.enableTds);
       setEnableTcs(!!invoice.enableTcs);
       setRoundOff(!!invoice.roundOff);
+      setDocType(invoice.docType || invoice.documentType || '');
       setCustomHeaderValues(invoice.customFieldValues || invoice.customHeaderValues || {});
       if (invoice.bank || invoice.bankId) {
         setSelectedBank(invoice.bank || { id: invoice.bankId });

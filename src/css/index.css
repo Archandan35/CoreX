@@ -718,6 +718,8 @@ kbd.cmd__kbd {
 .dropdown__item:hover { background: var(--bg-secondary); color: var(--text); }
 .dropdown__item--danger { color: var(--danger); }
 .dropdown__item--danger:hover { background: var(--danger-light); color: var(--danger); }
+.dropdown__item.active { background: var(--bg-secondary); color: var(--primary); font-weight: 600; }
+.dropdown__item--focused { background: var(--bg-secondary); outline: none; }
 
 /* ===== AUTH LAYOUT ===== */
 .auth-layout {

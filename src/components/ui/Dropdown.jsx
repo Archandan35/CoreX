@@ -7,9 +7,14 @@ export default function Dropdown({ trigger, children, align = 'left', className 
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const mousedownHandler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const keyHandler = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', mousedownHandler);
+    document.addEventListener('keydown', keyHandler);
+    return () => {
+      document.removeEventListener('mousedown', mousedownHandler);
+      document.removeEventListener('keydown', keyHandler);
+    };
   }, [open]);
 
   return (
