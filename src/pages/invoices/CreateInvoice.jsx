@@ -7,6 +7,7 @@ import AddProductPanel from '../../components/invoice/AddProductPanel.jsx';
 import DocumentSettings from '../../components/invoice/DocumentSettings.jsx';
 import CustomHeaderPanel from '../../components/invoice/CustomHeaderPanel.jsx';
 import ChargesModal from '../../components/invoice/modals/ChargesModal.jsx';
+import DynamicCustomHeaders from '../../components/invoice/DynamicCustomHeaders.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
@@ -20,7 +21,7 @@ import {
   validateInvoice, validateCustomer, validateProduct, validateBank,
   validateCustomHeaders, validateCreditLimit, validateFinancialYear,
 } from '../../business/invoice/validation.js';
-import { DEFAULT_DUE_DATE_OFFSET_DAYS } from '../../constants/index.js';
+import { DEFAULT_DUE_DATE_OFFSET_DAYS, TAX_RATE_OPTIONS, PAYMENT_MODE_OPTIONS, INVOICE_ATTACHMENT_MAX_FILES } from '../../constants/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
 import { invalidateCache } from '../../services/ui-sync/index.js';
 import { fileService } from '../../services/file/index.js';
@@ -396,8 +397,12 @@ export default function CreateInvoice() {
   // --- Unsaved changes ---
   const isFormDirty = useMemo(() => {
     if (!initialized.current) return false;
-    return items.length > 0 || !!selectedCustomer || notes.length > 0 || terms.length > 0;
-  }, [items, selectedCustomer, notes, terms]);
+    return items.length > 0 || !!selectedCustomer || notes.length > 0 || terms.length > 0
+      || payments.length > 0 || additionalCharges.length > 0 || extraDiscountValue > 0
+      || Object.keys(customHeaderValues).length > 0 || attachments.length > 0
+      || reverseCharge || eWaybill || eInvoice || enableTds || enableTcs || roundOff
+      || !!selectedBank || !!selectedSignature || !!reference;
+  }, [items, selectedCustomer, notes, terms, payments, additionalCharges, extraDiscountValue, customHeaderValues, attachments, reverseCharge, eWaybill, eInvoice, enableTds, enableTcs, roundOff, selectedBank, selectedSignature, reference]);
   const { showConfirm, confirmNavigation, proceed: confirmProceed, cancel: confirmCancel } = useUnsavedChanges(isFormDirty);
 
   const safeNavigate = useCallback((path) => {
@@ -420,9 +425,10 @@ export default function CreateInvoice() {
       signatureId: selectedSignature?.id, status,
       customFieldValues: customHeaderValues,
       sameState: sameState === true,
+      attachmentCount: attachments.length,
       ...computed,
     };
-  }, [prefix, invoiceNumber, invoiceDate, dueDate, reference, selectedCustomer, docType, items, extraDiscountType, extraDiscountValue, additionalCharges, notes, terms, reverseCharge, eWaybill, eInvoice, enableTds, enableTcs, roundOff, selectedBank, payments, selectedSignature, customHeaderValues, computed, sameState, markFullyPaid]);
+  }, [prefix, invoiceNumber, invoiceDate, dueDate, reference, selectedCustomer, docType, items, extraDiscountType, extraDiscountValue, additionalCharges, notes, terms, reverseCharge, eWaybill, eInvoice, enableTds, enableTcs, roundOff, selectedBank, payments, selectedSignature, customHeaderValues, computed, sameState, markFullyPaid, attachments]);
 
   const validate = useCallback((strict) => {
     const payload = buildPayload(strict ? 'pending' : 'draft');
@@ -584,7 +590,7 @@ export default function CreateInvoice() {
     <div className="page">
 
       {(() => {
-        const inlineKeys = new Set(['customer','invoiceDate','dueDate','invoiceNumber','items','payments','creditLimit']);
+        const inlineKeys = new Set(['customer','invoiceDate','dueDate','invoiceNumber','items','payments','creditLimit','lines']);
         const otherErrors = Object.entries(errors).filter(([k]) => !inlineKeys.has(k) && !k.startsWith('payment_'));
         if (otherErrors.length > 0) {
           return (
@@ -756,16 +762,16 @@ export default function CreateInvoice() {
           </div>
         </div>
 
-        <div className="ni-custom-headers-label">Custom Headers</div>
-        <div className="ni-pill-row">
-          {customHeaderDefs.length === 0 ? (
-            <div className="ni-pill" onClick={() => setCustomHeaderSettingsOpen(true)}><Icon name="plus" /> Add Custom Headers</div>
-          ) : customHeaderDefs.map(h => (
-            <div key={h.internalKey} className="ni-pill" onClick={() => setCustomHeaderSettingsOpen(true)}>
-              <Icon name="plus" /> {h.label}
-            </div>
-          ))}
-        </div>
+        <DynamicCustomHeaders
+          values={customHeaderValues}
+          onChange={(key, val) => setCustomHeaderValues(p => ({ ...p, [key]: val }))}
+          docType={docType}
+          chipMode
+          onOpenSettings={() => setCustomHeaderSettingsOpen(true)}
+          errors={errors}
+          onHeadersLoaded={(defs) => setCustomHeaderDefs(defs)}
+          refreshKey={headerRefreshKey}
+        />
       </div>
 
       {/* ===== Products & Services card ===== */}
@@ -876,20 +882,24 @@ export default function CreateInvoice() {
                       <input style={{ border:'none', outline:'none', width:'100%', fontSize:'11px', color:'var(--ni-text-gray)', marginTop:'2px', fontFamily:'inherit' }}
                         value={item.description || ''} onChange={e => onChangeItem(idx, { ...item, description: e.target.value })} placeholder="Description" />
                     )}
+                    {errors.lines?.[idx]?.name && <div style={{color:'#e5484d',fontSize:'10px',marginTop:'1px'}}>{errors.lines[idx].name}</div>}
                   </div>
-                  <div><input style={{ border:'1px solid var(--ni-border)', borderRadius:'6px', padding:'6px 8px', width:'100%', fontSize:'13px', fontFamily:'inherit' }}
-                    type="number" min="0" step="any" value={item.quantity} onChange={e => onChangeItem(idx, { ...item, quantity: Number(e.target.value) || 0 })} /></div>
-                  <div><input style={{ border:'1px solid var(--ni-border)', borderRadius:'6px', padding:'6px 8px', width:'100%', fontSize:'13px', fontFamily:'inherit' }}
-                    type="number" min="0" step="any" value={item.unitPrice} onChange={e => onChangeItem(idx, { ...item, unitPrice: Number(e.target.value) || 0 })} /></div>
+                  <div>
+                    <input style={{ border:'1px solid var(--ni-border)', borderRadius:'6px', padding:'6px 8px', width:'100%', fontSize:'13px', fontFamily:'inherit' }}
+                      type="number" min="0" step="any" value={item.quantity} onChange={e => onChangeItem(idx, { ...item, quantity: Number(e.target.value) || 0 })} />
+                    {errors.lines?.[idx]?.quantity && <div style={{color:'#e5484d',fontSize:'10px',marginTop:'1px'}}>{errors.lines[idx].quantity}</div>}
+                  </div>
+                  <div>
+                    <input style={{ border:'1px solid var(--ni-border)', borderRadius:'6px', padding:'6px 8px', width:'100%', fontSize:'13px', fontFamily:'inherit' }}
+                      type="number" min="0" step="any" value={item.unitPrice} onChange={e => onChangeItem(idx, { ...item, unitPrice: Number(e.target.value) || 0 })} />
+                    {errors.lines?.[idx]?.unitPrice && <div style={{color:'#e5484d',fontSize:'10px',marginTop:'1px'}}>{errors.lines[idx].unitPrice}</div>}
+                  </div>
                   <div style={{position:'relative'}}>
                     <select style={{border:'1px solid var(--ni-border)',borderRadius:'6px',padding:'6px 4px',fontSize:'12px',width:'100%',fontFamily:'inherit',background:'#fff'}}
                       value={item.taxRate} onChange={e => onChangeItem(idx, { ...item, taxRate: Number(e.target.value) })}>
-                      <option value={0}>0%</option>
-                      <option value={5}>5%</option>
-                      <option value={12}>12%</option>
-                      <option value={18}>18%</option>
-                      <option value={28}>28%</option>
+                      {TAX_RATE_OPTIONS.map(r => <option key={r} value={r}>{r}%</option>)}
                     </select>
+                    {errors.lines?.[idx]?.taxRate && <div style={{color:'#e5484d',fontSize:'10px',marginTop:'1px'}}>{errors.lines[idx].taxRate}</div>}
                   </div>
                   <div style={{display:'flex',gap:'2px',alignItems:'center'}}>
                     <select style={{border:'1px solid var(--ni-border)',borderRadius:'6px',padding:'6px 2px',fontSize:'11px',width:'40px',fontFamily:'inherit',background:'#fff'}}
@@ -1004,10 +1014,10 @@ export default function CreateInvoice() {
             <input type="file" ref={fileInputRef} multiple style={{ display:'none' }}
               onChange={e => {
                 const files = Array.from(e.target.files || []);
-                setAttachments(p => [...p, ...files].slice(0, 5));
+                setAttachments(p => [...p, ...files].slice(0, INVOICE_ATTACHMENT_MAX_FILES));
                 e.target.value = '';
               }} />
-            <button className="ni-btn-attach" onClick={() => fileInputRef.current?.click()}><Icon name="upload" /> Attach Files (Max: {5 - attachments.length})</button>
+            <button className="ni-btn-attach" onClick={() => fileInputRef.current?.click()}><Icon name="upload" /> Attach Files (Max: {INVOICE_ATTACHMENT_MAX_FILES - attachments.length})</button>
           </div>
         </div>
 
@@ -1115,13 +1125,7 @@ export default function CreateInvoice() {
                     <select style={{ border:'none', outline:'none', fontSize:'13px', fontFamily:'inherit', background:'transparent', width:'100%', cursor:'pointer', color: pmt.mode ? 'inherit' : 'var(--ni-text-light-gray)' }}
                       value={pmt.mode || ''} onChange={e => updatePayment(i, { ...pmt, mode: e.target.value })}>
                       <option value="" disabled>Select mode</option>
-                      <option value="Cash">Cash</option>
-                      <option value="UPI">UPI</option>
-                      <option value="Bank">Bank</option>
-                      <option value="Cheque">Cheque</option>
-                      <option value="Card">Card</option>
-                      <option value="NEFT">NEFT</option>
-                      <option value="RTGS">RTGS</option>
+                      {PAYMENT_MODE_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                     </select>
                   </div>
                   <div className="ni-pt-sub">
@@ -1129,6 +1133,7 @@ export default function CreateInvoice() {
                     <Icon name="chevron-down" style={{ width:'11px',height:'11px',verticalAlign:'middle' }} />
                   </div>
                 </div>
+                {errors[`payment_${i}`] && <div style={{color:'#e5484d',fontSize:'11px',gridColumn:'1/-1',padding:'2px 0 0'}}>{errors[`payment_${i}`]}</div>}
               </div>
             ))}
             </>)}

@@ -1,8 +1,9 @@
 import { FileManager } from '../../business/file-management/FileManager.js';
+import { storage } from '../storage/index.js';
 
 export class FileService {
   constructor(storageProvider) {
-    this.fileManager = new FileManager(storageProvider);
+    this.fileManager = new FileManager(storageProvider || storage);
   }
 
   async upload(file, path = '/uploads', options = {}) {
