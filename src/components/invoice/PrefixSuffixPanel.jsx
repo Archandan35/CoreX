@@ -602,7 +602,7 @@ export default function PrefixSuffixPanel({ open, onClose }) {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         title="Delete Record"
-        message={`Are you sure you want to delete ${isPrefix ? 'prefix' : 'suffix'} "${deleteTarget?.value}"? This action cannot be undone.`}
+        message={`Are you sure you want to delete ${isPrefix ? 'prefix' : 'suffix'} \"${deleteTarget?.value}\"? This action cannot be undone.`}
         confirmText="Delete"
         cancelText="Cancel"
         variant="danger"

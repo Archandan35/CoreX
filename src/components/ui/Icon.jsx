@@ -242,6 +242,14 @@ const COMPLEX = {
       <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite" />
     </circle>
   ),
+  'invoice-empty': (
+    <g transform="scale(0.375, 0.429) translate(-4, -14)">
+      <rect x="4" y="14" width="56" height="38" rx="4" stroke="currentColor" strokeWidth="2" fill="none" />
+      <path d="M4 16L30 36L60 16" stroke="currentColor" strokeWidth="2" fill="none" />
+      <circle cx="50" cy="10" r="9" fill="currentColor" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M46 10h8M50 6v8" stroke="#fff" strokeWidth="1.6" />
+    </g>
+  ),
 };
 
 export default memo(function Icon({ name, size = 18, className = '', strokeWidth = 1.9, fill = false }) {

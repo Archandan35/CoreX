@@ -15,6 +15,8 @@ import { Field, Input } from '../../components/ui/Field.jsx';
 import Icon from '../../components/ui/Icon.jsx';
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx';
 import useUnsavedChanges from '../../hooks/useUnsavedChanges.js';
+import PermissionGate from '../../components/ui/PermissionGate.jsx';
+import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 import { invoiceService } from '../../services/invoice/index.js';
 import { computeInvoice } from '../../business/invoice/calculations.js';
 import {
@@ -40,8 +42,6 @@ export default function CreateInvoice() {
   const [banks, setBanks] = useState([]);
   const [signatures, setSignatures] = useState([]);
   const [prefixes, setPrefixes] = useState([]);
-  const [units, setUnits] = useState([]);
-  const [warehouses, setWarehouses] = useState([]);
   const [dueDateOffset, setDueDateOffset] = useState(DEFAULT_DUE_DATE_OFFSET_DAYS);
   const [companyState, setCompanyState] = useState('');
 
@@ -152,8 +152,6 @@ export default function CreateInvoice() {
         const items = d?.items || [];
         setPrefixes(items.filter(p => p.isActive !== false));
       }).catch(e => console.warn('Failed to load prefixes', e)),
-      invoiceService.listUnits().then(d => setUnits(Array.isArray(d) ? d : [])).catch(e => console.warn('Failed to load units', e)),
-      invoiceService.listWarehouses().then(d => setWarehouses(Array.isArray(d) ? d : [])).catch(e => console.warn('Failed to load warehouses', e)),
       invoiceService.getDocumentSettings().then(d => {
         if (d?.default_due_days) setDueDateOffset(Number(d.default_due_days));
       }).catch(e => console.warn('Failed to load document settings', e)),
@@ -203,17 +201,6 @@ export default function CreateInvoice() {
     }
   }, [invoiceDate, dueDate, dueDateOffset]);
 
-  const autoDueDate = useCallback((invDate) => {
-    if (!invDate) return;
-    const d = new Date(invDate);
-    if (selectedCustomer?.payment_terms?.days) {
-      d.setDate(d.getDate() + Number(selectedCustomer.payment_terms.days));
-    } else {
-      d.setDate(d.getDate() + dueDateOffset);
-    }
-    setDueDate(d.toISOString().split('T')[0]);
-  }, [dueDateOffset, selectedCustomer]);
-
   // --- Customer selection: auto-fill address, GSTIN, state, terms, outstanding ---
   const handleSelectCustomer = useCallback(async (customer) => {
     setSelectedCustomer(customer);
@@ -257,9 +244,6 @@ export default function CreateInvoice() {
   const openCreateCustomer = () => setAddCustomerPanelOpen(true);
   const closeAddCustomerPanel = () => setAddCustomerPanelOpen(false);
   const closeCustomerModal = () => setCustomerModal(p => ({ ...p, open: false }));
-  const editCustomer = () => {
-    if (selectedCustomer) setCustomerModal({ open: true, mode: 'edit', customer: selectedCustomer });
-  };
   const submitCustomer = async (form) => {
     const errs = validateCustomer(form);
     if (Object.keys(errs).length) return;
@@ -485,6 +469,11 @@ export default function CreateInvoice() {
       if (attachments.length > 0) {
         try {
           for (const file of attachments) {
+            const validation = validateAttachment(file);
+            if (validation) {
+              notificationManager.warning('Attachments', `"${file.name}" - ${validation}. Skipping.`);
+              continue;
+            }
             await fileService.upload(file, `/invoices/${result.id}`);
           }
         } catch (uploadErr) {
@@ -582,12 +571,9 @@ export default function CreateInvoice() {
   const [bankOpen, setBankOpen] = useState(false);
   const [sigOpen, setSigOpen] = useState(false);
 
-  const DOC_TYPES = [
-    'Regular','Estimate','Quotation','Proforma','Tax Invoice','Debit Note','Credit Note','Delivery Challan'
-  ];
-
   return (
-    <div className="page">
+    <PermissionGate permission={PERMISSIONS.INVOICE_CREATE}>
+      <div className="page">
 
       {(() => {
         const inlineKeys = new Set(['customer','invoiceDate','dueDate','invoiceNumber','items','payments','creditLimit','lines']);
@@ -1264,5 +1250,6 @@ export default function CreateInvoice() {
       />
 
     </div>
+    </PermissionGate>
   );
 }

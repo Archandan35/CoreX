@@ -70,6 +70,8 @@ export const PAYMENT_MODE = Object.freeze({
   BANK_TRANSFER: 'bank_transfer',
   CHEQUE: 'cheque',
   CARD: 'card',
+  NEFT: 'neft',
+  RTGS: 'rtgs',
   OTHER: 'other',
 });
 
@@ -79,7 +81,14 @@ export const PAYMENT_MODE_OPTIONS = Object.freeze([
   { value: PAYMENT_MODE.BANK_TRANSFER, label: 'Bank Transfer' },
   { value: PAYMENT_MODE.CHEQUE, label: 'Cheque' },
   { value: PAYMENT_MODE.CARD, label: 'Card' },
+  { value: PAYMENT_MODE.NEFT, label: 'NEFT' },
+  { value: PAYMENT_MODE.RTGS, label: 'RTGS' },
   { value: PAYMENT_MODE.OTHER, label: 'Other' },
+]);
+
+export const DOC_TYPES = Object.freeze([
+  'Regular', 'Estimate', 'Quotation', 'Proforma',
+  'Tax Invoice', 'Debit Note', 'Credit Note', 'Delivery Challan',
 ]);
 
 // Admin-defined custom header keys shipped by default. The Invoice Settings

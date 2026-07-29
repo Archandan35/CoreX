@@ -437,55 +437,11 @@ export default function CustomHeaderPanel({ open, onClose }) {
               <div className="ds-body">
                 <form className="inv-modal-form" onSubmit={(e) => { e.preventDefault(); saveEdit(); }}>
                   <div className="inv-modal-row">
-                    <Field label="Display Name" required>
-                      <Input value={editForm.displayName} onChange={(e) => updateForm('displayName', e.target.value)} placeholder="e.g. Vehicle No" aria-invalid={!!editErrors.displayName} />
+                    <Field label="Display Name : input field" required>
+                      <div className="inv-modal-row" style={{ marginTop: 4 }}>
+                        <Select options={CUSTOM_HEADER_INPUT_TYPE_OPTIONS} value={editForm.inputType} onChange={(v) => updateForm('inputType', v)} placeholder="Select type" />
+                      </div>
                       {editErrors.displayName && <span className="inv-field-error">{editErrors.displayName}</span>}
-                    </Field>
-                  </div>
-                  <div className="inv-modal-row">
-                    <Field label="Internal Key">
-                      <Input value={editForm.internalKey} onChange={(e) => updateForm('internalKey', e.target.value)} placeholder="Auto-generated from display name" aria-invalid={!!editErrors.internalKey} />
-                      {editErrors.internalKey && <span className="inv-field-error">{editErrors.internalKey}</span>}
-                    </Field>
-                  </div>
-                  <div className="inv-modal-row">
-                    <Field label="Input Type">
-                      <Select options={CUSTOM_HEADER_INPUT_TYPE_OPTIONS} value={editForm.inputType} onChange={(v) => updateForm('inputType', v)} />
-                    </Field>
-                  </div>
-                  <div className="inv-modal-row">
-                    <Field label="Description">
-                      <textarea className="form-input" rows={3} value={editForm.description} onChange={(e) => updateForm('description', e.target.value)} placeholder="Description of this custom field" />
-                    </Field>
-                  </div>
-                  <div className="inv-modal-row">
-                    <Field label="Document Types">
-                      <Input value={editForm.docTypes} onChange={(e) => updateForm('docTypes', e.target.value)} placeholder="e.g. invoice,credit-note (comma-separated)" />
-                    </Field>
-                  </div>
-                  <div className="inv-modal-row">
-                    <Field label="Display Order">
-                      <Input type="number" min="1" value={editForm.displayOrder} onChange={(e) => updateForm('displayOrder', Number(e.target.value) || 1)} />
-                    </Field>
-                  </div>
-                  <div className="inv-modal-row">
-                    <Field label="Column Position">
-                      <select className="form-input" value={String(editForm.columnPosition)} onChange={(e) => updateForm('columnPosition', e.target.value)}>
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                      </select>
-                    </Field>
-                  </div>
-                  <div className="inv-modal-row">
-                    <Field label="Placeholder">
-                      <Input value={editForm.placeholder} onChange={(e) => updateForm('placeholder', e.target.value)} placeholder="Placeholder text" />
-                    </Field>
-                  </div>
-                  <div className="inv-modal-row">
-                    <Field label="Default Value">
-                      <Input value={editForm.defaultValue} onChange={(e) => updateForm('defaultValue', e.target.value)} placeholder="Default value" />
                     </Field>
                   </div>
                   {(editForm.inputType === 'dropdown' || editForm.inputType === 'multi_select' || editForm.inputType === 'radio') && (
@@ -496,23 +452,6 @@ export default function CustomHeaderPanel({ open, onClose }) {
                       </Field>
                     </div>
                   )}
-                  <div className="inv-modal-row" style={{ gap: 16 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-                      <input type="checkbox" checked={editForm.required} onChange={(e) => updateForm('required', e.target.checked)} /> Required
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-                      <input type="checkbox" checked={editForm.readOnly} onChange={(e) => updateForm('readOnly', e.target.checked)} /> Read Only
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-                      <input type="checkbox" checked={editForm.visible} onChange={(e) => updateForm('visible', e.target.checked)} /> Visible
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-                      <input type="checkbox" checked={editForm.printable} onChange={(e) => updateForm('printable', e.target.checked)} /> Printable
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-                      <input type="checkbox" checked={editForm.exportable} onChange={(e) => updateForm('exportable', e.target.checked)} /> Exportable
-                    </label>
-                  </div>
                 </form>
               </div>
               <div className="ds-footer">

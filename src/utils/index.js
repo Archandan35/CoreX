@@ -33,6 +33,10 @@ export function generateId() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+export function generateKey() {
+  return Math.random().toString(36).substring(2, 10);
+}
+
 export function clone(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
