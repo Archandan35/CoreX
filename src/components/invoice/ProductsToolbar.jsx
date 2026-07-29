@@ -11,8 +11,9 @@ import { DISCOUNT_TYPE } from '../../constants/index.js';
 export default function ProductsToolbar({
   category, onCategory, categories,
   productQuery, onProductQuery, products, qty, onQty,
-  onAddProduct, onCreateProduct, showDescription, onToggleShowDescription,
+  onAddProduct, showDescription, onToggleShowDescription,
   onDraftWithAI, aiBusy, disabledAdd, onAddNewProduct,
+  columnManager,
 }) {
   return (
     <>
@@ -28,9 +29,7 @@ export default function ProductsToolbar({
             <input type="checkbox" checked={showDescription} onChange={(e) => onToggleShowDescription(e.target.checked)} />
             Show description
           </label>
-          <button className="inv-icon-btn" onClick={onCreateProduct} aria-label="Settings">
-            <Icon name="sliders-horizontal" size={14} />
-          </button>
+          {columnManager}
         </div>
       </div>
 

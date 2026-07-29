@@ -409,6 +409,14 @@ async function handleInvoiceMemory(db, path, method, parsed, send, currentUser) 
     if (!cp(PERM.INVOICE_UPDATE)) return true;
     const result = await db.invoices.save(parsed, currentUser);
     if (!result.ok) send(409, { error: result.error }); else send(200, { invoice: result.invoice });
+  } else if (method === 'POST' && path.match(/^\/api\/invoices\/([0-9a-fA-F-]+)\/duplicate$/)) {
+    if (!cp(PERM.INVOICE_CREATE)) return true;
+    const id = path.match(/^\/api\/invoices\/([0-9a-fA-F-]+)\/duplicate$/)[1];
+    const original = await db.invoices.findById(id, currentUser);
+    if (!original) { send(404, { error: 'Invoice not found.' }); return true; }
+    const dup = { ...original, id: undefined, invoiceNumber: undefined, created_at: undefined, updated_at: undefined, status: 'draft' };
+    const result = await db.invoices.save({ ...dup, created_by: currentUser.id }, currentUser);
+    if (!result.ok) send(409, { error: result.error }); else send(201, { invoice: result.invoice });
   } else if (method === 'DELETE' && path.startsWith('/api/invoices/')) {
     if (!cp(PERM.INVOICE_DELETE)) return true;
     await db.invoices.delete(path.split('/').pop(), currentUser);
@@ -1009,6 +1017,52 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
     ]);
 
     return send(200, { ok: true, status: 'cancelled' });
+  }
+
+  if (method === 'POST' && path.match(/^\/api\/invoices\/([0-9a-fA-F-]+)\/duplicate$/)) {
+    if (!cp('invoice:create')) return;
+    const id = path.match(/^\/api\/invoices\/([0-9a-fA-F-]+)\/duplicate$/)[1];
+
+    const { data: original, error: fetchErr } = await adminClient.from('invoices').select('*, items:invoice_items(*)').eq('id', id).single();
+    if (fetchErr || !original) return send(404, { error: 'Invoice not found.' });
+
+    const { invoice_number: nextNum } = await getNextInvoiceNumber(adminClient, original.prefix || 'INV-');
+    const newInv = {
+      prefix: original.prefix, invoice_number: nextNum, customer_id: original.customer_id,
+      invoice_date: new Date().toISOString().split('T')[0], due_date: original.due_date,
+      reference: original.reference, custom_headers: original.custom_headers,
+      notes: original.notes, terms: original.terms, attachments: original.attachments,
+      reverse_charge: original.reverse_charge, create_ewaybill: original.create_ewaybill,
+      create_einvoice: original.create_einvoice, tds_enabled: original.tds_enabled,
+      tcs_enabled: original.tcs_enabled, extra_discount_type: original.extra_discount_type,
+      extra_discount_value: original.extra_discount_value, round_off: original.round_off,
+      bank_id: original.bank_id, signature_id: original.signature_id,
+      subtotal: original.subtotal, discount_total: original.discount_total,
+      taxable_amount: original.taxable_amount, cgst_total: original.cgst_total,
+      sgst_total: original.sgst_total, igst_total: original.igst_total,
+      tax_total: original.tax_total, additional_charges_total: original.additional_charges_total,
+      grand_total: original.grand_total, amount_paid: 0, balance_due: original.grand_total,
+      status: 'draft', created_by: uid,
+    };
+
+    const { data: created, error: insertErr } = await adminClient.from('invoices').insert(newInv).select().single();
+    if (insertErr) return send(500, { error: insertErr.message });
+
+    if (original.items?.length) {
+      const newItems = original.items.map(item => ({
+        invoice_id: created.id, product_id: item.product_id, name: item.name,
+        description: item.description, show_description: item.show_description,
+        quantity: item.quantity, unit_price: item.unit_price, tax_rate: item.tax_rate,
+        discount_type: item.discount_type, discount_value: item.discount_value,
+        discount_amount: item.discount_amount, tax_amount: item.tax_amount,
+        line_total: item.line_total, sort_order: item.sort_order,
+      }));
+      const { error: itemsErr } = await adminClient.from('invoice_items').insert(newItems);
+      if (itemsErr) return send(500, { error: itemsErr.message });
+    }
+
+    await createAuditLog('invoices', created.id, 'created', null, newInv, uid);
+    return send(201, { invoice: created });
   }
 
   return send(404, { error: 'Not found.' });

@@ -6,7 +6,7 @@ import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 
 export default function InvoiceHeader({
   prefix, invoiceNumber, onPrefixChange, onInvoiceNumberChange,
-  onSave, onDraft,
+  onSave, onDraft, onClear,
   saving, canSave, title = 'Create Invoice',
   prefixes = []
 }) {
@@ -47,6 +47,11 @@ export default function InvoiceHeader({
             onChange={(e) => onInvoiceNumberChange(e.target.value)}
             placeholder="000"
           />
+          {onClear && (
+            <button className="inv-btn-ghost" onClick={onClear} type="button" style={{ marginRight: 6 }}>
+              <Icon name="refresh-cw" size={14} /> Clear
+            </button>
+          )}
           <PermissionGate permission={PERMISSIONS.INVOICE_CREATE}>
             <button className="inv-btn-save" onClick={onDraft} disabled={!canSave || saving} style={{ marginRight: 6 }}>
               {saving ? 'Saving...' : 'Save Draft'}

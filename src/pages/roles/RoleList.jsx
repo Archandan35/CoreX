@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -12,6 +12,8 @@ import PermissionGate from '../../components/ui/PermissionGate.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 import { roleService } from '../../services/role/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
+import useDeleteHandler from '../../hooks/useDeleteHandler.js';
+import { invalidateCache } from '../../services/ui-sync/index.js';
 
 export default function RoleList() {
   const navigate = useNavigate();
@@ -20,8 +22,41 @@ export default function RoleList() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+
+  const {
+    deleting,
+    deleteTarget,
+    requestDelete,
+    cancelDelete,
+    confirmDelete,
+  } = useDeleteHandler({
+    onDelete: (target) => roleService.deleteRole(target.id),
+    onSuccess: (target) => {
+      setRoles((prev) => prev.filter((r) => r.id !== target.id));
+      invalidateCache('roles');
+      loadRoles();
+    },
+    successMessage: 'Role deleted successfully.',
+    errorMessage: 'Failed to delete role.',
+    requirePermission: PERMISSIONS.ROLE_DELETE,
+  });
+
+  const loadRoles = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await roleService.listRoles();
+      setRoles(Array.isArray(data) ? data : []);
+      setTotalPages(1);
+    } catch {
+      notificationManager.error('Failed to load roles.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRoles();
+  }, [loadRoles]);
 
   const columns = [
     { key: 'name', label: 'Name', render: (row) => <strong>{row.name}</strong> },
@@ -41,7 +76,7 @@ export default function RoleList() {
                 <DropdownItem onClick={() => { close(); navigate(`/roles/${row.id}/edit`); }}>Edit</DropdownItem>
               </PermissionGate>
               <PermissionGate permission={PERMISSIONS.ROLE_DELETE}>
-                <DropdownItem danger onClick={() => { close(); setDeleteTarget(row); }}>Delete</DropdownItem>
+                <DropdownItem danger onClick={() => { close(); requestDelete(row); }}>Delete</DropdownItem>
               </PermissionGate>
             </>
           )}
@@ -49,21 +84,6 @@ export default function RoleList() {
       ),
     },
   ];
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      await roleService.deleteRole(deleteTarget.id);
-      setRoles((prev) => prev.filter((r) => r.id !== deleteTarget.id));
-      notificationManager.success('Role deleted successfully.');
-    } catch {
-      notificationManager.error('Failed to delete role.');
-    } finally {
-      setDeleting(false);
-      setDeleteTarget(null);
-    }
-  };
 
   return (
     <div className="page">
@@ -81,13 +101,13 @@ export default function RoleList() {
 
       <Modal
         open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        onClose={cancelDelete}
         title="Delete Role"
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="primary" loading={deleting} onClick={handleDelete}>Delete</Button>
+            <Button variant="secondary" onClick={cancelDelete}>Cancel</Button>
+            <Button variant="primary" loading={deleting} onClick={confirmDelete}>Delete</Button>
           </>
         }
       >

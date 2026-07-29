@@ -2,11 +2,15 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../../components/ui/Icon.jsx';
 import Dropdown, { DropdownItem } from '../../components/ui/Dropdown.jsx';
+import Modal from '../../components/ui/Modal.jsx';
+import Button from '../../components/ui/Button.jsx';
 import { usePermission } from '../../identity/authorization/PermissionContext.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 import DocumentSettings from '../../components/invoice/DocumentSettings.jsx';
 import { invoiceService } from '../../services/invoice/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
+import useDeleteHandler from '../../hooks/useDeleteHandler.js';
+import { invalidateCache } from '../../services/ui-sync/index.js';
 
 const TABS = ['All', 'Pending', 'Paid', 'Cancelled', 'Drafts'];
 
@@ -120,6 +124,10 @@ export default function Invoices({ variant = 'invoices' }) {
   const [sortField, setSortField] = useState('invoiceDate');
   const [sortDir, setSortDir] = useState('desc');
   const [showFilters, setShowFilters] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false);
+  const [deletingInvoiceId, setDeletingInvoiceId] = useState(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const pageSize = 10;
 
   useEffect(() => {
@@ -203,6 +211,7 @@ export default function Invoices({ variant = 'invoices' }) {
   }, []);
 
   const handleRefresh = useCallback(() => {
+    invalidateCache('invoices');
     setLoading(true);
     invoiceService.listInvoices()
       .then((data) => {
@@ -214,15 +223,19 @@ export default function Invoices({ variant = 'invoices' }) {
 
   const handleBulkDelete = useCallback(async () => {
     if (!selectedIds.length) return;
-    const confirmed = window.confirm(`Delete ${selectedIds.length} invoice(s)?`);
-    if (!confirmed) return;
+    setBulkDeleting(true);
     let success = 0;
+    let lastError = null;
     for (const id of selectedIds) {
-      try { await invoiceService.deleteInvoice(id); success++; } catch { }
+      try { await invoiceService.deleteInvoice(id); success++; }
+      catch (e) { lastError = e; }
     }
     if (success > 0) notificationManager.success('Invoices', `${success} invoice(s) deleted.`);
+    if (lastError) notificationManager.error('Invoices', `${selectedIds.length - success} invoice(s) failed to delete.`);
     handleRefresh();
     setSelectedIds([]);
+    setBulkDeleting(false);
+    setConfirmBulkDeleteOpen(false);
   }, [selectedIds, handleRefresh]);
 
   const handleExportCsv = useCallback(async (close) => {
@@ -259,18 +272,21 @@ export default function Invoices({ variant = 'invoices' }) {
     notificationManager.info('Send', `Send invoice ${inv.billNo} — email service will be available soon.`);
   }, []);
 
-  const handleDeleteOne = useCallback(async (inv, close) => {
-    close();
-    const confirmed = window.confirm(`Delete invoice ${inv.billNo}?`);
-    if (!confirmed) return;
+  const handleDeleteOne = useCallback(async () => {
+    if (!deletingInvoiceId?.inv) return;
+    const inv = deletingInvoiceId.inv;
+    setDeletingInvoiceId(prev => ({ ...prev, deleting: true }));
     try {
       await invoiceService.deleteInvoice(inv.id);
       notificationManager.success('Invoices', `Invoice ${inv.billNo} deleted.`);
       handleRefresh();
+      setConfirmDeleteOpen(false);
     } catch (e) {
       notificationManager.error('Invoices', e.message);
+    } finally {
+      setDeletingInvoiceId(prev => ({ ...prev, deleting: false }));
     }
-  }, [handleRefresh]);
+  }, [deletingInvoiceId, handleRefresh]);
 
   const handleDownloadPdf = useCallback((inv, close) => {
     close();
@@ -297,57 +313,73 @@ export default function Invoices({ variant = 'invoices' }) {
     notificationManager.info('Bulk Download', 'Bulk Download PDFs feature coming soon.');
   }, []);
 
-  const handleDuplicate = useCallback((inv, close) => {
+  const handleDuplicate = useCallback(async (inv, close) => {
     close();
-    notificationManager.info('Duplicate', `Duplicate invoice ${inv.billNo} (3/3 left) — coming soon.`);
-  }, []);
+    try {
+      await invoiceService.duplicateInvoice(inv.id);
+      notificationManager.success('Invoices', `Invoice ${inv.billNo} duplicated.`);
+      handleRefresh();
+    } catch (e) {
+      notificationManager.error('Duplicate', e.message || 'Duplicate feature will be available soon.');
+    }
+  }, [handleRefresh]);
 
   const handleThermalPrint = useCallback((inv, close) => {
     close();
-    notificationManager.info('Thermal Print', `Thermal print for ${inv.billNo} will be available in a future update.`);
+    window.print();
   }, []);
 
   const handleShippingLabel = useCallback((inv, close) => {
     close();
-    notificationManager.info('Shipping Label', `Shipping label for ${inv.billNo} will be available in a future update.`);
+    notificationManager.info('Shipping Label', `Shipping label for ${inv.billNo} is not yet available.`);
   }, []);
 
   const handleDeliveryChallan = useCallback((inv, close) => {
     close();
-    notificationManager.info('Delivery Challan', `Create Delivery Challan from ${inv.billNo} will be available in a future update.`);
+    notificationManager.info('Delivery Challan', `Delivery Challan for ${inv.billNo} is not yet available.`);
   }, []);
 
   const handleCreatePackingList = useCallback((inv, close) => {
     close();
-    notificationManager.info('Packing List', `Create Packing List from ${inv.billNo} (3/3 left) — coming soon.`);
+    notificationManager.info('Packing List', `Packing List for ${inv.billNo} is not yet available.`);
   }, []);
 
   const handleCreateEwayBill = useCallback((inv, close) => {
     close();
-    notificationManager.info('E-way Bill', `Create E-way Bill for ${inv.billNo} will be available in a future update.`);
+    notificationManager.info('E-way Bill', `E-way Bill for ${inv.billNo} is not yet available.`);
   }, []);
 
   const handleCreateEInvoice = useCallback((inv, close) => {
     close();
-    notificationManager.info('E-Invoice', `Create E-Invoice for ${inv.billNo} will be available in a future update.`);
+    notificationManager.info('E-Invoice', `E-Invoice for ${inv.billNo} is not yet available.`);
   }, []);
 
   const handleConvert = useCallback((inv, close) => {
     close();
-    notificationManager.info('Convert', `Convert invoice ${inv.billNo} — 3 conversions left. Coming soon.`);
+    notificationManager.info('Convert', `Convert invoice ${inv.billNo} is not yet available.`);
   }, []);
 
   const handleCancelInvoice = useCallback(async (inv, close) => {
     close();
-    if (!window.confirm(`Cancel invoice ${inv.billNo}? This will mark it as cancelled.`)) return;
+    setDeletingInvoiceId({ inv, deleting: false, mode: 'cancel' });
+    setConfirmDeleteOpen(true);
+  }, []);
+
+  const confirmCancelInvoice = useCallback(async () => {
+    if (!deletingInvoiceId?.inv) return;
+    const inv = deletingInvoiceId.inv;
+    setDeletingInvoiceId(prev => ({ ...prev, deleting: true }));
     try {
       await invoiceService.deleteInvoice(inv.id);
       notificationManager.success('Invoices', `Invoice ${inv.billNo} cancelled.`);
       handleRefresh();
+      setConfirmDeleteOpen(false);
     } catch (e) {
       notificationManager.error('Cancel', e.message);
+    } finally {
+      setDeletingInvoiceId(prev => ({ ...prev, deleting: false }));
     }
-  }, [handleRefresh]);
+  }, [deletingInvoiceId, handleRefresh]);
 
   const title = VARIANT_TITLES[variant] || 'Invoices';
 
@@ -448,7 +480,7 @@ export default function Invoices({ variant = 'invoices' }) {
                   <Icon name="print" size={14} /> Print
                 </DropdownItem>
                 {canDelete && selectedIds.length > 0 && (
-                  <DropdownItem onClick={() => { close(); handleBulkDelete(); }}>
+                  <DropdownItem onClick={() => { close(); setConfirmBulkDeleteOpen(true); }}>
                     <Icon name="trash" size={14} /> Delete ({selectedIds.length})
                   </DropdownItem>
                 )}
@@ -651,7 +683,7 @@ export default function Invoices({ variant = 'invoices' }) {
                                 </DropdownItem>
                               )}
                               {canDelete && (
-                                <DropdownItem danger onClick={() => handleDeleteOne(inv, close)}>
+                                <DropdownItem danger onClick={() => { close(); setDeletingInvoiceId({ inv, deleting: false, mode: 'delete' }); setConfirmDeleteOpen(true); }}>
                                   <Icon name="trash" size={14} /> Delete
                                 </DropdownItem>
                               )}
@@ -726,6 +758,53 @@ export default function Invoices({ variant = 'invoices' }) {
 
       {/* Document Settings Panel */}
       <DocumentSettings open={docSettingsOpen} onClose={() => setDocSettingsOpen(false)} />
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={confirmDeleteOpen}
+        onClose={() => { if (!deletingInvoiceId?.deleting) { setConfirmDeleteOpen(false); setDeletingInvoiceId(null); } }}
+        title={deletingInvoiceId?.mode === 'cancel' ? 'Cancel Invoice' : 'Delete Invoice'}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setConfirmDeleteOpen(false); setDeletingInvoiceId(null); }} disabled={deletingInvoiceId?.deleting}>
+              Cancel
+            </Button>
+            <Button
+              variant={deletingInvoiceId?.mode === 'cancel' ? 'warning' : 'danger'}
+              loading={deletingInvoiceId?.deleting}
+              onClick={deletingInvoiceId?.mode === 'cancel' ? confirmCancelInvoice : handleDeleteOne}
+            >
+              {deletingInvoiceId?.mode === 'cancel' ? 'Cancel Invoice' : 'Delete'}
+            </Button>
+          </>
+        }
+      >
+        <p>
+          {deletingInvoiceId?.mode === 'cancel'
+            ? `Are you sure you want to cancel invoice ${deletingInvoiceId?.inv?.billNo}? This will mark it as cancelled.`
+            : `Are you sure you want to delete invoice ${deletingInvoiceId?.inv?.billNo}? This action cannot be undone.`
+          }
+        </p>
+      </Modal>
+
+      {/* Bulk Delete Confirmation Modal */}
+      <Modal
+        open={confirmBulkDeleteOpen}
+        onClose={() => { if (!bulkDeleting) setConfirmBulkDeleteOpen(false); }}
+        title="Delete Multiple Invoices"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setConfirmBulkDeleteOpen(false)} disabled={bulkDeleting}>Cancel</Button>
+            <Button variant="danger" loading={bulkDeleting} onClick={handleBulkDelete}>
+              Delete {selectedIds.length} Invoice(s)
+            </Button>
+          </>
+        }
+      >
+        <p>Are you sure you want to delete <strong>{selectedIds.length}</strong> invoice(s)? This action cannot be undone.</p>
+      </Modal>
     </div>
   );
 }

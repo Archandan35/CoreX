@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -8,12 +8,13 @@ import Filter, { FilterItem } from '../../components/ui/Filter.jsx';
 import Pagination from '../../components/ui/Pagination.jsx';
 import Badge from '../../components/ui/Badge.jsx';
 import Dropdown, { DropdownItem } from '../../components/ui/Dropdown.jsx';
-import Modal from '../../components/ui/Modal.jsx';
 import PermissionGate from '../../components/ui/PermissionGate.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 import { usePermission } from '../../identity/authorization/PermissionContext.jsx';
 import { userService } from '../../services/user/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
+import useDeleteHandler from '../../hooks/useDeleteHandler.js';
+import { invalidateCache } from '../../services/ui-sync/index.js';
 
 const STATUS_OPTIONS = ['active', 'inactive'];
 
@@ -26,8 +27,42 @@ export default function UserList() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+
+  const {
+    deleting,
+    deleteTarget,
+    requestDelete,
+    cancelDelete,
+    confirmDelete,
+  } = useDeleteHandler({
+    onDelete: (target) => userService.deleteUser(target.id),
+    onSuccess: (target) => {
+      setUsers((prev) => prev.filter((u) => u.id !== target.id));
+      invalidateCache('users');
+      loadUsers();
+    },
+    successMessage: 'User deleted successfully.',
+    errorMessage: 'Failed to delete user.',
+    requirePermission: PERMISSIONS.USER_DELETE,
+    hasPermission: hasPermission(PERMISSIONS.USER_DELETE),
+  });
+
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await userService.listUsers();
+      setUsers(Array.isArray(data) ? data : []);
+      setTotalPages(1);
+    } catch {
+      notificationManager.error('Failed to load users.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   const columns = [
     { key: 'name', label: 'Name', render: (row) => <strong>{row.name}</strong> },
@@ -51,7 +86,7 @@ export default function UserList() {
                 <DropdownItem onClick={() => { close(); navigate(`/users/${row.id}/edit`); }}>Edit</DropdownItem>
               </PermissionGate>
               <PermissionGate permission={PERMISSIONS.USER_DELETE}>
-                <DropdownItem danger onClick={() => { close(); setDeleteTarget(row); }}>Delete</DropdownItem>
+                <DropdownItem danger onClick={() => { close(); requestDelete(row); }}>Delete</DropdownItem>
               </PermissionGate>
             </>
           )}
@@ -59,21 +94,6 @@ export default function UserList() {
       ),
     },
   ];
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      await userService.deleteUser(deleteTarget.id);
-      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
-      notificationManager.success('User deleted successfully.');
-    } catch {
-      notificationManager.error('Failed to delete user.');
-    } finally {
-      setDeleting(false);
-      setDeleteTarget(null);
-    }
-  };
 
   return (
     <div className="page">
@@ -101,13 +121,13 @@ export default function UserList() {
 
       <Modal
         open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        onClose={cancelDelete}
         title="Delete User"
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="primary" loading={deleting} onClick={handleDelete}>Delete</Button>
+            <Button variant="secondary" onClick={cancelDelete}>Cancel</Button>
+            <Button variant="primary" loading={deleting} onClick={confirmDelete}>Delete</Button>
           </>
         }
       >

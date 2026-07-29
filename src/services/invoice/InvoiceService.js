@@ -10,6 +10,7 @@ import { api } from '../api.js';
 import { aiService } from '../ai/AiService.js';
 import { settingsApiService } from '../settings/SettingsApiService.js';
 import { auditService } from '../../audit/AuditService.js';
+import { INVOICE_TABLE_COLUMNS } from '../../constants/index.js';
 
 async function asJson(res) {
   let data = null;
@@ -155,6 +156,12 @@ export class InvoiceService {
     return true;
   }
 
+  async duplicateInvoice(id) {
+    const r = await asJson(await api(`/api/invoices/${id}/duplicate`, { method: 'POST' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to duplicate invoice.');
+    return r.data.invoice;
+  }
+
   // --- AI ----------------------------------------------------------------
   // Delegates to the application's existing provider-agnostic AI service so
   // the page never imports an AI provider directly.
@@ -207,6 +214,14 @@ export class InvoiceService {
     }));
     if (!r.ok) throw new Error(r.data?.error || 'Failed to save document settings.');
     return true;
+  }
+
+  // --- Column definitions ------------------------------------------------
+  async getColumnDefinitions() {
+    const r = await asJson(await api('/api/product-columns'));
+    if (!r.ok) { return INVOICE_TABLE_COLUMNS; }
+    const columns = r.data.columns || r.data || [];
+    return Array.isArray(columns) && columns.length ? columns : INVOICE_TABLE_COLUMNS;
   }
 
   // --- Document types (from master config) ------------------------------

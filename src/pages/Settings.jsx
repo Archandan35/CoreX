@@ -14,6 +14,8 @@ import { settingsApiService } from '../services/settings/SettingsApiService.js';
 import { notificationManager } from '../managers/NotificationManager.js';
 import { settingsManager } from '../managers/SettingsManager.js';
 import { validateSettings } from '../business/validation/SettingsValidator.js';
+import useSaveHandler from '../hooks/useSaveHandler.js';
+import { invalidateCache } from '../services/ui-sync/index.js';
 
 const SECTIONS = [
   { id: 'logo', label: 'Website Logo', icon: 'image' },
@@ -272,9 +274,14 @@ export default function Settings() {
       setValidationErrors({});
       notificationManager.successLoading(loadingId, 'Settings saved', 'All changes have been applied.');
 
+      // Broadcast changes to all listeners (live UI sync)
       Object.entries(values).forEach(([key, value]) => {
         settingsManager.listeners.get(key)?.forEach((fn) => fn(value));
       });
+      // Notify settingsManager change for global sync
+      settingsManager.notifyChange?.(values);
+      // Invalidate cache for live UI refresh
+      await invalidateCache('settings');
     } catch (err) {
       notificationManager.errorLoading(loadingId, 'Failed to save', err.message || 'Please try again.');
     } finally {

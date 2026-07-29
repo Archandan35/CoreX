@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/ui/Button.jsx';
 import Card from '../../components/ui/Card.jsx';
@@ -8,35 +8,58 @@ import Select from '../../components/ui/Select.jsx';
 import { userService } from '../../services/user/index.js';
 import { roleService } from '../../services/role/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
+import useSaveHandler from '../../hooks/useSaveHandler.js';
+import { invalidateCache } from '../../services/ui-sync/index.js';
+
+const INITIAL_FORM = { name: '', email: '', phone: '', password: '', role: '' };
+
+function validateForm(form) {
+  const errors = {};
+  if (!form.name?.trim()) errors.name = 'Full name is required.';
+  if (!form.email?.trim()) errors.email = 'Email is required.';
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Enter a valid email address.';
+  if (!form.password) errors.password = 'Password is required.';
+  else if (form.password.length < 6) errors.password = 'Password must be at least 6 characters.';
+  if (form.phone && !/^[\d\s+()-]{6,}$/.test(form.phone)) errors.phone = 'Enter a valid phone number.';
+  if (!form.role) errors.role = 'Select a role.';
+  return { valid: Object.keys(errors).length === 0, errors };
+}
 
 export default function UserCreate() {
   const navigate = useNavigate();
   const [roles, setRoles] = useState([]);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', role: '' });
-  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({ ...INITIAL_FORM });
+
+  const { saving, save } = useSaveHandler({
+    validate: validateForm,
+    onSave: async (data) => userService.createUser(data),
+    onSuccess: async (user) => {
+      notificationManager.success('User Created', `User "${user.name}" created successfully.`);
+      await invalidateCache('users');
+      navigate(`/users/${user.id}`);
+    },
+    messages: {
+      saving: 'Creating user...',
+      saved: 'User created successfully.',
+      saveFailed: 'Failed to create user.',
+    },
+  });
 
   useEffect(() => {
-    roleService.listRoles().then((roles) => {
-      setRoles(roles);
-      if (roles.length > 0 && !form.role) {
-        setForm((p) => ({ ...p, role: roles[0].name }));
+    roleService.listRoles().then((roleList) => {
+      setRoles(roleList);
+      if (roleList.length > 0 && !form.role) {
+        setForm((p) => ({ ...p, role: roleList[0].name }));
       }
     }).catch(() => {});
   }, []);
 
   const set = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
+  const handleClear = useCallback(() => setForm({ ...INITIAL_FORM, role: roles[0]?.name || '' }), [roles]);
 
   const submit = async (e) => {
     e.preventDefault();
-    setBusy(true);
-    try {
-      const user = await userService.createUser(form);
-      navigate(`/users/${user.id}`);
-    } catch (err) {
-      notificationManager.error(err.message || 'Network error.');
-    } finally {
-      setBusy(false);
-    }
+    await save(form);
   };
 
   return (
@@ -63,7 +86,8 @@ export default function UserCreate() {
           </Field>
           <div className="form-actions">
             <Button type="button" variant="secondary" onClick={() => navigate('/users')}>Cancel</Button>
-            <Button type="submit" loading={busy} icon="user-plus">Create User</Button>
+            <Button type="button" variant="secondary" onClick={handleClear}>Clear</Button>
+            <Button type="submit" loading={saving} icon="user-plus">Create User</Button>
           </div>
         </form>
       </Card>

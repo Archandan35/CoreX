@@ -14,22 +14,23 @@ import AddCustomerPanel from '../../components/invoice/AddCustomerPanel.jsx';
 import DocumentSettings from '../../components/invoice/DocumentSettings.jsx';
 import InvoiceTypeSelector from '../../components/invoice/InvoiceTypeSelector.jsx';
 import CustomHeaderPanel from '../../components/invoice/CustomHeaderPanel.jsx';
+import ColumnVisibilityManager from '../../components/invoice/ColumnVisibilityManager.jsx';
 import Modal from '../../components/ui/Modal.jsx';
-import Dropdown from '../../components/ui/Dropdown.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
 
 import Icon from '../../components/ui/Icon.jsx';
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx';
 import useUnsavedChanges from '../../hooks/useUnsavedChanges.js';
+import useColumnVisibility from '../../hooks/useColumnVisibility.js';
 import { invoiceService } from '../../services/invoice/index.js';
 import { computeInvoice } from '../../business/invoice/calculations.js';
 import {
   validateInvoice, validateCustomer, validateProduct, validateBank,
+  validateCustomHeaders,
 } from '../../business/invoice/validation.js';
 import {
   DEFAULT_DUE_DATE_OFFSET_DAYS, PAYMENT_MODE_OPTIONS,
-  INVOICE_TABLE_COLUMNS, COLUMN_STORAGE_KEY,
 } from '../../constants/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
 
@@ -81,8 +82,10 @@ export default function EditInvoice() {
   // --- Headers ---
   const [docType, setDocType] = useState('');
   const [customHeaderValues, setCustomHeaderValues] = useState({});
+  const [customHeaderDefs, setCustomHeaderDefs] = useState([]);
   const [docSettingsOpen, setDocSettingsOpen] = useState(false);
   const [customHeaderSettingsOpen, setCustomHeaderSettingsOpen] = useState(false);
+  const [headerRefreshKey, setHeaderRefreshKey] = useState(0);
 
   // --- Products ---
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -92,30 +95,22 @@ export default function EditInvoice() {
   const [showDescription, setShowDescription] = useState(true);
   const [aiBusy, setAiBusy] = useState(false);
 
-  const defaultColumnKeys = INVOICE_TABLE_COLUMNS.filter((c) => c.always || c.defaultVisible).map((c) => c.key);
-  const [visibleColumns, setVisibleColumnsState] = useState(() => {
-    try {
-      const saved = localStorage.getItem(COLUMN_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : defaultColumnKeys;
-    } catch {
-      return defaultColumnKeys;
-    }
-  });
+  const {
+    visibleKeys,
+    visibleColumns,
+    toggleColumn,
+    allColumns,
+  } = useColumnVisibility();
 
-  const setVisibleColumns = useCallback((keys) => {
-    setVisibleColumnsState(keys);
-    localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(keys));
-  }, []);
-
-  const toggleColumn = useCallback((key) => {
-    const col = INVOICE_TABLE_COLUMNS.find((c) => c.key === key);
-    if (col?.always) return;
-    if (visibleColumns.includes(key)) {
-      setVisibleColumns(visibleColumns.filter((k) => k !== key));
-    } else {
-      setVisibleColumns([...visibleColumns, key]);
-    }
-  }, [visibleColumns, setVisibleColumns]);
+  // Clear stale header errors when definitions change
+  useEffect(() => {
+    setErrors(prev => {
+      const validKeys = new Set((customHeaderDefs || []).map(h => h.internalKey));
+      const next = { ...prev };
+      Object.keys(next).forEach(k => { if (!validKeys.has(k)) delete next[k]; });
+      return next;
+    });
+  }, [customHeaderDefs]);
 
   // --- Discount ---
   const [extraDiscountType, setExtraDiscountType] = useState('percent');
@@ -215,6 +210,18 @@ export default function EditInvoice() {
       navigate('/sales/invoices');
     });
   }, [id, navigate]);
+
+  // --- DocType change → reload prefixes & settings ---
+  useEffect(() => {
+    if (!docType) return;
+    invoiceService.listPrefixes({ docType }).then(d => {
+      const items = (d?.items || []).filter(p => p.isActive !== false);
+      setPrefixes(items);
+    }).catch(() => {});
+    invoiceService.getDocumentSettings().then(d => {
+      if (d?.default_due_days) setDueDateOffset(Number(d.default_due_days));
+    }).catch(() => {});
+  }, [docType]);
 
   // --- Computed totals ---
   const computed = useMemo(() => {
@@ -363,6 +370,7 @@ export default function EditInvoice() {
   const buildPayload = useCallback((status) => ({
     id, prefix, invoiceNumber, invoiceDate, dueDate, reference,
     customerId: selectedCustomer?.id, customer: selectedCustomer,
+    docType,
     items, extraDiscountType, extraDiscountValue, additionalCharges,
     notes, terms, reverseCharge, eWaybill, eInvoice,
     enableTds, enableTcs, roundOff,
@@ -370,13 +378,16 @@ export default function EditInvoice() {
     signatureId: selectedSignature?.id, status,
     customFieldValues: customHeaderValues,
     ...computed,
-  }), [id, prefix, invoiceNumber, invoiceDate, dueDate, reference, selectedCustomer, items, extraDiscountType, extraDiscountValue, additionalCharges, notes, terms, reverseCharge, eWaybill, eInvoice, enableTds, enableTcs, roundOff, selectedBank, payments, selectedSignature, customHeaderValues, computed]);
+  }), [id, prefix, invoiceNumber, invoiceDate, dueDate, reference, selectedCustomer, docType, items, extraDiscountType, extraDiscountValue, additionalCharges, notes, terms, reverseCharge, eWaybill, eInvoice, enableTds, enableTcs, roundOff, selectedBank, payments, selectedSignature, customHeaderValues, computed]);
 
   const validate = useCallback((strict) => {
-    const errs = validateInvoice(buildPayload(strict ? 'pending' : 'draft'), { strict });
+    const payload = buildPayload(strict ? 'pending' : 'draft');
+    const errs = validateInvoice(payload, { strict });
+    const headerErrs = validateCustomHeaders(customHeaderDefs, customHeaderValues);
+    Object.assign(errs, headerErrs);
     setErrors(errs);
     return Object.keys(errs).length === 0;
-  }, [buildPayload]);
+  }, [buildPayload, customHeaderDefs, customHeaderValues]);
 
   const save = useCallback(async (status) => {
     if (!validate(status !== 'draft')) {
@@ -455,6 +466,9 @@ export default function EditInvoice() {
         docType={docType}
         chipMode
         onOpenSettings={() => setCustomHeaderSettingsOpen(true)}
+        errors={errors}
+        onHeadersLoaded={setCustomHeaderDefs}
+        refreshKey={headerRefreshKey}
       />
 
       {/* Products & Services - Flex section that fills remaining space */}
@@ -465,35 +479,20 @@ export default function EditInvoice() {
             categories={categories} productQuery={productQuery}
             onProductQuery={setProductQuery} products={products}
             qty={defaultQty} onQty={setDefaultQty}
-            onAddProduct={addProduct} onCreateProduct={openCreateProduct}
+            onAddProduct={addProduct}
             showDescription={showDescription}
             onToggleShowDescription={setShowDescription}
             onDraftWithAI={draftWithAI} aiBusy={aiBusy}
             disabledAdd={!productQuery.trim()}
+            onAddNewProduct={openCreateProduct}
+            columnManager={
+              <ColumnVisibilityManager
+                visibleKeys={visibleKeys}
+                onToggle={toggleColumn}
+                allColumns={allColumns}
+              />
+            }
           />
-          <div style={{ padding: '0 22px 8px', display: 'flex', justifyContent: 'flex-end' }}>
-            <Dropdown
-              trigger={
-                <button className="inv-icon-btn" aria-label="Column settings">
-                  <Icon name="sliders-horizontal" size={14} />
-                </button>
-              }
-            >
-              <div style={{ padding: '8px 12px', minWidth: 200 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--inv-text-primary)' }}>Column Visibility</div>
-                {INVOICE_TABLE_COLUMNS.filter((c) => !c.always).map((col) => (
-                  <label key={col.key} className="inv-checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={visibleColumns.includes(col.key)}
-                      onChange={() => toggleColumn(col.key)}
-                    />
-                    <span style={{ fontSize: 13 }}>{col.label}</span>
-                  </label>
-                ))}
-              </div>
-            </Dropdown>
-          </div>
         </div>
 
         <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'auto' }}>
@@ -501,7 +500,7 @@ export default function EditInvoice() {
             items={items} onChangeItem={onChangeItem}
             onRemoveItem={onRemoveItem} showDescription={showDescription}
             onAddNewProduct={addNewProductLine}
-            visibleColumns={INVOICE_TABLE_COLUMNS.filter((c) => visibleColumns.includes(c.key))}
+            visibleColumns={visibleColumns}
             units={units}
             warehouses={warehouses}
           />
@@ -628,7 +627,7 @@ export default function EditInvoice() {
 
       <DocumentSettings open={docSettingsOpen} onClose={() => setDocSettingsOpen(false)} />
 
-      <CustomHeaderPanel open={customHeaderSettingsOpen} onClose={() => setCustomHeaderSettingsOpen(false)} />
+      <CustomHeaderPanel open={customHeaderSettingsOpen} onClose={() => { setCustomHeaderSettingsOpen(false); setHeaderRefreshKey(k => k + 1); }} />
 
       <ConfirmDialog
         open={showConfirm}

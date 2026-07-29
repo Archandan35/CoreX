@@ -31,7 +31,7 @@ const INPUT_TYPE_RENDERERS = {
   ),
 };
 
-export default function DynamicCustomHeaders({ values, onChange, docType, chipMode, onOpenSettings, expandedKeys: controlledExpanded, onExpandedChange }) {
+export default function DynamicCustomHeaders({ values, onChange, docType, chipMode, onOpenSettings, expandedKeys: controlledExpanded, onExpandedChange, errors, onHeadersLoaded, refreshKey }) {
   const [headers, setHeaders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [internalExpanded, setInternalExpanded] = useState(new Set());
@@ -49,10 +49,11 @@ export default function DynamicCustomHeaders({ values, onChange, docType, chipMo
       .then((data) => {
         const all = data.items || [];
         setHeaders(all);
+        if (onHeadersLoaded) onHeadersLoaded(all);
       })
       .catch(() => setHeaders([]))
       .finally(() => setLoading(false));
-  }, [docType]);
+  }, [docType, refreshKey]);
 
   // Seed expanded set from existing values once when headers load (edit mode)
   useEffect(() => {
@@ -142,22 +143,25 @@ export default function DynamicCustomHeaders({ values, onChange, docType, chipMo
             {gridColumns.map((col) => (
               <div key={col.colNum} className="inv-ch-col">
                 {col.headers.map((header) => (
-                  <div className="inv-ch-field" key={header.id || header.internalKey}>
-                    <div className="inv-ch-field-head">
-                      <label className="inv-ch-field-label">
-                        {header.displayName || header.internalKey}
-                        {header.required && <span className="inv-required-dot">*</span>}
-                      </label>
-                      {chipMode && (
-                        <button type="button" className="inv-ch-remove-btn" onClick={() => toggleHeader(header)} aria-label={`Remove ${header.displayName || header.internalKey}`}>
-                          <Icon name="x" size={12} />
-                        </button>
+                    <div className="inv-ch-field" key={header.id || header.internalKey}>
+                      <div className="inv-ch-field-head">
+                        <label className="inv-ch-field-label">
+                          {header.displayName || header.internalKey}
+                          {header.required && <span className="inv-required-dot">*</span>}
+                        </label>
+                        {chipMode && (
+                          <button type="button" className="inv-ch-remove-btn" onClick={() => toggleHeader(header)} aria-label={`Remove ${header.displayName || header.internalKey}`}>
+                            <Icon name="x" size={12} />
+                          </button>
+                        )}
+                      </div>
+                      <div className="inv-ch-field-input">
+                        {renderField(header, values[header.internalKey] ?? header.defaultValue ?? '', (val) => handleChange(header, val))}
+                      </div>
+                      {errors?.[header.internalKey] && (
+                        <span className="inv-field-error">{errors[header.internalKey]}</span>
                       )}
                     </div>
-                    <div className="inv-ch-field-input">
-                      {renderField(header, values[header.internalKey] ?? header.defaultValue ?? '', (val) => handleChange(header, val))}
-                    </div>
-                  </div>
                 ))}
               </div>
             ))}

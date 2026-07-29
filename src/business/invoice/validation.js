@@ -95,6 +95,48 @@ export function validateInvoice(invoice, { strict = true } = {}) {
   return e;
 }
 
+export function validateCustomHeaders(headers, values) {
+  const e = {};
+  if (!headers || !Array.isArray(headers)) return e;
+  headers.forEach((h) => {
+    const key = h.internalKey;
+    const val = values?.[key];
+    if (h.required && isBlank(val)) {
+      e[key] = `${h.displayName || key} is required.`;
+      return;
+    }
+    if (!isBlank(val)) {
+      if (h.maxLength && typeof val === 'string' && val.length > Number(h.maxLength)) {
+        e[key] = `${h.displayName || key} must not exceed ${h.maxLength} characters.`;
+        return;
+      }
+      if (h.minLength && typeof val === 'string' && val.length < Number(h.minLength)) {
+        e[key] = `${h.displayName || key} must be at least ${h.minLength} characters.`;
+        return;
+      }
+      if (h.inputType === 'number' || h.inputType === 'currency') {
+        if (Number.isNaN(Number(val))) {
+          e[key] = `${h.displayName || key} must be a valid number.`;
+          return;
+        }
+      }
+      if (h.inputType === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+        e[key] = `${h.displayName || key} must be a valid email address.`;
+        return;
+      }
+      if (h.inputType === 'phone' && !/^[\d\s+()-]{6,}$/.test(val)) {
+        e[key] = `${h.displayName || key} must be a valid phone number.`;
+        return;
+      }
+      if (h.inputType === 'url' && !/^https?:\/\/.+/.test(val)) {
+        e[key] = `${h.displayName || key} must be a valid URL.`;
+        return;
+      }
+    }
+  });
+  return e;
+}
+
 export function isValid(errors) {
   if (!errors) return true;
   return Object.keys(errors).length === 0;

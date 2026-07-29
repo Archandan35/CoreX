@@ -32,6 +32,12 @@ class SettingsManager {
       if (list) this.listeners.set(key, list.filter((l) => l !== fn));
     };
   }
+
+  notifyChange(values) {
+    Object.entries(values || {}).forEach(([key, value]) => {
+      this.listeners.get(key)?.forEach((fn) => fn(value));
+    });
+  }
 }
 
 export const settingsManager = new SettingsManager();
