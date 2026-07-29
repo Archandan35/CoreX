@@ -1,29 +1,20 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import InvoiceHeader from '../../components/invoice/InvoiceHeader.jsx';
-import InvoiceDetails from '../../components/invoice/InvoiceDetails.jsx';
-import DynamicCustomHeaders from '../../components/invoice/DynamicCustomHeaders.jsx';
-import ProductsToolbar, { InvoiceDiscount } from '../../components/invoice/ProductsToolbar.jsx';
-import InvoiceTable from '../../components/invoice/InvoiceTable.jsx';
-import InvoiceNotes from '../../components/invoice/InvoiceNotes.jsx';
-import InvoiceSummary from '../../components/invoice/InvoiceSummary.jsx';
-import InvoiceFooter from '../../components/invoice/InvoiceFooter.jsx';
 import ProductModal from '../../components/invoice/ProductModal.jsx';
 import CustomerModal from '../../components/invoice/CustomerModal.jsx';
 import AddCustomerPanel from '../../components/invoice/AddCustomerPanel.jsx';
 import AddProductPanel from '../../components/invoice/AddProductPanel.jsx';
 import DocumentSettings from '../../components/invoice/DocumentSettings.jsx';
-import InvoiceTypeSelector from '../../components/invoice/InvoiceTypeSelector.jsx';
 import CustomHeaderPanel from '../../components/invoice/CustomHeaderPanel.jsx';
-import ColumnVisibilityManager from '../../components/invoice/ColumnVisibilityManager.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
 
 import Icon from '../../components/ui/Icon.jsx';
+import ColumnVisibilityManager from '../../components/invoice/ColumnVisibilityManager.jsx';
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx';
-import useUnsavedChanges from '../../hooks/useUnsavedChanges.js';
 import useColumnVisibility from '../../hooks/useColumnVisibility.js';
+import useUnsavedChanges from '../../hooks/useUnsavedChanges.js';
 import { invoiceService } from '../../services/invoice/index.js';
 import { computeInvoice } from '../../business/invoice/calculations.js';
 import {
@@ -576,149 +567,408 @@ export default function CreateInvoice() {
     }));
   }, [prefixes]);
 
-  return (
-    <div className="inv-page" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-      <InvoiceHeader
-        prefix={prefix} invoiceNumber={invoiceNumber}
-        onPrefixChange={setPrefix} onInvoiceNumberChange={setInvoiceNumber}
-        onSave={saveInvoice} onDraft={saveDraft}
-        onSaveAndPrint={saveAndPrint}
-        onSaveAndShare={saveAndShare}
-        onSaveAndNew={saveAndNew}
-        onClear={handleClear}
-        saving={saving} canSave={canSave}
-        prefixes={prefixOptions}
-      />
+  const [columnManagerOpen, setColumnManagerOpen] = useState(false);
 
-      {/* Subbar */}
-      <div className="inv-subbar" style={{ flexShrink: 0 }}>
-        <div className="inv-subbar-left">
-          <span className="inv-label">Type</span>
-          <InvoiceTypeSelector value={docType} onChange={setDocType} />
-        </div>
-        <div className="inv-subbar-right">
-          <button className="inv-link-action" onClick={() => setDocSettingsOpen(true)}>
-            <Icon name="gear" size={14} /> Settings
+  return (
+    <div className="page">
+
+      {/* ===== Header card ===== */}
+      <div className="ni-header-card">
+        <div className="ni-topbar">
+          <div className="ni-topbar-left">
+            <span className="ni-back-arrow" onClick={() => safeNavigate('/sales/invoices')}><Icon name="arrow-left" /></span>
+            <div className="ni-title-block">
+              <h1>Create Invoice</h1>
+              <div className="ni-sub">{companyState || 'Loading...'}</div>
+            </div>
+            <div className="ni-topbar-mid">
+              <div className="ni-select-box" onClick={() => {}}>
+                {prefix || 'INV'} <Icon name="chevronDown" />
+              </div>
+              <div className="ni-input-box">{invoiceNumber || '000'}</div>
+            </div>
+          </div>
+          <button className="ni-btn-primary" onClick={saveInvoice} disabled={!canSave || saving}>
+            {saving ? 'Saving...' : 'Save Invoice'} <Icon name="arrow-right" />
           </button>
         </div>
+
+        <div className="ni-header-divider"></div>
+
+        <div className="ni-type-row">
+          <div className="ni-type-left">
+            Type
+            <div className="ni-select-box" onClick={() => {}}>
+              {docType || 'Regular'} <Icon name="chevronDown" />
+            </div>
+          </div>
+          <div className="ni-type-right">
+            <div className="ni-link-icon" onClick={() => setCustomHeaderSettingsOpen(true)}>
+              <Icon name="info" /> Custom Headers
+            </div>
+            <div className="ni-link-icon" onClick={() => setDocSettingsOpen(true)}>
+              <Icon name="gear" /> Settings
+            </div>
+          </div>
+        </div>
       </div>
 
-      <InvoiceDetails
-        customers={customers} customerQuery={customerQuery}
-        onCustomerQuery={setCustomerQuery} selectedCustomer={selectedCustomer}
-        onSelectCustomer={handleSelectCustomer} onEditCustomer={editCustomer}
-        invoiceDate={invoiceDate} dueDate={dueDate}
-        onInvoiceDate={setInvoiceDate} onDueDate={setDueDate}
-        reference={reference} onReference={setReference}
-        dueDateOffset={dueDateOffset} onAutoDueDate={autoDueDate}
-        onOpenCreateCustomer={openCreateCustomer}
-        errors={errors}
-        customerOutstanding={customerOutstanding}
-        creditLimitExceeded={creditLimitExceeded}
-      />
-
-      <DynamicCustomHeaders
-        values={customHeaderValues}
-        onChange={(key, value) => setCustomHeaderValues((prev) => ({ ...prev, [key]: value }))}
-        docType={docType}
-        chipMode
-        onOpenSettings={() => setCustomHeaderSettingsOpen(true)}
-        errors={errors}
-        onHeadersLoaded={setCustomHeaderDefs}
-        refreshKey={headerRefreshKey}
-      />
-
-      {/* Products & Services - Flex section that fills remaining space */}
-      <section className="inv-card" style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ flexShrink: 0 }}>
-          <ProductsToolbar
-            category={categoryFilter} onCategory={setCategoryFilter}
-            categories={categories} productQuery={productQuery}
-            onProductQuery={setProductQuery} products={products}
-            qty={defaultQty} onQty={setDefaultQty}
-            onAddProduct={addProduct}
-            showDescription={showDescription}
-            onToggleShowDescription={setShowDescription}
-            onDraftWithAI={draftWithAI} aiBusy={aiBusy}
-            disabledAdd={!productQuery.trim()}
-            onAddNewProduct={() => setAddProductPanelOpen(true)}
-            columnManager={
-              <ColumnVisibilityManager
-                visibleKeys={visibleKeys}
-                onToggle={toggleColumn}
-                allColumns={allColumns}
-              />
-            }
-          />
+      {/* ===== Select Customer card ===== */}
+      <div className="ni-card">
+        <div className="ni-customer-top">
+          <div className="ni-card-heading"><Icon name="user" /> Select Customer</div>
+          <button className="ni-btn-outline" onClick={openCreateCustomer}><Icon name="plus" /> Create Customer</button>
         </div>
 
-        <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'auto' }}>
-          <InvoiceTable
-            items={items} onChangeItem={onChangeItem}
-            onRemoveItem={onRemoveItem} showDescription={showDescription}
-            onAddNewProduct={addNewProductLine}
-            visibleColumns={visibleColumns}
-            units={units}
-            warehouses={warehouses}
-          />
+        <div className="ni-customer-grid">
+          <div>
+            <div className="ni-field-label" style={{visibility:'hidden'}}>Customer</div>
+            <div className="ni-field-input">
+              <Icon name="search" />
+              <input type="text" placeholder="Search customers by name, company, GSTIN, tags..."
+                value={customerQuery} onChange={e => setCustomerQuery(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <div className="ni-field-label">Invoice Date</div>
+            <div className="ni-field-input ni-between">
+              <input type="text" value={invoiceDate || new Date().toISOString().split('T')[0]}
+                onChange={e => setInvoiceDate(e.target.value)} />
+              <Icon name="calendar" />
+            </div>
+          </div>
+          <div>
+            <div className="ni-field-label">Due Date</div>
+            <div className="ni-field-input ni-between">
+              <input type="text" value={dueDate || ''}
+                onChange={e => setDueDate(e.target.value)} />
+              <Icon name="calendar" />
+            </div>
+          </div>
+          <div>
+            <div className="ni-field-label">Reference <span className="ni-optional">(Optional)</span></div>
+            <div className="ni-field-input">
+              <input type="text" placeholder="Reference, e.g. PO Number, Sales Person names, Shipment Number etc..."
+                value={reference} onChange={e => setReference(e.target.value)} />
+            </div>
+          </div>
         </div>
 
-        <div style={{ flexShrink: 0 }}>
-          <InvoiceDiscount
-            items={items}
-            extraDiscountType={extraDiscountType}
-            extraDiscountValue={extraDiscountValue}
-            onExtraDiscountType={setExtraDiscountType}
-            onExtraDiscountValue={setExtraDiscountValue}
-            additionalCharges={additionalCharges}
-            onAddCharge={addCharge}
-            onRemoveCharge={removeCharge}
-            onUpdateCharge={updateCharge}
-            subtotal={computed.subtotal}
-            lineDiscountTotal={computed.lineDiscountTotal}
-            invoiceDiscount={computed.invoiceDiscount}
-          />
+        <div className="ni-custom-headers-label">Custom Headers</div>
+        <div className="ni-pill-row">
+          {customHeaderDefs.length === 0 ? (
+            <div className="ni-pill" onClick={() => setCustomHeaderSettingsOpen(true)}><Icon name="plus" /> Add Custom Headers</div>
+          ) : customHeaderDefs.map(h => (
+            <div key={h.internalKey} className="ni-pill" onClick={() => setCustomHeaderSettingsOpen(true)}>
+              <Icon name="plus" /> {h.label}
+            </div>
+          ))}
         </div>
-      </section>
-
-      {/* Bottom Grid */}
-      <div className="inv-bottom-grid" style={{ flexShrink: 0 }}>
-        <InvoiceNotes
-          notes={notes} onAddNote={addNote} onRemoveNote={removeNote} onUpdateNote={updateNote}
-          terms={terms} onAddTerm={addTerm} onRemoveTerm={removeTerm} onUpdateTerm={updateTerm}
-          onAiSuggest={aiSuggestNote}
-          reverseCharge={reverseCharge} onReverseCharge={setReverseCharge}
-          eWaybill={eWaybill} onEWaybill={setEWaybill}
-          eInvoice={eInvoice} onEInvoice={setEInvoice}
-          attachments={attachments} onAddAttachment={(file) => setAttachments(prev => [...prev, file])} onRemoveAttachment={(i) => setAttachments(p => p.filter((_, j) => j !== i))}
-        />
-
-        <InvoiceSummary
-          enableTds={enableTds} onTds={setEnableTds}
-          enableTcs={enableTcs} onTcs={setEnableTcs}
-          extraDiscountValue={extraDiscountValue} onExtraDiscountValue={setExtraDiscountValue}
-          taxableAmount={computed.taxableAmount}
-          taxTotal={computed.taxTotal}
-          discountTotal={computed.discountTotal}
-          roundOff={roundOff} onRoundOff={setRoundOff}
-          beforeRound={computed.beforeRound} grandTotal={computed.grandTotal}
-          selectedBank={selectedBank} banks={banks}
-          onSelectBank={setSelectedBank}
-          onAddNewBank={() => setBankModal(true)}
-          payments={payments} onAddPayment={addPayment}
-          onRemovePayment={removePayment} onUpdatePayment={updatePayment}
-          markFullyPaid={markFullyPaid} onMarkFullyPaid={setMarkFullyPaid}
-          balanceDue={computed.balanceDue}
-          signatures={signatures} selectedSignature={selectedSignature}
-          onSelectSignature={setSelectedSignature}
-          onAddNewSignature={() => setSignatureModal(true)}
-          sigName={sigName}
-        />
       </div>
 
-      <InvoiceFooter />
+      {/* ===== Products & Services card ===== */}
+      <div className="ni-card">
+        <div className="ni-products-top">
+          <div className="ni-card-heading"><Icon name="package" /> Products &amp; Services <Icon name="help-circle" /></div>
+          <div className="ni-products-top-right">
+            <label className="ni-checkbox-label">
+              <input type="checkbox" checked={showDescription} onChange={e => setShowDescription(e.target.checked)} /> Show description
+            </label>
+            <div className="ni-icon-btn" onClick={() => setColumnManagerOpen(true)}>
+              <Icon name="sliders-horizontal" />
+            </div>
+          </div>
+        </div>
 
-      {/* Modals */}
+        {columnManagerOpen && (
+          <div style={{ position:'absolute', zIndex:100 }}>
+            <ColumnVisibilityManager visibleKeys={visibleKeys} onToggle={toggleColumn} allColumns={allColumns} onClose={() => setColumnManagerOpen(false)} />
+          </div>
+        )}
+
+        <div className="ni-toolbar-row">
+          <div className="ni-field-input ni-between">
+            <span>{categoryFilter || 'Filter Category'}</span>
+            <Icon name="chevronDown" />
+          </div>
+          <div className="ni-field-input">
+            <Icon name="search" />
+            <input type="text" placeholder="Search or scan barcode for existing products"
+              value={productQuery} onChange={e => setProductQuery(e.target.value)} />
+          </div>
+          <div className="ni-field-input">
+            <input type="text" placeholder="Qty" value={defaultQty} onChange={e => setDefaultQty(Number(e.target.value) || 1)} />
+          </div>
+          <button className="ni-btn-add-bill" onClick={() => {
+            const found = products.find(p => p.name?.toLowerCase() === productQuery?.toLowerCase());
+            if (found) addProduct(found);
+            else notificationManager.info('Product', 'Search for an existing product or add a new one.');
+          }} disabled={!productQuery.trim()}><Icon name="plus" /> Add to Bill</button>
+          <button className="ni-btn-ai" onClick={draftWithAI} disabled={aiBusy}>
+            <Icon name="sparkles" /> Create Invoices with AI <span className="ni-beta-badge">BETA</span>
+          </button>
+        </div>
+
+        <div className="ni-products-table">
+          <div className="ni-products-table-header">
+            <div>#</div>
+            <div>Product Name</div>
+            <div>Quantity</div>
+            <div>Unit Price</div>
+            <div>Price with Tax</div>
+            <div>Discount</div>
+            <div>Amount</div>
+            <div className="ni-col-total">Total<span className="ni-sub">(Net + Tax)</span></div>
+          </div>
+
+          {items.length === 0 ? (
+            <div className="ni-empty-state">
+              <svg className="ni-empty-icon" viewBox="0 0 64 56" fill="none">
+                <rect x="4" y="14" width="56" height="38" rx="4" stroke="currentColor" strokeWidth="2"/>
+                <path d="M4 16L30 36L60 16" stroke="currentColor" strokeWidth="2"/>
+                <circle cx="50" cy="10" r="9" fill="#fff" stroke="currentColor" strokeWidth="2"/>
+                <path d="M46 10h8M50 6v8" stroke="currentColor" strokeWidth="1.6"/>
+              </svg>
+              <p>Search existing products to add to this list or add new product to get started!</p>
+              <button className="ni-btn-add-product" onClick={() => setAddProductPanelOpen(true)}>
+                <Icon name="plus" /> Add New Product
+              </button>
+            </div>
+          ) : (
+            <div>
+              {items.map((item, idx) => (
+                <div key={item._key} className="ni-products-table-header" style={{ background:'#fff', borderBottom:'1px solid var(--ni-border)', gridTemplateColumns:'34px 1.6fr 1fr 1fr 1fr 1fr 1fr 1.1fr', padding:'10px 16px', fontSize:'13px', fontWeight:400 }}>
+                  <div>{idx + 1}</div>
+                  <div>
+                    <input style={{ border:'none', outline:'none', width:'100%', fontSize:'13px', fontFamily:'inherit' }}
+                      value={item.name} onChange={e => onChangeItem(idx, { ...item, name: e.target.value })} placeholder="Product name" />
+                    {showDescription && (
+                      <input style={{ border:'none', outline:'none', width:'100%', fontSize:'11px', color:'var(--ni-text-gray)', marginTop:'2px', fontFamily:'inherit' }}
+                        value={item.description || ''} onChange={e => onChangeItem(idx, { ...item, description: e.target.value })} placeholder="Description" />
+                    )}
+                  </div>
+                  <div><input style={{ border:'1px solid var(--ni-border)', borderRadius:'6px', padding:'6px 8px', width:'80%', fontSize:'13px', fontFamily:'inherit' }}
+                    type="number" value={item.quantity} onChange={e => onChangeItem(idx, { ...item, quantity: Number(e.target.value) })} /></div>
+                  <div><input style={{ border:'1px solid var(--ni-border)', borderRadius:'6px', padding:'6px 8px', width:'80%', fontSize:'13px', fontFamily:'inherit' }}
+                    type="number" value={item.unitPrice} onChange={e => onChangeItem(idx, { ...item, unitPrice: Number(e.target.value) })} /></div>
+                  <div style={{ padding:'6px 0' }}>{(item.unitPrice * (1 + item.taxRate / 100)).toFixed(2)}</div>
+                  <div style={{ padding:'6px 0' }}>{item.discountValue || 0}{item.discountType === 'percent' ? '%' : ''}</div>
+                  <div style={{ padding:'6px 0' }}>{(item.quantity * item.unitPrice).toFixed(2)}</div>
+                  <div className="ni-col-total" style={{ padding:'6px 0' }}>
+                    {(item.quantity * item.unitPrice * (1 + item.taxRate / 100)).toFixed(2)}
+                    <span className="ni-sub" style={{ display:'block', fontSize:'10px', color:'var(--ni-text-light-gray)' }}>
+                      ₹ {(item.quantity * item.unitPrice).toFixed(2)} + ₹ {(item.quantity * item.unitPrice * item.taxRate / 100).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="ni-discount-row">
+          <div className="ni-discount-left">
+            <div className="ni-label"><Icon name="info" /> Apply discount(%) to all items</div>
+            <div className="ni-discount-input">
+              <input type="text" value={extraDiscountValue}
+                onChange={e => setExtraDiscountValue(Number(e.target.value) || 0)} />
+              <span className="ni-suffix">%</span>
+            </div>
+          </div>
+          <div className="ni-discount-right">
+            <div className="ni-items-summary">Items: {items.length}, Qty: {items.reduce((s, i) => s + Number(i.quantity), 0).toFixed(3)}</div>
+            <button className="ni-btn-outline" onClick={addCharge}><Icon name="plus" /> Additional Charges</button>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Bottom grid ===== */}
+      <div className="ni-bottom-grid">
+
+        {/* --- Notes, terms & more --- */}
+        <div className="ni-card">
+          <div className="ni-card-heading">Notes, terms &amp; more</div>
+
+          <div className="ni-field-block">
+            <div className="ni-field-block-header">
+              <div className="ni-field-block-title"><Icon name="edit" /> Notes <Icon name="info" className="ni-info" /></div>
+              <button className="ni-btn-outline" onClick={addNote}><Icon name="plus" /> New Note</button>
+            </div>
+            <div className="ni-textarea-wrap">
+              <textarea placeholder="Enter your notes, say thanks, or anything else..."
+                value={notes[0]?.text || ''}
+                onChange={e => {
+                  if (notes.length > 0) updateNote(0, { ...notes[0], text: e.target.value });
+                  else addNote();
+                }} />
+              <button className="ni-btn-ai-assist" onClick={aiSuggestNote}><Icon name="sparkles" /> AI Assist</button>
+            </div>
+          </div>
+
+          <div className="ni-field-block">
+            <div className="ni-field-block-header">
+              <div className="ni-field-block-title"><Icon name="file-text" /> Terms &amp; Conditions <Icon name="info" className="ni-info" /></div>
+              <button className="ni-btn-outline" onClick={addTerm}><Icon name="plus" /> New Terms</button>
+            </div>
+            <div className="ni-terms-box">
+              {terms.map((t, i) => (
+                <div key={t.id} style={{ display:'flex', gap:'8px', marginBottom:'6px' }}>
+                  <input style={{ border:'1px solid var(--ni-border)', borderRadius:'6px', padding:'8px', fontSize:'13px', width:'100%', fontFamily:'inherit' }}
+                    value={t.text} onChange={e => updateTerm(i, { ...t, text: e.target.value })} placeholder="Enter terms and conditions..." />
+                  <span style={{ cursor:'pointer', color:'var(--ni-text-light-gray)' }} onClick={() => removeTerm(i)}><Icon name="x" /></span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="ni-toggle-row">
+            <div className="ni-toggle-label"><Icon name="info" /> Reverse Charge Mechanism applicable?</div>
+            <div className={`ni-toggle-switch ${reverseCharge ? 'ni-on' : ''}`} onClick={() => setReverseCharge(!reverseCharge)}></div>
+          </div>
+          <div className="ni-toggle-row">
+            <div className="ni-toggle-label">Create E-Waybill</div>
+            <div className={`ni-toggle-switch ${eWaybill ? 'ni-on' : ''}`} onClick={() => setEWaybill(!eWaybill)}></div>
+          </div>
+          <div className="ni-toggle-row">
+            <div className="ni-toggle-label">Create E-Invoice</div>
+            <div className={`ni-toggle-switch ${eInvoice ? 'ni-on' : ''}`} onClick={() => setEInvoice(!eInvoice)}></div>
+          </div>
+
+          <div className="ni-attach-block">
+            <div className="ni-field-block-title"><Icon name="paperclip" /> Attach files <Icon name="info" className="ni-info" /></div>
+            <button className="ni-btn-attach"><Icon name="upload" /> Attach Files (Max: {5 - attachments.length})</button>
+          </div>
+        </div>
+
+        {/* --- Totals / payment card --- */}
+        <div className="ni-totals-card">
+          <div className="ni-totals-green">
+            <div className="ni-tds-tcs-row">
+              <div className="ni-tds-tcs-item">
+                <div className={`ni-toggle-switch ni-small ${enableTds ? 'ni-on' : ''}`} onClick={() => setEnableTds(!enableTds)}></div>
+                TDS
+              </div>
+              <div className="ni-tds-tcs-item">
+                <div className={`ni-toggle-switch ni-small ${enableTcs ? 'ni-on' : ''}`} onClick={() => setEnableTcs(!enableTcs)}></div>
+                TCS
+              </div>
+            </div>
+
+            <div className="ni-discount-selectors">
+              <div className="ni-dd-box">
+                <span className="ni-strike">Extra Discount</span> <Icon name="chevronDown" />
+              </div>
+              <div className="ni-dd-box">
+                {extraDiscountValue || 0} <Icon name="chevronDown" />
+              </div>
+            </div>
+
+            <div className="ni-totals-rows">
+              <div className="ni-totals-line"><span>Taxable Amount</span><span>₹ {Number(computed.taxableAmount || 0).toFixed(2)}</span></div>
+              <div className="ni-totals-line"><span>Total Tax</span><span>₹ {Number(computed.taxTotal || 0).toFixed(2)}</span></div>
+              <div className="ni-totals-line ni-roundoff">
+                <div className="ni-label-group">
+                  Round Off
+                  <div className={`ni-toggle-switch ni-small ${roundOff ? 'ni-on' : ''}`} onClick={() => setRoundOff(!roundOff)}></div>
+                </div>
+                <span>₹ {Number(computed.roundOffValue || 0).toFixed(2)}</span>
+              </div>
+              <div className="ni-totals-divider"></div>
+              <div className="ni-total-amount-row">
+                <span className="ni-label">Total Amount</span>
+                <span className="ni-value">₹ {Number(computed.grandTotal || 0).toFixed(2)}</span>
+              </div>
+              <div className="ni-total-discount-row">Total Discount: ₹ {Number(computed.discountTotal || 0).toFixed(2)}</div>
+            </div>
+          </div>
+
+          <div className="ni-totals-body">
+            <div className="ni-section-row">
+              <div className="ni-field-block-title"><Icon name="landmark" /> Select Bank <Icon name="info" className="ni-info" /></div>
+              <div className="ni-link-purple" onClick={() => setBankModal(true)}><Icon name="plus" /> Add New Bank</div>
+            </div>
+            <div className="ni-bank-select" onClick={() => {}}>
+              <div className="ni-bank-select-left">
+                <div className="ni-bank-icon"><Icon name="landmark" /></div>
+                {selectedBank ? `${selectedBank.bank_name} (${selectedBank.account_number?.slice(-4) || '...'})` : 'Select a bank'}
+              </div>
+              <Icon name="chevron-down" className="ni-chev" />
+            </div>
+
+            <div className="ni-payment-header-row">
+              <div className="ni-label-title">Add payment (Payment Notes, Amount and Mode)</div>
+              <label className="ni-checkbox-label">
+                <input type="checkbox" checked={markFullyPaid} onChange={e => setMarkFullyPaid(e.target.checked)} /> Mark as fully paid
+              </label>
+            </div>
+
+            {payments.length === 0 ? (
+              <div style={{ color:'var(--ni-text-light-gray)', fontSize:'13px', marginBottom:'12px' }}>No payments added yet.</div>
+            ) : payments.map((pmt, i) => (
+              <div key={pmt.id} className="ni-payment-table" style={{ marginBottom:'12px' }}>
+                <div>
+                  <div className="ni-col-label">Notes</div>
+                  <div className="ni-pt-input">
+                    <input type="text" placeholder="Advance received, UTR number" value={pmt.notes}
+                      onChange={e => updatePayment(i, { ...pmt, notes: e.target.value })} />
+                  </div>
+                </div>
+                <div>
+                  <div className="ni-col-label">Amount</div>
+                  <div className="ni-pt-input"><input type="text" value={pmt.amount}
+                    onChange={e => updatePayment(i, { ...pmt, amount: Number(e.target.value) || 0 })} /></div>
+                </div>
+                <div>
+                  <div className="ni-col-label">Payment Date</div>
+                  <div className="ni-pt-input">
+                    <input type="text" value={pmt.paymentDate}
+                      onChange={e => updatePayment(i, { ...pmt, paymentDate: e.target.value })} />
+                    <Icon name="calendar" />
+                  </div>
+                </div>
+                <div>
+                  <div className="ni-col-label">Payment Mode</div>
+                  <div className="ni-pt-input">
+                    <span style={{ color: pmt.mode ? 'inherit' : 'var(--ni-text-light-gray)' }}>{pmt.mode || 'Select mode'}</span>
+                    <Icon name="chevronDown" />
+                  </div>
+                  <div className="ni-pt-sub">
+                    {selectedBank ? `${selectedBank.bank_name?.slice(0, 20)}...` : 'No bank selected'}
+                    <Icon name="chevron-down" style={{ width:'11px',height:'11px',verticalAlign:'middle' }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            <div className="ni-split-payment-link" onClick={addPayment}><Icon name="plus" /> Split Payment</div>
+
+            <div className="ni-signature-row">
+              <div className="ni-field-block-title">Select Signature<span className="ni-required-dot"></span></div>
+              <div className="ni-link-purple" onClick={() => setSignatureModal(true)}><Icon name="plus" /> Add New Signature</div>
+            </div>
+            <div className="ni-signature-grid">
+              <div className="ni-signature-select" onClick={() => {}}>
+                {selectedSignature?.name || 'No Signature'}
+                <Icon name="chevronDown" />
+              </div>
+              <div className="ni-signature-preview">
+                <div className="ni-label">Signature on the document</div>
+                <div className="ni-sig">{selectedSignature?.name || '—'}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ===== Footer ===== */}
+      <div className="ni-footer">
+        <div className="ni-footer-logo"><Icon name="bolt" /> swipe</div>
+        <div className="ni-footer-copy">&copy; 2026 NextSpeed Technologies Private Limited. All rights reserved.</div>
+        <div className="ni-footer-secure"><Icon name="shield-check" /> Data is secured via bank-grade security</div>
+      </div>
+
+      {/* ===== Modals ===== */}
       <CustomerModal open={customerModal.open} mode={customerModal.mode}
         initial={customerModal.customer} onClose={closeCustomerModal}
         onSubmit={submitCustomer} />
