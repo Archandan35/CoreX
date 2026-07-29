@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from '../../ui/Modal.jsx';
 import Button from '../../ui/Button.jsx';
 import { Field, Input } from '../../ui/Field.jsx';
@@ -6,6 +6,13 @@ import { Field, Input } from '../../ui/Field.jsx';
 export default function DiscountModal({ open, onClose, extraDiscountType, extraDiscountValue, onTypeChange, onValueChange }) {
   const [type, setType] = useState(extraDiscountType || 'percent');
   const [value, setValue] = useState(extraDiscountValue ?? 0);
+
+  useEffect(() => {
+    if (open) {
+      setType(extraDiscountType || 'percent');
+      setValue(extraDiscountValue ?? 0);
+    }
+  }, [open, extraDiscountType, extraDiscountValue]);
 
   const apply = () => {
     onTypeChange?.(type);

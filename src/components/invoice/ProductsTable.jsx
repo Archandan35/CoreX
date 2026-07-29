@@ -24,7 +24,7 @@ export default function ProductsTable({
   showDescription,
   onToggleDescription,
 }) {
-  const columns = ['#', 'Product Name', 'Quantity', 'Unit Price', 'Price with Tax', 'Discount', 'Total Amount', 'Total'];
+  const columns = ['#', 'Product Name', 'Quantity', 'Unit Price', 'Price with Tax', 'Discount', 'Tax Amount', 'Total'];
 
   const discountOptions = [
     { value: DISCOUNT_TYPE.PERCENT, label: '%' },

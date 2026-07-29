@@ -49,7 +49,7 @@ export default function InvoiceSummary({
           <span className="inv-roundoff-label">Round Off</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button className={`inv-switch${roundOff ? ' inv-on' : ''}`} onClick={() => onRoundOff(!roundOff)} aria-label="Round Off" />
-            ₹{roundOff ? round2(beforeRound - Math.floor(beforeRound)) : '0.00'}
+            {roundOff ? (() => { const diff = round2(grandTotal - beforeRound); return diff >= 0 ? `+₹${diff}` : `-₹${Math.abs(diff)}`; })() : '₹0.00'}
           </span>
         </div>
       </div>

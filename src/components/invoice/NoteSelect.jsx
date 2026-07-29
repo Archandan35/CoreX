@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { input, select } from '../../components/ui';
 import { noteService } from '../../services/note/index.js';
 
+// legacy component - kept for reference
 export default function NoteSelect({ onSelect }) {
   const [notes, setNotes] = useState([]);
 

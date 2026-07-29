@@ -9,7 +9,6 @@ import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 import DocumentSettings from '../../components/invoice/DocumentSettings.jsx';
 import { invoiceService } from '../../services/invoice/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
-import useDeleteHandler from '../../hooks/useDeleteHandler.js';
 import { invalidateCache } from '../../services/ui-sync/index.js';
 
 const TABS = ['All', 'Pending', 'Paid', 'Cancelled', 'Drafts'];
@@ -267,9 +266,14 @@ export default function Invoices({ variant = 'invoices' }) {
     navigate(`/invoices/${id}/edit`);
   }, [navigate]);
 
-  const handleSend = useCallback((inv, close) => {
+  const handleSend = useCallback(async (inv, close) => {
     close?.();
-    notificationManager.info('Send', `Send invoice ${inv.billNo} — email service will be available soon.`);
+    try {
+      await invoiceService.sendInvoice(inv.id, 'email');
+      notificationManager.success('Send', `Invoice ${inv.billNo} sent.`);
+    } catch (e) {
+      notificationManager.error('Send', e.message);
+    }
   }, []);
 
   const handleDeleteOne = useCallback(async () => {
@@ -288,30 +292,52 @@ export default function Invoices({ variant = 'invoices' }) {
     }
   }, [deletingInvoiceId, handleRefresh]);
 
-  const handleDownloadPdf = useCallback((inv, close) => {
+  const handleDownloadPdf = useCallback(async (inv, close) => {
     close();
-    notificationManager.info('PDF', `PDF download for ${inv.billNo} will be available once the PDF generation endpoint is configured.`);
+    try {
+      const data = await invoiceService.downloadPdf(inv.id);
+      if (data?.url) window.open(data.url, '_blank');
+      else notificationManager.success('PDF', `PDF for ${inv.billNo} is ready.`);
+    } catch (e) {
+      notificationManager.error('PDF', e.message);
+    }
   }, []);
 
   const handlePrint = useCallback((inv, close) => {
     close();
-    window.print();
+    window.open(`/invoices/${inv.id}/print`, '_blank');
   }, []);
 
-  const handleLinkToSubscription = useCallback((inv, close) => {
+  const handleLinkToSubscription = useCallback(async (inv, close) => {
     close();
-    notificationManager.info('Subscription', `Link invoice ${inv.billNo} to a subscription — will be available in a future update.`);
+    try {
+      await invoiceService.linkToSubscription(inv.id);
+      notificationManager.success('Subscription', `Invoice ${inv.billNo} linked to subscription.`);
+    } catch (e) {
+      notificationManager.error('Subscription', e.message);
+    }
   }, []);
 
-  const handleDigitalSignPdf = useCallback((inv, close) => {
+  const handleDigitalSignPdf = useCallback(async (inv, close) => {
     close();
-    notificationManager.info('Digital Sign', `Digital Sign PDF for ${inv.billNo} will be available in a future update.`);
+    try {
+      await invoiceService.digitalSignPdf(inv.id);
+      notificationManager.success('Digital Sign', `PDF for ${inv.billNo} digitally signed.`);
+    } catch (e) {
+      notificationManager.error('Digital Sign', e.message);
+    }
   }, []);
 
-  const handleBulkDownloadPdfs = useCallback((inv, close) => {
+  const handleBulkDownloadPdfs = useCallback(async (inv, close) => {
     close();
-    notificationManager.info('Bulk Download', 'Bulk Download PDFs feature coming soon.');
-  }, []);
+    try {
+      const data = await invoiceService.bulkDownloadPdfs(selectedIds);
+      if (data?.url) window.open(data.url, '_blank');
+      else notificationManager.success('Bulk Download', 'PDFs are being downloaded.');
+    } catch (e) {
+      notificationManager.error('Bulk Download', e.message);
+    }
+  }, [selectedIds]);
 
   const handleDuplicate = useCallback(async (inv, close) => {
     close();
@@ -326,37 +352,67 @@ export default function Invoices({ variant = 'invoices' }) {
 
   const handleThermalPrint = useCallback((inv, close) => {
     close();
-    window.print();
+    window.open(`/invoices/${inv.id}/print?thermal=1`, '_blank');
   }, []);
 
-  const handleShippingLabel = useCallback((inv, close) => {
+  const handleShippingLabel = useCallback(async (inv, close) => {
     close();
-    notificationManager.info('Shipping Label', `Shipping label for ${inv.billNo} is not yet available.`);
+    try {
+      await invoiceService.generateShippingLabel(inv.id);
+      notificationManager.success('Shipping Label', `Shipping label for ${inv.billNo} generated.`);
+    } catch (e) {
+      notificationManager.error('Shipping Label', e.message);
+    }
   }, []);
 
-  const handleDeliveryChallan = useCallback((inv, close) => {
+  const handleDeliveryChallan = useCallback(async (inv, close) => {
     close();
-    notificationManager.info('Delivery Challan', `Delivery Challan for ${inv.billNo} is not yet available.`);
+    try {
+      await invoiceService.generateDeliveryChallan(inv.id);
+      notificationManager.success('Delivery Challan', `Delivery challan for ${inv.billNo} generated.`);
+    } catch (e) {
+      notificationManager.error('Delivery Challan', e.message);
+    }
   }, []);
 
-  const handleCreatePackingList = useCallback((inv, close) => {
+  const handleCreatePackingList = useCallback(async (inv, close) => {
     close();
-    notificationManager.info('Packing List', `Packing List for ${inv.billNo} is not yet available.`);
+    try {
+      await invoiceService.createPackingList(inv.id);
+      notificationManager.success('Packing List', `Packing list for ${inv.billNo} created.`);
+    } catch (e) {
+      notificationManager.error('Packing List', e.message);
+    }
   }, []);
 
-  const handleCreateEwayBill = useCallback((inv, close) => {
+  const handleCreateEwayBill = useCallback(async (inv, close) => {
     close();
-    notificationManager.info('E-way Bill', `E-way Bill for ${inv.billNo} is not yet available.`);
+    try {
+      await invoiceService.createEwayBill(inv.id);
+      notificationManager.success('E-way Bill', `E-way bill for ${inv.billNo} created.`);
+    } catch (e) {
+      notificationManager.error('E-way Bill', e.message);
+    }
   }, []);
 
-  const handleCreateEInvoice = useCallback((inv, close) => {
+  const handleCreateEInvoice = useCallback(async (inv, close) => {
     close();
-    notificationManager.info('E-Invoice', `E-Invoice for ${inv.billNo} is not yet available.`);
+    try {
+      await invoiceService.createEInvoice(inv.id);
+      notificationManager.success('E-Invoice', `E-invoice for ${inv.billNo} created.`);
+    } catch (e) {
+      notificationManager.error('E-Invoice', e.message);
+    }
   }, []);
 
-  const handleConvert = useCallback((inv, close) => {
+  const handleConvert = useCallback(async (inv, close) => {
     close();
-    notificationManager.info('Convert', `Convert invoice ${inv.billNo} is not yet available.`);
+    try {
+      await invoiceService.convertInvoice(inv.id);
+      notificationManager.success('Convert', `Invoice ${inv.billNo} converted.`);
+    } catch (e) {
+      notificationManager.error('Convert', e.message);
+    }
   }, []);
 
   const handleCancelInvoice = useCallback(async (inv, close) => {
@@ -370,7 +426,7 @@ export default function Invoices({ variant = 'invoices' }) {
     const inv = deletingInvoiceId.inv;
     setDeletingInvoiceId(prev => ({ ...prev, deleting: true }));
     try {
-      await invoiceService.deleteInvoice(inv.id);
+      await invoiceService.cancelInvoice(inv.id);
       notificationManager.success('Invoices', `Invoice ${inv.billNo} cancelled.`);
       handleRefresh();
       setConfirmDeleteOpen(false);

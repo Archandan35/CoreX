@@ -5,6 +5,7 @@ import Select from '../ui/Select.jsx';
 import Icon from '../ui/Icon.jsx';
 import Modal from '../ui/Modal.jsx';
 import { Field, Input } from '../ui/Field.jsx';
+import { notificationManager } from '../../managers/NotificationManager.js';
 
 export default function InvoiceSignature({
   signatures,
@@ -28,7 +29,9 @@ export default function InvoiceSignature({
     try {
       await onAddSignature({ name: sigName, image: sigImage || null });
       setShowSignatureModal(false);
-    } catch {}
+    } catch (e) {
+      notificationManager.error('Signature', e.message);
+    }
   };
 
   const previewUrl = selectedSignature?.image_url

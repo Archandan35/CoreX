@@ -106,9 +106,13 @@ export function computeInvoice(invoice) {
   const discountTotal = round2(lineDiscountTotal + invoiceDiscount);
   const taxTotal = tax.total;
   const beforeRound = round2(taxableAmount + taxTotal + nonTaxableCharges);
-  const roundOff = invoice?.roundOff ? round2(beforeRound - Math.floor(beforeRound)) : 0;
-  const grandTotal = invoice?.roundOff ? round2(Math.floor(beforeRound) + 1) : beforeRound;
-  // When rounding is off, roundOff is 0 and grandTotal equals beforeRound.
+  let roundOff = 0;
+  let grandTotal = beforeRound;
+  if (invoice?.roundOff) {
+    const rounded = Math.round(beforeRound);
+    roundOff = round2(rounded - beforeRound);
+    grandTotal = rounded;
+  }
 
   // Payments.
   const amountPaid = round2((invoice?.payments || []).reduce((s, p) => s + (Number(p?.amount) || 0), 0));

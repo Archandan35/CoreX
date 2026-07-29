@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { templateService } from '../../services/template/index.js';
-import { select } from '../../components/ui';
 
 export default function TemplateSelect({ onChange }) {
   const [templates, setTemplates] = useState([]);

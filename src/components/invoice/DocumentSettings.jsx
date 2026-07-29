@@ -128,9 +128,16 @@ export default function DocumentSettings({ open, onClose }) {
   const [prefixSuffixOpen, setPrefixSuffixOpen] = useState(false);
   const [customHeaderOpen, setCustomHeaderOpen] = useState(false);
   const [documentNotesOpen, setDocumentNotesOpen] = useState(false);
+  const [files, setFiles] = useState({ logo: null, header: null, footer: null, bannerTop: null, bannerBottom: null });
   const scrollRef = useRef(null);
   const sectionRefs = useRef({});
   const observerRef = useRef(null);
+
+  const handleFile = (key) => (e) => {
+    if (e.target.files?.[0]) {
+      setFiles((prev) => ({ ...prev, [key]: e.target.files[0] }));
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -222,7 +229,7 @@ export default function DocumentSettings({ open, onClose }) {
     companyName: 'Your Company',
     customerName: 'John Doe',
     amount: '₹ 1,000.00',
-    dueDate: '15 Aug 2026',
+    dueDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
   }), []);
 
   if (!open) return null;
@@ -441,8 +448,8 @@ export default function DocumentSettings({ open, onClose }) {
                   <div className="ds-card">
                     <div className="ds-card-title">File Settings</div>
                     <div className="ds-grid-2">
-                      <SelectField label="File Naming Convention" desc="How exported files are named." options={['{number}-{customer}', '{customer}-{number}', '{date}-{number}', '{number}']} value="INV-{number}" locked />
-                      <SelectField label="Compression" desc="PDF compression quality." options={['Standard', 'High', 'Maximum']} value="Standard" locked />
+                      <TextField label="File Naming Convention" desc="How exported files are named." value={settings.fileNamingConvention || ''} onChange={(v) => update('fileNamingConvention', v)} />
+                      <TextField label="Compression" desc="PDF compression quality." value={settings.compression || ''} onChange={(v) => update('compression', v)} />
                     </div>
                   </div>
                 </SectionWrapper>
@@ -473,9 +480,11 @@ export default function DocumentSettings({ open, onClose }) {
                         <div className="ds-field-label">Company Logo</div>
                         <div className="ds-setting-desc">Upload your company logo for PDF headers.</div>
                         <div className="ds-file-upload">
-                          <button type="button" className="ds-btn ds-btn-secondary" onClick={() => notificationManager.info('Upload', 'Logo upload will be available in a future update.')}>
+                          <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleFile('logo')} style={{ display: 'none' }} id="upload-logo" />
+                          <label htmlFor="upload-logo" className="ds-btn ds-btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             <Icon name="upload" size={14} /> Upload Logo
-                          </button>
+                          </label>
+                          {files.logo && <span style={{ fontSize: 12, marginLeft: 8 }}>{files.logo.name}</span>}
                         </div>
                       </div>
                       <div className="ds-field-group">
@@ -505,18 +514,22 @@ export default function DocumentSettings({ open, onClose }) {
                         <div className="ds-field-label">Header</div>
                         <div className="ds-setting-desc">PNG or JPEG, 1000x125 wide strip. First PDF page only.</div>
                         <div className="ds-file-upload">
-                          <button type="button" className="ds-btn ds-btn-secondary" onClick={() => notificationManager.info('Upload', 'Header image upload will be available in a future update.')}>
+                          <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleFile('header')} style={{ display: 'none' }} id="upload-header" />
+                          <label htmlFor="upload-header" className="ds-btn ds-btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             <Icon name="upload" size={14} /> Upload
-                          </button>
+                          </label>
+                          {files.header && <span style={{ fontSize: 12, marginLeft: 8 }}>{files.header.name}</span>}
                         </div>
                       </div>
                       <div className="ds-field-group">
                         <div className="ds-field-label">Footer</div>
                         <div className="ds-setting-desc">PNG or JPEG, 1000x125 wide strip.</div>
                         <div className="ds-file-upload">
-                          <button type="button" className="ds-btn ds-btn-secondary" onClick={() => notificationManager.info('Upload', 'Footer image upload will be available in a future update.')}>
+                          <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleFile('footer')} style={{ display: 'none' }} id="upload-footer" />
+                          <label htmlFor="upload-footer" className="ds-btn ds-btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             <Icon name="upload" size={14} /> Upload
-                          </button>
+                          </label>
+                          {files.footer && <span style={{ fontSize: 12, marginLeft: 8 }}>{files.footer.name}</span>}
                         </div>
                       </div>
                     </div>
@@ -528,18 +541,22 @@ export default function DocumentSettings({ open, onClose }) {
                         <div className="ds-field-label">Banner Image — Top</div>
                         <div className="ds-setting-desc">PNG or JPEG, 1000x125. Above line items on PDFs.</div>
                         <div className="ds-file-upload">
-                          <button type="button" className="ds-btn ds-btn-secondary" onClick={() => notificationManager.info('Upload', 'Banner image upload will be available in a future update.')}>
+                          <input type="file" accept="image/png,image/jpeg,image.webp" onChange={handleFile('bannerTop')} style={{ display: 'none' }} id="upload-banner-top" />
+                          <label htmlFor="upload-banner-top" className="ds-btn ds-btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             <Icon name="upload" size={14} /> Upload
-                          </button>
+                          </label>
+                          {files.bannerTop && <span style={{ fontSize: 12, marginLeft: 8 }}>{files.bannerTop.name}</span>}
                         </div>
                       </div>
                       <div className="ds-field-group">
                         <div className="ds-field-label">Banner Image — Bottom</div>
                         <div className="ds-setting-desc">PNG or JPEG, 1000x125. Below line items on PDFs.</div>
                         <div className="ds-file-upload">
-                          <button type="button" className="ds-btn ds-btn-secondary" onClick={() => notificationManager.info('Upload', 'Banner image upload will be available in a future update.')}>
+                          <input type="file" accept="image/png,image/jpeg,image.webp" onChange={handleFile('bannerBottom')} style={{ display: 'none' }} id="upload-banner-bottom" />
+                          <label htmlFor="upload-banner-bottom" className="ds-btn ds-btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             <Icon name="upload" size={14} /> Upload
-                          </button>
+                          </label>
+                          {files.bannerBottom && <span style={{ fontSize: 12, marginLeft: 8 }}>{files.bannerBottom.name}</span>}
                         </div>
                       </div>
                     </div>

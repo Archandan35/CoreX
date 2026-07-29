@@ -137,6 +137,32 @@ export function validateCustomHeaders(headers, values) {
   return e;
 }
 
+export function validateCreditLimit(customer, invoiceTotal) {
+  const e = {};
+  if (!customer) return e;
+  if (customer.is_active === false) {
+    e.customer = 'Cannot invoice an inactive customer.';
+    return e;
+  }
+  const limit = Number(customer.credit_limit) || 0;
+  const outstanding = Number(customer.outstanding_balance) || 0;
+  if (limit > 0 && (outstanding + Number(invoiceTotal || 0)) > limit) {
+    e.creditLimit = 'Invoice would exceed the customer\'s credit limit.';
+  }
+  return e;
+}
+
+export function validateFinancialYear(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const fyStart = month >= 3 ? year : year - 1;
+  const fyEnd = fyStart + 1;
+  return { fy: `${fyStart}-${fyEnd}`, start: new Date(fyStart, 3, 1), end: new Date(fyEnd, 2, 31) };
+}
+
 export function isValid(errors) {
   if (!errors) return true;
   return Object.keys(errors).length === 0;

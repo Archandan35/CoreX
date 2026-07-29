@@ -6,7 +6,7 @@ import { Field, Input } from '../ui/Field.jsx';
 import PermissionGate from '../ui/PermissionGate.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 
-export default function CustomHeaders({ headers, settingsOpen, onOpenSettings, onCloseSettings, onAddHeader, onRemoveHeader }) {
+export default function CustomHeaders({ headers, settingsOpen, onCloseSettings, onAddHeader, onRemoveHeader }) {
   const [newLabel, setNewLabel] = useState('');
 
   const addHeader = (e) => {

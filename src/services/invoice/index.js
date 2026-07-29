@@ -1,1 +1,11 @@
 export { InvoiceService, invoiceService } from './InvoiceService.js';
+export { CustomerService, customerService } from './services/CustomerService.js';
+export { ProductService, productService } from './services/ProductService.js';
+export { BankService, bankService } from './services/BankService.js';
+export { SignatureService, signatureService } from './services/SignatureService.js';
+export { PrefixService, prefixService } from './services/PrefixService.js';
+export { SuffixService, suffixService } from './services/SuffixService.js';
+export { CustomHeaderService, customHeaderService } from './services/CustomHeaderService.js';
+export { DocumentNoteService, documentNoteService } from './services/DocumentNoteService.js';
+export { CompanyService, companyService } from './services/CompanyService.js';
+export { SettingsService, settingsService } from './services/SettingsService.js';

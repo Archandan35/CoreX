@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import Icon from '../ui/Icon.jsx';
-import Search from '../ui/Search.jsx';
 import Dropdown, { DropdownItem } from '../ui/Dropdown.jsx';
 import PermissionGate from '../ui/PermissionGate.jsx';
 import { useDebounce } from '../../hooks/useDebounce.js';
@@ -11,6 +10,7 @@ export default function InvoiceDetails({
   onSelectCustomer, onEditCustomer, invoiceDate, dueDate,
   onInvoiceDate, onDueDate, reference, onReference, dueDateOffset,
   onAutoDueDate, onOpenCreateCustomer, errors,
+  customerOutstanding, creditLimitExceeded,
 }) {
   const debounced = useDebounce(customerQuery, 300);
   const filtered = useMemo(() => {
@@ -21,8 +21,10 @@ export default function InvoiceDetails({
     ).slice(0, 8);
   }, [customers, debounced]);
 
-  const bal = Number(selectedCustomer?.outstanding_balance) || 0;
+  const bal = Number(selectedCustomer?.outstanding_balance || customerOutstanding?.totalOutstanding || 0);
   const limit = Number(selectedCustomer?.credit_limit) || 0;
+  const isInactive = selectedCustomer && selectedCustomer.is_active === false;
+  const exceeded = limit > 0 && bal >= limit;
 
   return (
     <section className="inv-card inv-customer-card-layout">
@@ -63,6 +65,9 @@ export default function InvoiceDetails({
                     <span style={{ fontSize: 11, color: 'var(--inv-text-sub)' }}>
                       {[c.company, c.phone, c.gstin].filter(Boolean).join(' · ')}
                     </span>
+                    {c.is_active === false && (
+                      <span style={{ fontSize: 11, color: 'var(--inv-red-dot)', fontWeight: 600 }}>Inactive</span>
+                    )}
                   </div>
                 </DropdownItem>
               ))}
@@ -73,6 +78,9 @@ export default function InvoiceDetails({
         {selectedCustomer && (
           <div className="inv-selected-customer">
             <span className="inv-cust-name">{selectedCustomer.name}</span>
+            {isInactive && (
+              <span className="inv-field-error" style={{ marginLeft: 8 }}>Inactive customer — cannot invoice</span>
+            )}
             <PermissionGate permission={PERMISSIONS.CUSTOMER_UPDATE}>
               <button className="inv-cust-edit" onClick={onEditCustomer}>
                 <Icon name="edit" size={12} /> Edit
@@ -81,15 +89,21 @@ export default function InvoiceDetails({
           </div>
         )}
         {selectedCustomer && (
-          <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 11, color: 'var(--inv-text-sub)' }}>
+          <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 11, color: 'var(--inv-text-sub)', flexWrap: 'wrap' }}>
+            {selectedCustomer.gstin && <span>GSTIN: {selectedCustomer.gstin}</span>}
+            {selectedCustomer.state && <span>State: {selectedCustomer.state}</span>}
             {bal > 0 && <span style={{ color: 'var(--inv-red-dot)' }}>Due: ₹{bal.toFixed(2)}</span>}
             {!!limit && <span>Limit: ₹{limit.toFixed(2)}</span>}
-            {limit > 0 && bal >= limit && (
+            {exceeded && (
               <span style={{ color: 'var(--inv-red-dot)', fontWeight: 600 }}>Credit limit reached!</span>
+            )}
+            {creditLimitExceeded && (
+              <span style={{ color: 'var(--inv-red-dot)', fontWeight: 600 }}>Invoice would exceed credit limit</span>
             )}
           </div>
         )}
         {errors?.customer && <span className="inv-field-error">{errors.customer}</span>}
+        {isInactive && <span className="inv-field-error">Cannot create invoice for inactive customer.</span>}
       </div>
 
       <div className="inv-customer-right">

@@ -157,6 +157,44 @@ export default function InvoiceBank({
       </div>
 
       <Modal
+        open={showSplitModal}
+        onClose={() => setShowSplitModal(false)}
+        title="Split Payment"
+        size="md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowSplitModal(false)}>Cancel</Button>
+            <Button icon="split" onClick={() => { setShowSplitModal(false); }}>Done</Button>
+          </>
+        }
+      >
+        <div className="inv-modal-form">
+          <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--inv-text-sub)' }}>
+            Split the balance of {round2(balanceDue)} across multiple payment modes.
+          </p>
+          {payments.map((pmt, i) => (
+            <div key={i} className="inv-payment-row" style={{ marginBottom: 8 }}>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={pmt.amount ?? ''}
+                onChange={(e) => onUpdatePayment(i, { ...pmt, amount: Number(e.target.value) || 0 })}
+                placeholder="Amount"
+                className="inv-payment-input"
+              />
+              <Select
+                options={PAYMENT_MODE_OPTIONS}
+                value={pmt.mode || ''}
+                onChange={(v) => onUpdatePayment(i, { ...pmt, mode: v })}
+                className="inv-payment-input inv-payment-input--sm"
+              />
+            </div>
+          ))}
+        </div>
+      </Modal>
+
+      <Modal
         open={showBankModal}
         onClose={() => setShowBankModal(false)}
         title={editingBank ? 'Edit Bank' : 'Add New Bank'}

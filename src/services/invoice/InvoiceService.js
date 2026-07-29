@@ -1,140 +1,106 @@
-// ---------------------------------------------------------------------------
-// InvoiceService — provider-agnostic client for the invoice domain.
-// Pages import this, never the database/storage/AI providers directly. All
-// persistence flows through the existing `api()` wrapper to /api/* endpoints
-// which enforce server-side authorization; attachments use the existing
-// FileService/storage layer; AI helpers delegate to the existing aiService.
-// ---------------------------------------------------------------------------
-
 import { api } from '../api.js';
 import { aiService } from '../ai/AiService.js';
-import { settingsApiService } from '../settings/SettingsApiService.js';
 import { auditService } from '../../audit/AuditService.js';
-import { INVOICE_TABLE_COLUMNS } from '../../constants/index.js';
+import { asJson } from './services/utils.js';
 
-async function asJson(res) {
-  let data = null;
-  try { data = await res.json(); } catch { /* non-JSON body */ }
-  return { ok: res.ok, status: res.status, data };
-}
+import { customerService } from './services/CustomerService.js';
+import { productService } from './services/ProductService.js';
+import { bankService } from './services/BankService.js';
+import { signatureService } from './services/SignatureService.js';
+import { prefixService } from './services/PrefixService.js';
+import { suffixService } from './services/SuffixService.js';
+import { customHeaderService } from './services/CustomHeaderService.js';
+import { documentNoteService } from './services/DocumentNoteService.js';
+import { companyService } from './services/CompanyService.js';
+import { settingsService } from './services/SettingsService.js';
 
 export class InvoiceService {
-  // --- Customers ---------------------------------------------------------
-  async listCustomers(query) {
-    const q = query ? `?q=${encodeURIComponent(query)}` : '';
-    const r = await asJson(await api(`/api/customers${q}`));
-    return r.ok ? r.data.customers || [] : [];
-  }
-  async createCustomer(payload) {
-    const r = await asJson(await api('/api/customers', { method: 'POST', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to create customer.');
-    return r.data.customer;
-  }
-  async updateCustomer(id, payload) {
-    const r = await asJson(await api(`/api/customers/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to update customer.');
-    return r.data.customer;
+  // --- Re-exported domain services ---------------------------------------
+  get listCustomers() { return customerService.listCustomers.bind(customerService); }
+  get createCustomer() { return customerService.createCustomer.bind(customerService); }
+  get updateCustomer() { return customerService.updateCustomer.bind(customerService); }
+  get getCustomerOutstanding() { return customerService.getCustomerOutstanding.bind(customerService); }
+
+  get listProducts() { return productService.listProducts.bind(productService); }
+  get createProduct() { return productService.createProduct.bind(productService); }
+  get updateProduct() { return productService.updateProduct.bind(productService); }
+  get listProductCategories() { return productService.listProductCategories.bind(productService); }
+  get listBrands() { return productService.listBrands.bind(productService); }
+  get listUnits() { return productService.listUnits.bind(productService); }
+  get listWarehouses() { return productService.listWarehouses.bind(productService); }
+  get listPriceLists() { return productService.listPriceLists.bind(productService); }
+  get getProductPriceLists() { return productService.getProductPriceLists.bind(productService); }
+  get saveProductPriceLists() { return productService.saveProductPriceLists.bind(productService); }
+
+  get listBanks() { return bankService.listBanks.bind(bankService); }
+  get createBank() { return bankService.createBank.bind(bankService); }
+  get updateBank() { return bankService.updateBank.bind(bankService); }
+  get deleteBank() { return bankService.deleteBank.bind(bankService); }
+
+  get listSignatures() { return signatureService.listSignatures.bind(signatureService); }
+  get createSignature() { return signatureService.createSignature.bind(signatureService); }
+  get deleteSignature() { return signatureService.deleteSignature.bind(signatureService); }
+
+  get listPrefixes() { return prefixService.listPrefixes.bind(prefixService); }
+  get createPrefix() { return prefixService.createPrefix.bind(prefixService); }
+  get updatePrefix() { return prefixService.updatePrefix.bind(prefixService); }
+  get deletePrefix() { return prefixService.deletePrefix.bind(prefixService); }
+  get setDefaultPrefix() { return prefixService.setDefaultPrefix.bind(prefixService); }
+
+  get listSuffixes() { return suffixService.listSuffixes.bind(suffixService); }
+  get createSuffix() { return suffixService.createSuffix.bind(suffixService); }
+  get updateSuffix() { return suffixService.updateSuffix.bind(suffixService); }
+  get deleteSuffix() { return suffixService.deleteSuffix.bind(suffixService); }
+  get setDefaultSuffix() { return suffixService.setDefaultSuffix.bind(suffixService); }
+
+  get listCustomHeaders() { return customHeaderService.listCustomHeaders.bind(customHeaderService); }
+  get createCustomHeader() { return customHeaderService.createCustomHeader.bind(customHeaderService); }
+  get updateCustomHeader() { return customHeaderService.updateCustomHeader.bind(customHeaderService); }
+  get deleteCustomHeader() { return customHeaderService.deleteCustomHeader.bind(customHeaderService); }
+
+  get listNotes() { return documentNoteService.listNotes.bind(documentNoteService); }
+  get createNote() { return documentNoteService.createNote.bind(documentNoteService); }
+  get updateNote() { return documentNoteService.updateNote.bind(documentNoteService); }
+  get deleteNote() { return documentNoteService.deleteNote.bind(documentNoteService); }
+  get listTerms() { return documentNoteService.listTerms.bind(documentNoteService); }
+  get createTerm() { return documentNoteService.createTerm.bind(documentNoteService); }
+  get updateTerm() { return documentNoteService.updateTerm.bind(documentNoteService); }
+  get deleteTerm() { return documentNoteService.deleteTerm.bind(documentNoteService); }
+
+  get listCompanies() { return companyService.listCompanies.bind(companyService); }
+  get getCurrentCompany() { return companyService.getCurrentCompany.bind(companyService); }
+
+  get getDocumentSettings() { return settingsService.getDocumentSettings.bind(settingsService); }
+  get saveDocumentSettings() { return settingsService.saveDocumentSettings.bind(settingsService); }
+  get getColumnDefinitions() { return settingsService.getColumnDefinitions.bind(settingsService); }
+  get listDocumentTypes() { return settingsService.listDocumentTypes.bind(settingsService); }
+
+  // --- Invoice-specific methods ------------------------------------------
+  async checkDuplicateNumber(prefix, invoiceNumber, excludeId) {
+    if (!prefix || !invoiceNumber) return { available: true };
+    const params = new URLSearchParams({ prefix, number: invoiceNumber });
+    if (excludeId) params.set('excludeId', excludeId);
+    const r = await asJson(await api(`/api/invoices/check-number?${params}`));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to check duplicate number.');
+    return r.data;
   }
 
-  // --- Products & categories --------------------------------------------
-  async listProducts() {
-    const r = await asJson(await api('/api/products'));
-    if (!r.ok) return { products: [], categories: [] };
-    return { products: r.data.products || [], categories: r.data.categories || [] };
-  }
-  async createProduct(payload) {
-    const r = await asJson(await api('/api/products', { method: 'POST', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to create product.');
-    return r.data.product;
-  }
-  async updateProduct(id, payload) {
-    const r = await asJson(await api(`/api/products/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to update product.');
-    return r.data.product;
-  }
-  async listProductCategories() {
-    const r = await asJson(await api('/api/products'));
-    return r.ok ? (r.data.categories || []) : [];
-  }
-  async listBrands() {
-    const r = await asJson(await api('/api/product-brands'));
-    return r.ok ? (r.data.brands || []) : [];
-  }
-  async listUnits() {
-    const r = await asJson(await api('/api/product-units'));
-    return r.ok ? (r.data.units || []) : [];
-  }
-  async listWarehouses() {
-    const r = await asJson(await api('/api/product-warehouses'));
-    return r.ok ? (r.data.warehouses || []) : [];
-  }
-  async listPriceLists() {
-    const r = await asJson(await api('/api/price-lists'));
-    return r.ok ? (r.data.priceLists || []) : [];
-  }
-  async getProductPriceLists(productId) {
-    const r = await asJson(await api(`/api/products/${productId}/price-lists`));
-    return r.ok ? (r.data.items || []) : [];
-  }
-  async saveProductPriceLists(productId, items) {
-    const r = await asJson(await api(`/api/products/${productId}/price-lists`, {
-      method: 'POST', body: JSON.stringify({ items }),
-    }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to save price lists.');
-    return true;
-  }
-
-  // --- Banks -------------------------------------------------------------
-  async listBanks() {
-    const r = await asJson(await api('/api/banks'));
-    return r.ok ? r.data.banks || [] : [];
-  }
-  async createBank(payload) {
-    const r = await asJson(await api('/api/banks', { method: 'POST', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to add bank.');
-    return r.data.bank;
-  }
-  async updateBank(id, payload) {
-    const r = await asJson(await api(`/api/banks/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to update bank.');
-    return r.data.bank;
-  }
-  async deleteBank(id) {
-    const r = await asJson(await api(`/api/banks/${id}`, { method: 'DELETE' }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to remove bank.');
-    return true;
-  }
-
-  // --- Signatures --------------------------------------------------------
-  async listSignatures() {
-    const r = await asJson(await api('/api/signatures'));
-    return r.ok ? r.data.signatures || [] : [];
-  }
-  async createSignature(payload) {
-    const r = await asJson(await api('/api/signatures', { method: 'POST', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to add signature.');
-    return r.data.signature;
-  }
-  async deleteSignature(id) {
-    const r = await asJson(await api(`/api/signatures/${id}`, { method: 'DELETE' }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to remove signature.');
-    return true;
-  }
-
-  // --- Invoices ----------------------------------------------------------
   async nextInvoiceNumber(prefix) {
     const r = await asJson(await api(`/api/invoices/next-number${prefix ? `?prefix=${encodeURIComponent(prefix)}` : ''}`));
     return r.ok ? r.data.number : null;
   }
+
   async listInvoices() {
     const r = await asJson(await api('/api/invoices'));
     return r.ok ? r.data.invoices || [] : [];
   }
+
   async getInvoice(id) {
     const r = await asJson(await api(`/api/invoices/${id}`));
     if (!r.ok) throw new Error(r.data?.error || 'Invoice not found.');
     return r.data.invoice;
   }
+
   async saveInvoice(invoice) {
     const isEdit = !!invoice.id;
     const r = await asJson(await api(
@@ -150,6 +116,7 @@ export class InvoiceService {
     }
     return r.data.invoice;
   }
+
   async deleteInvoice(id) {
     const r = await asJson(await api(`/api/invoices/${id}`, { method: 'DELETE' }));
     if (!r.ok) throw new Error(r.data?.error || 'Failed to delete invoice.');
@@ -162,9 +129,102 @@ export class InvoiceService {
     return r.data.invoice;
   }
 
-  // --- AI ----------------------------------------------------------------
-  // Delegates to the application's existing provider-agnostic AI service so
-  // the page never imports an AI provider directly.
+  async cancelInvoice(id) {
+    const r = await asJson(await api(`/api/invoices/${id}/cancel`, { method: 'POST' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to cancel invoice.');
+    return r.data.invoice;
+  }
+
+  async markAsPaid(id, payload) {
+    const r = await asJson(await api(`/api/invoices/${id}/mark-paid`, {
+      method: 'POST', body: JSON.stringify(payload),
+    }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to mark invoice as paid.');
+    return r.data.invoice;
+  }
+
+  async downloadPdf(id) {
+    const r = await asJson(await api(`/api/invoices/${id}/pdf`));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to download PDF.');
+    return r.data;
+  }
+
+  async sendInvoice(id, method) {
+    const r = await asJson(await api(`/api/invoices/${id}/send`, {
+      method: 'POST', body: JSON.stringify({ method }),
+    }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to send invoice.');
+    return r.data;
+  }
+
+  async linkToSubscription(id) {
+    const r = await asJson(await api(`/api/invoices/${id}/link-subscription`, { method: 'POST' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to link subscription.');
+    return r.data;
+  }
+
+  async digitalSignPdf(id) {
+    const r = await asJson(await api(`/api/invoices/${id}/digital-sign`, { method: 'POST' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to digitally sign PDF.');
+    return r.data;
+  }
+
+  async bulkDownloadPdfs(ids) {
+    const r = await asJson(await api('/api/invoices/bulk-download-pdf', { method: 'POST', body: JSON.stringify({ ids }) }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to bulk download PDFs.');
+    return r.data;
+  }
+
+  async generateShippingLabel(id) {
+    const r = await asJson(await api(`/api/invoices/${id}/shipping-label`, { method: 'POST' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to generate shipping label.');
+    return r.data;
+  }
+
+  async generateDeliveryChallan(id) {
+    const r = await asJson(await api(`/api/invoices/${id}/delivery-challan`, { method: 'POST' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to generate delivery challan.');
+    return r.data;
+  }
+
+  async createPackingList(id) {
+    const r = await asJson(await api(`/api/invoices/${id}/packing-list`, { method: 'POST' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to create packing list.');
+    return r.data;
+  }
+
+  async createEwayBill(id) {
+    const r = await asJson(await api(`/api/invoices/${id}/eway-bill`, { method: 'POST' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to create e-way bill.');
+    return r.data;
+  }
+
+  async createEInvoice(id) {
+    const r = await asJson(await api(`/api/invoices/${id}/e-invoice`, { method: 'POST' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to create e-invoice.');
+    return r.data;
+  }
+
+  async convertInvoice(id) {
+    const r = await asJson(await api(`/api/invoices/${id}/convert`, { method: 'POST' }));
+    if (!r.ok) throw new Error(r.data?.error || 'Failed to convert invoice.');
+    return r.data;
+  }
+
+  async exportInvoicesCsv(filters) {
+    const q = filters ? `?${new URLSearchParams(filters)}` : '';
+    const r = await asJson(await api(`/api/invoices/export/csv${q}`));
+    if (!r.ok) throw new Error(r.data?.error || 'CSV export failed.');
+    return r.data;
+  }
+
+  async exportInvoicesPdf(filters) {
+    const q = filters ? `?${new URLSearchParams(filters)}` : '';
+    const r = await asJson(await api(`/api/invoices/export/pdf${q}`));
+    if (!r.ok) throw new Error(r.data?.error || 'PDF export failed.');
+    return r.data;
+  }
+
   async draftInvoiceWithAI(context) {
     const messages = [
       { role: 'system', content: 'You are an invoicing assistant. Given a free-text request, return only a JSON object with customer, items (name, quantity, unitPrice, taxRate), notes, and terms.' },
@@ -174,178 +234,13 @@ export class InvoiceService {
     const text = res?.choices?.[0]?.message?.content || '';
     try { return JSON.parse(text); } catch { return null; }
   }
-  // --- Exports ----------------------------------------------------------
-  async exportInvoicesCsv(filters) {
-    const q = filters ? `?${new URLSearchParams(filters)}` : '';
-    const r = await asJson(await api(`/api/invoices/export/csv${q}`));
-    if (!r.ok) throw new Error(r.data?.error || 'CSV export failed.');
-    return r.data;
-  }
-  async exportInvoicesPdf(filters) {
-    const q = filters ? `?${new URLSearchParams(filters)}` : '';
-    const r = await asJson(await api(`/api/invoices/export/pdf${q}`));
-    if (!r.ok) throw new Error(r.data?.error || 'PDF export failed.');
-    return r.data;
-  }
+
   async suggestNote(existingNotes, intent) {
     const res = await aiService.chat([
       { role: 'system', content: 'Write a concise professional invoice note.' },
       { role: 'user', content: `Intent: ${intent}. Existing notes: ${existingNotes || 'none'}` },
     ]);
     return res?.choices?.[0]?.message?.content || '';
-  }
-
-  // --- Document settings ------------------------------------------------
-  // Persisted as a single JSON blob under the `documentSettings` key via the
-  // generic /api/settings endpoint so we don't need a new backend route.
-  async getDocumentSettings() {
-    const all = await settingsApiService.getAll();
-    const raw = all?.settings?.documentSettings ?? all?.documentSettings;
-    let doc = raw || {};
-    if (typeof doc === 'string') {
-      try { doc = JSON.parse(doc); } catch { doc = {}; }
-    }
-    return doc && typeof doc === 'object' ? doc : {};
-  }
-  async saveDocumentSettings(updates) {
-    const r = await asJson(await api('/api/settings', {
-      method: 'PUT',
-      body: JSON.stringify({ documentSettings: updates }),
-    }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to save document settings.');
-    return true;
-  }
-
-  // --- Column definitions ------------------------------------------------
-  async getColumnDefinitions() {
-    const r = await asJson(await api('/api/product-columns'));
-    if (!r.ok) { return INVOICE_TABLE_COLUMNS; }
-    const columns = r.data.columns || r.data || [];
-    return Array.isArray(columns) && columns.length ? columns : INVOICE_TABLE_COLUMNS;
-  }
-
-  // --- Document types (from master config) ------------------------------
-  async listDocumentTypes() {
-    const r = await asJson(await api('/api/document-types'));
-    return r.ok ? (r.data.types || r.data || []) : [];
-  }
-
-  // --- Prefixes ---------------------------------------------------------
-  async listPrefixes(params = {}) {
-    const q = Object.keys(params).length ? `?${new URLSearchParams(params)}` : '';
-    const r = await asJson(await api(`/api/prefix-settings${q}`));
-    return r.ok ? r.data : { items: [], total: 0 };
-  }
-  async createPrefix(payload) {
-    const r = await asJson(await api('/api/prefix-settings', { method: 'POST', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to create prefix.');
-    return r.data.prefix;
-  }
-  async updatePrefix(id, payload) {
-    const r = await asJson(await api(`/api/prefix-settings/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to update prefix.');
-    return r.data.prefix;
-  }
-  async deletePrefix(id) {
-    const r = await asJson(await api(`/api/prefix-settings/${id}`, { method: 'DELETE' }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to delete prefix.');
-    return true;
-  }
-  async setDefaultPrefix(id) {
-    const r = await asJson(await api(`/api/prefix-settings/${id}/default`, { method: 'POST' }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to set default prefix.');
-    return r.data.prefix;
-  }
-
-  // --- Suffixes ---------------------------------------------------------
-  async listSuffixes(params = {}) {
-    const q = Object.keys(params).length ? `?${new URLSearchParams(params)}` : '';
-    const r = await asJson(await api(`/api/suffix-settings${q}`));
-    return r.ok ? r.data : { items: [], total: 0 };
-  }
-  async createSuffix(payload) {
-    const r = await asJson(await api('/api/suffix-settings', { method: 'POST', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to create suffix.');
-    return r.data.suffix;
-  }
-  async updateSuffix(id, payload) {
-    const r = await asJson(await api(`/api/suffix-settings/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to update suffix.');
-    return r.data.suffix;
-  }
-  async deleteSuffix(id) {
-    const r = await asJson(await api(`/api/suffix-settings/${id}`, { method: 'DELETE' }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to delete suffix.');
-    return true;
-  }
-  async setDefaultSuffix(id) {
-    const r = await asJson(await api(`/api/suffix-settings/${id}/default`, { method: 'POST' }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to set default suffix.');
-    return r.data.suffix;
-  }
-
-  // --- Custom Headers ---------------------------------------------------
-  async listCustomHeaders(params = {}) {
-    const q = Object.keys(params).length ? `?${new URLSearchParams(params)}` : '';
-    const r = await asJson(await api(`/api/custom-headers${q}`));
-    return r.ok ? r.data : { items: [], total: 0 };
-  }
-  async createCustomHeader(payload) {
-    const r = await asJson(await api('/api/custom-headers', { method: 'POST', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to create custom header.');
-    return r.data.header;
-  }
-  async updateCustomHeader(id, payload) {
-    const r = await asJson(await api(`/api/custom-headers/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to update custom header.');
-    return r.data.header;
-  }
-  async deleteCustomHeader(id) {
-    const r = await asJson(await api(`/api/custom-headers/${id}`, { method: 'DELETE' }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to delete custom header.');
-    return true;
-  }
-
-  // --- Document Notes & Terms -------------------------------------------
-  async listNotes(params = {}) {
-    const q = Object.keys(params).length ? `?${new URLSearchParams(params)}` : '';
-    const r = await asJson(await api(`/api/document-notes${q}`));
-    return r.ok ? r.data : { items: [], total: 0 };
-  }
-  async createNote(payload) {
-    const r = await asJson(await api('/api/document-notes', { method: 'POST', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to create note.');
-    return r.data.note;
-  }
-  async updateNote(id, payload) {
-    const r = await asJson(await api(`/api/document-notes/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to update note.');
-    return r.data.note;
-  }
-  async deleteNote(id) {
-    const r = await asJson(await api(`/api/document-notes/${id}`, { method: 'DELETE' }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to delete note.');
-    return true;
-  }
-  async listTerms(params = {}) {
-    const q = Object.keys(params).length ? `?${new URLSearchParams(params)}` : '';
-    const r = await asJson(await api(`/api/document-terms${q}`));
-    return r.ok ? r.data : { items: [], total: 0 };
-  }
-  async createTerm(payload) {
-    const r = await asJson(await api('/api/document-terms', { method: 'POST', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to create term.');
-    return r.data.term;
-  }
-  async updateTerm(id, payload) {
-    const r = await asJson(await api(`/api/document-terms/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to update term.');
-    return r.data.term;
-  }
-  async deleteTerm(id) {
-    const r = await asJson(await api(`/api/document-terms/${id}`, { method: 'DELETE' }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to delete term.');
-    return true;
   }
 }
 

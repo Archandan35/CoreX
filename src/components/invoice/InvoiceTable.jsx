@@ -142,7 +142,7 @@ const LineRow = memo(function LineRow({ line, index, onChange, onRemove, columns
   );
 });
 
-export default function InvoiceTable({ items, onChangeItem, onRemoveItem, showDescription, onAddNewProduct, visibleColumns, units, warehouses }) {
+export default function InvoiceTable({ items, onChangeItem, onRemoveItem, onAddNewProduct, visibleColumns, units, warehouses }) {
   const resolvedColumns = visibleColumns || INVOICE_TABLE_COLUMNS.filter((c) => c.always || c.defaultVisible);
 
   const headerColumns = resolvedColumns.filter((c) => c.key !== 'actions');
