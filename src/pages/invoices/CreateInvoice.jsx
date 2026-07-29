@@ -12,9 +12,7 @@ import Button from '../../components/ui/Button.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
 
 import Icon from '../../components/ui/Icon.jsx';
-import ColumnVisibilityManager from '../../components/invoice/ColumnVisibilityManager.jsx';
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx';
-import useColumnVisibility from '../../hooks/useColumnVisibility.js';
 import useUnsavedChanges from '../../hooks/useUnsavedChanges.js';
 import { invoiceService } from '../../services/invoice/index.js';
 import { computeInvoice } from '../../business/invoice/calculations.js';
@@ -25,6 +23,7 @@ import {
 import { DEFAULT_DUE_DATE_OFFSET_DAYS } from '../../constants/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
 import { invalidateCache } from '../../services/ui-sync/index.js';
+import { fileService } from '../../services/file/index.js';
 
 function generateKey() {
   return Math.random().toString(36).substring(2, 10);
@@ -74,13 +73,6 @@ export default function CreateInvoice() {
   const [items, setItems] = useState([]);
   const [showDescription, setShowDescription] = useState(true);
   const [aiBusy, setAiBusy] = useState(false);
-
-  const {
-    visibleKeys,
-    visibleColumns,
-    toggleColumn,
-    allColumns,
-  } = useColumnVisibility();
 
   // Clear stale header errors when definitions change
   useEffect(() => {
@@ -344,11 +336,6 @@ export default function CreateInvoice() {
     setItems(prev => prev.filter((_, i) => i !== index));
   }, []);
 
-  // --- Discount ---
-  const addCharge = useCallback((c) => setAdditionalCharges(p => [...p, c]), []);
-  const removeCharge = useCallback((i) => setAdditionalCharges(p => p.filter((_, j) => j !== i)), []);
-  const updateCharge = useCallback((i, c) => setAdditionalCharges(p => { const n = [...p]; n[i] = c; return n; }), []);
-
   // --- Notes ---
   const addNote = useCallback(() => setNotes(p => [...p, { id: generateKey(), text: '' }]), []);
   const removeNote = useCallback((i) => setNotes(p => p.filter((_, j) => j !== i)), []);
@@ -487,6 +474,18 @@ export default function CreateInvoice() {
     setSaving(true);
     try {
       const result = await invoiceService.saveInvoice(buildPayload(status));
+
+      // Upload attachments after save
+      if (attachments.length > 0) {
+        try {
+          for (const file of attachments) {
+            await fileService.upload(file, `/invoices/${result.id}`);
+          }
+        } catch (uploadErr) {
+          notificationManager.warning('Attachments', 'Invoice saved but file upload failed. You can re-attach later.');
+        }
+      }
+
       await invalidateCache('invoices');
       notificationManager.success('Invoice', `Invoice ${status === 'draft' ? 'draft saved' : 'saved'}.`);
 
@@ -502,7 +501,7 @@ export default function CreateInvoice() {
     } catch (e) {
       notificationManager.error('Invoice', e.message || 'Failed.');
     } finally { setSaving(false); }
-  }, [buildPayload, validate, safeNavigate, navigate, prefix, invoiceNumber]);
+  }, [buildPayload, validate, safeNavigate, navigate, prefix, invoiceNumber, attachments]);
 
   const saveInvoice = useCallback(() => performSave('pending', null), [performSave]);
   const saveDraft = useCallback(() => performSave('draft', null), [performSave]);
@@ -570,7 +569,6 @@ export default function CreateInvoice() {
     }));
   }, [prefixes]);
 
-  const [columnManagerOpen, setColumnManagerOpen] = useState(false);
   const [saveMenuOpen, setSaveMenuOpen] = useState(false);
   const [prefixOpen, setPrefixOpen] = useState(false);
   const [docTypeOpen, setDocTypeOpen] = useState(false);
@@ -584,6 +582,24 @@ export default function CreateInvoice() {
 
   return (
     <div className="page">
+
+      {(() => {
+        const inlineKeys = new Set(['customer','invoiceDate','dueDate','invoiceNumber','items','payments','creditLimit']);
+        const otherErrors = Object.entries(errors).filter(([k]) => !inlineKeys.has(k) && !k.startsWith('payment_'));
+        if (otherErrors.length > 0) {
+          return (
+            <div style={{ marginBottom:'12px', padding:'10px 14px', background:'#fdeef2', border:'1px solid #f5c6cb', borderRadius:'8px', color:'#e5484d', fontSize:'13px' }}>
+              <strong>Please fix the following errors:</strong>
+              <ul style={{ margin:'6px 0 0', paddingLeft:'18px' }}>
+                {otherErrors.map(([key, msg]) => (
+                  <li key={key}>{typeof msg === 'string' ? msg : JSON.stringify(msg)}</li>
+                ))}
+              </ul>
+            </div>
+          );
+        }
+        return null;
+      })()}
 
       {/* ===== Header card ===== */}
       <div className="ni-header-card">
@@ -608,6 +624,7 @@ export default function CreateInvoice() {
               </div>
               <input className="ni-input-box" style={{border:'1px solid var(--ni-border)',fontSize:'13px',fontWeight:600,fontFamily:'inherit'}}
                 value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} />
+              {errors.invoiceNumber && <div style={{color:'#e5484d',fontSize:'11px',marginTop:'2px'}}>{errors.invoiceNumber}</div>}
             </div>
           </div>
           <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
@@ -759,17 +776,8 @@ export default function CreateInvoice() {
             <label className="ni-checkbox-label">
               <input type="checkbox" checked={showDescription} onChange={e => setShowDescription(e.target.checked)} /> Show description
             </label>
-            <div className="ni-icon-btn" onClick={() => setColumnManagerOpen(true)}>
-              <Icon name="sliders-horizontal" />
-            </div>
           </div>
         </div>
-
-        {columnManagerOpen && (
-          <div style={{ position:'absolute', zIndex:100 }}>
-            <ColumnVisibilityManager visibleKeys={visibleKeys} onToggle={toggleColumn} allColumns={allColumns} onClose={() => setColumnManagerOpen(false)} />
-          </div>
-        )}
 
         <div className="ni-toolbar-row">
           <div className="ni-field-input ni-between" onClick={() => setCatFilterOpen(!catFilterOpen)} style={{position:'relative',cursor:'pointer'}}>
@@ -821,6 +829,8 @@ export default function CreateInvoice() {
             <Icon name="sparkles" /> Create Invoices with AI <span className="ni-beta-badge">BETA</span>
           </button>
         </div>
+
+        {errors.items && <div style={{color:'#e5484d',fontSize:'12px',fontWeight:600,marginBottom:'8px',padding:'8px 12px',background:'#fdeef2',borderRadius:'8px'}}>{errors.items}</div>}
 
         <div className="ni-products-table">
           <div className="ni-products-table-header">
@@ -1075,7 +1085,9 @@ export default function CreateInvoice() {
 
             {payments.length === 0 ? (
               <div style={{ color:'var(--ni-text-light-gray)', fontSize:'13px', marginBottom:'12px' }}>No payments added yet.</div>
-            ) : payments.map((pmt, i) => (
+            ) : (<>
+              {errors.payments && <div style={{color:'#e5484d',fontSize:'12px',fontWeight:600,marginBottom:'8px',padding:'6px 10px',background:'#fdeef2',borderRadius:'6px'}}>{errors.payments}</div>}
+              {payments.map((pmt, i) => (
               <div key={pmt.id} className="ni-payment-table" style={{ marginBottom:'12px' }}>
                 <div>
                   <div className="ni-col-label">Notes</div>
@@ -1119,6 +1131,7 @@ export default function CreateInvoice() {
                 </div>
               </div>
             ))}
+            </>)}
 
             <div className="ni-split-payment-link" onClick={addPayment}><Icon name="plus" /> Split Payment</div>
 
