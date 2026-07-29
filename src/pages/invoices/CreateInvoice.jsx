@@ -6,6 +6,7 @@ import AddCustomerPanel from '../../components/invoice/AddCustomerPanel.jsx';
 import AddProductPanel from '../../components/invoice/AddProductPanel.jsx';
 import DocumentSettings from '../../components/invoice/DocumentSettings.jsx';
 import CustomHeaderPanel from '../../components/invoice/CustomHeaderPanel.jsx';
+import ChargesModal from '../../components/invoice/modals/ChargesModal.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
@@ -95,6 +96,8 @@ export default function CreateInvoice() {
   const [extraDiscountType, setExtraDiscountType] = useState('percent');
   const [extraDiscountValue, setExtraDiscountValue] = useState(0);
   const [additionalCharges, setAdditionalCharges] = useState([]);
+  const [showChargesModal, setShowChargesModal] = useState(false);
+  const fileInputRef = useRef(null);
 
   // --- Notes & Terms ---
   const [notes, setNotes] = useState([]);
@@ -568,6 +571,16 @@ export default function CreateInvoice() {
   }, [prefixes]);
 
   const [columnManagerOpen, setColumnManagerOpen] = useState(false);
+  const [saveMenuOpen, setSaveMenuOpen] = useState(false);
+  const [prefixOpen, setPrefixOpen] = useState(false);
+  const [docTypeOpen, setDocTypeOpen] = useState(false);
+  const [catFilterOpen, setCatFilterOpen] = useState(false);
+  const [bankOpen, setBankOpen] = useState(false);
+  const [sigOpen, setSigOpen] = useState(false);
+
+  const DOC_TYPES = [
+    'Regular','Estimate','Quotation','Proforma','Tax Invoice','Debit Note','Credit Note','Delivery Challan'
+  ];
 
   return (
     <div className="page">
@@ -582,15 +595,50 @@ export default function CreateInvoice() {
               <div className="ni-sub">{companyState || 'Loading...'}</div>
             </div>
             <div className="ni-topbar-mid">
-              <div className="ni-select-box" onClick={() => {}}>
+              <div className="ni-select-box" onClick={() => setPrefixOpen(!prefixOpen)} style={{position:'relative'}}>
                 {prefix || 'INV'} <Icon name="chevronDown" />
+                {prefixOpen && (
+                  <div style={{position:'absolute',top:'100%',left:0,background:'#fff',border:'1px solid var(--ni-border)',borderRadius:'8px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:100,minWidth:'120px',marginTop:'4px'}}>
+                    {prefixOptions.map(p => (
+                      <div key={p.value} style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:p.value===prefix?'700':'400'}}
+                        onClick={() => { setPrefix(p.value); setPrefixOpen(false); }}>{p.label}</div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="ni-input-box">{invoiceNumber || '000'}</div>
+              <input className="ni-input-box" style={{border:'1px solid var(--ni-border)',fontSize:'13px',fontWeight:600,fontFamily:'inherit'}}
+                value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} />
             </div>
           </div>
-          <button className="ni-btn-primary" onClick={saveInvoice} disabled={!canSave || saving}>
-            {saving ? 'Saving...' : 'Save Invoice'} <Icon name="arrow-right" />
-          </button>
+          <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+            <div style={{position:'relative'}}>
+              <button className="ni-btn-primary" onClick={saveInvoice} disabled={!canSave || saving}
+                style={{borderRadius:'8px 0 0 8px'}}>
+                {saving ? 'Saving...' : 'Save Invoice'}
+              </button>
+              <button className="ni-btn-primary" onClick={() => setSaveMenuOpen(!saveMenuOpen)} disabled={!canSave || saving}
+                style={{borderRadius:'0 8px 8px 0',borderLeft:'1px solid rgba(255,255,255,0.3)',padding:'11px 10px'}}>
+                <Icon name="chevronDown" />
+              </button>
+              {saveMenuOpen && (
+                <div style={{position:'absolute',top:'100%',right:0,background:'#fff',border:'1px solid var(--ni-border)',borderRadius:'8px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:100,minWidth:'170px',marginTop:'4px'}}>
+                  <div style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:500}}
+                    onClick={() => { setSaveMenuOpen(false); saveInvoice(); }}><Icon name="check" /> Save</div>
+                  <div style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:500}}
+                    onClick={() => { setSaveMenuOpen(false); saveDraft(); }}><Icon name="file" /> Save Draft</div>
+                  <div style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:500}}
+                    onClick={() => { setSaveMenuOpen(false); saveAndPrint(); }}><Icon name="print" /> Save & Print</div>
+                  <div style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:500}}
+                    onClick={() => { setSaveMenuOpen(false); saveAndShare(); }}><Icon name="send" /> Save & Share</div>
+                  <div style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:500}}
+                    onClick={() => { setSaveMenuOpen(false); saveAndNew(); }}><Icon name="plus" /> Save & New</div>
+                  <div style={{borderTop:'1px solid var(--ni-border)'}}></div>
+                  <div style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:500,color:'var(--ni-text-gray)'}}
+                    onClick={() => { setSaveMenuOpen(false); handleClear(); }}><Icon name="trash" /> Clear</div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="ni-header-divider"></div>
@@ -598,8 +646,16 @@ export default function CreateInvoice() {
         <div className="ni-type-row">
           <div className="ni-type-left">
             Type
-            <div className="ni-select-box" onClick={() => {}}>
+            <div className="ni-select-box" onClick={() => setDocTypeOpen(!docTypeOpen)} style={{position:'relative'}}>
               {docType || 'Regular'} <Icon name="chevronDown" />
+              {docTypeOpen && (
+                <div style={{position:'absolute',top:'100%',left:0,background:'#fff',border:'1px solid var(--ni-border)',borderRadius:'8px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:100,minWidth:'160px',marginTop:'4px',maxHeight:'250px',overflow:'auto'}}>
+                  {DOC_TYPES.map(dt => (
+                    <div key={dt} style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:dt===docType?'700':'400'}}
+                      onClick={() => { setDocType(dt === 'Regular' ? '' : dt); setDocTypeOpen(false); }}>{dt}</div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="ni-type-right">
@@ -620,22 +676,50 @@ export default function CreateInvoice() {
           <button className="ni-btn-outline" onClick={openCreateCustomer}><Icon name="plus" /> Create Customer</button>
         </div>
 
+        {errors.customer && (
+          <div style={{color:'#e5484d',fontSize:'12px',fontWeight:600,marginBottom:'12px',padding:'8px 12px',background:'#fdeef2',borderRadius:'8px'}}>
+            <Icon name="alert-circle" size={14} /> {errors.customer}
+          </div>
+        )}
         <div className="ni-customer-grid">
-          <div>
+          <div style={{position:'relative'}}>
             <div className="ni-field-label" style={{visibility:'hidden'}}>Customer</div>
             <div className="ni-field-input">
               <Icon name="search" />
               <input type="text" placeholder="Search customers by name, company, GSTIN, tags..."
-                value={customerQuery} onChange={e => setCustomerQuery(e.target.value)} />
+                value={customerQuery} onChange={e => { setCustomerQuery(e.target.value); if (e.target.value !== selectedCustomer?.name) setSelectedCustomer(null); }} />
             </div>
+            {customerQuery && !selectedCustomer && (
+              <div style={{position:'absolute',top:'100%',left:0,right:0,background:'#fff',border:'1px solid var(--ni-border)',borderRadius:'8px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:100,marginTop:'2px',maxHeight:'220px',overflow:'auto'}}>
+                {customers.filter(c => (c.name||'').toLowerCase().includes(customerQuery.toLowerCase()) || (c.mobile||'').includes(customerQuery) || (c.gstin||'').toLowerCase().includes(customerQuery.toLowerCase())).slice(0,8).map(c => (
+                  <div key={c.id} style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}
+                    onClick={() => handleSelectCustomer(c)}>
+                    <span style={{fontWeight:600}}>{c.name}</span>
+                    <span style={{color:'var(--ni-text-light-gray)',fontSize:'11px'}}>{c.gstin || c.mobile || ''}</span>
+                  </div>
+                ))}
+                {customers.filter(c => (c.name||'').toLowerCase().includes(customerQuery.toLowerCase())).length === 0 && (
+                  <div style={{padding:'10px 14px',fontSize:'12px',color:'var(--ni-text-gray)'}}>No customers found. <span style={{color:'var(--ni-purple)',cursor:'pointer',fontWeight:600}} onClick={openCreateCustomer}>Create new</span></div>
+                )}
+              </div>
+            )}
+            {selectedCustomer && (
+              <div style={{fontSize:'11px',color:'var(--ni-text-gray)',marginTop:'4px'}}>
+                {selectedCustomer.gstin && <span>GST: {selectedCustomer.gstin} | </span>}
+                {selectedCustomer.state && <span>State: {selectedCustomer.state} | </span>}
+                {customerOutstanding !== null && <span style={{color:customerOutstanding?.totalOutstanding > 0 ? '#e5484d' : 'inherit'}}>Due: ₹{Number(customerOutstanding?.totalOutstanding || 0).toFixed(2)}</span>}
+                {creditLimitExceeded && <span style={{color:'#e5484d',fontWeight:700,marginLeft:'8px'}}>Credit limit exceeded!</span>}
+              </div>
+            )}
           </div>
           <div>
             <div className="ni-field-label">Invoice Date</div>
             <div className="ni-field-input ni-between">
               <input type="text" value={invoiceDate || new Date().toISOString().split('T')[0]}
-                onChange={e => setInvoiceDate(e.target.value)} />
+                onChange={e => { setInvoiceDate(e.target.value); }} />
               <Icon name="calendar" />
             </div>
+            {errors.invoiceDate && <div style={{color:'#e5484d',fontSize:'11px',marginTop:'4px'}}>{errors.invoiceDate}</div>}
           </div>
           <div>
             <div className="ni-field-label">Due Date</div>
@@ -644,6 +728,7 @@ export default function CreateInvoice() {
                 onChange={e => setDueDate(e.target.value)} />
               <Icon name="calendar" />
             </div>
+            {errors.dueDate && <div style={{color:'#e5484d',fontSize:'11px',marginTop:'4px'}}>{errors.dueDate}</div>}
           </div>
           <div>
             <div className="ni-field-label">Reference <span className="ni-optional">(Optional)</span></div>
@@ -687,9 +772,19 @@ export default function CreateInvoice() {
         )}
 
         <div className="ni-toolbar-row">
-          <div className="ni-field-input ni-between">
+          <div className="ni-field-input ni-between" onClick={() => setCatFilterOpen(!catFilterOpen)} style={{position:'relative',cursor:'pointer'}}>
             <span>{categoryFilter || 'Filter Category'}</span>
             <Icon name="chevronDown" />
+            {catFilterOpen && (
+              <div style={{position:'absolute',top:'100%',left:0,background:'#fff',border:'1px solid var(--ni-border)',borderRadius:'8px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:100,minWidth:'180px',marginTop:'2px',maxHeight:'200px',overflow:'auto'}}>
+                <div style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:!categoryFilter?'700':'400'}}
+                  onClick={() => { setCategoryFilter(''); setCatFilterOpen(false); }}>All Categories</div>
+                {categories.map(cat => (
+                  <div key={cat.id || cat.name} style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:categoryFilter===cat.name?'700':'400'}}
+                    onClick={() => { setCategoryFilter(cat.name); setCatFilterOpen(false); }}>{cat.name}</div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="ni-field-input">
             <Icon name="search" />
@@ -700,9 +795,27 @@ export default function CreateInvoice() {
             <input type="text" placeholder="Qty" value={defaultQty} onChange={e => setDefaultQty(Number(e.target.value) || 1)} />
           </div>
           <button className="ni-btn-add-bill" onClick={() => {
-            const found = products.find(p => p.name?.toLowerCase() === productQuery?.toLowerCase());
+            const q = productQuery.trim().toLowerCase();
+            const found = products.find(p =>
+              p.name?.toLowerCase() === q ||
+              p.sku?.toLowerCase() === q ||
+              p.barcode?.toLowerCase() === q ||
+              p.item_code?.toLowerCase() === q
+            );
             if (found) addProduct(found);
-            else notificationManager.info('Product', 'Search for an existing product or add a new one.');
+            else {
+              const matches = products.filter(p =>
+                p.name?.toLowerCase().includes(q) ||
+                p.sku?.toLowerCase().includes(q)
+              );
+              if (matches.length === 1) addProduct(matches[0]);
+              else if (matches.length > 1) {
+                setProductQuery(q);
+                notificationManager.info('Product', `${matches.length} products match. Type exact name, SKU, or barcode.`);
+              } else {
+                notificationManager.info('Product', 'No matching product found. Add a new product or refine search.');
+              }
+            }
           }} disabled={!productQuery.trim()}><Icon name="plus" /> Add to Bill</button>
           <button className="ni-btn-ai" onClick={draftWithAI} disabled={aiBusy}>
             <Icon name="sparkles" /> Create Invoices with AI <span className="ni-beta-badge">BETA</span>
@@ -712,11 +825,11 @@ export default function CreateInvoice() {
         <div className="ni-products-table">
           <div className="ni-products-table-header">
             <div>#</div>
-            <div>Product Name</div>
-            <div>Quantity</div>
+            <div>Product Name{showDescription ? ' + Desc' : ''}</div>
+            <div>Qty</div>
             <div>Unit Price</div>
-            <div>Price with Tax</div>
-            <div>Discount</div>
+            <div>Tax</div>
+            <div>Disc</div>
             <div>Amount</div>
             <div className="ni-col-total">Total<span className="ni-sub">(Net + Tax)</span></div>
           </div>
@@ -736,32 +849,65 @@ export default function CreateInvoice() {
             </div>
           ) : (
             <div>
-              {items.map((item, idx) => (
-                <div key={item._key} className="ni-products-table-header" style={{ background:'#fff', borderBottom:'1px solid var(--ni-border)', gridTemplateColumns:'34px 1.6fr 1fr 1fr 1fr 1fr 1fr 1.1fr', padding:'10px 16px', fontSize:'13px', fontWeight:400 }}>
-                  <div>{idx + 1}</div>
-                  <div>
-                    <input style={{ border:'none', outline:'none', width:'100%', fontSize:'13px', fontFamily:'inherit' }}
-                      value={item.name} onChange={e => onChangeItem(idx, { ...item, name: e.target.value })} placeholder="Product name" />
+              {items.map((item, idx) => {
+                const lineAmount = item.quantity * item.unitPrice;
+                const lineDisc = item.discountType === 'percent' ? lineAmount * (item.discountValue || 0) / 100 : (item.discountValue || 0);
+                const lineNet = lineAmount - lineDisc;
+                const lineTax = lineNet * (item.taxRate || 0) / 100;
+                const lineTotal = lineNet + lineTax;
+                return (
+                <div key={item._key} className="ni-products-table-header" style={{ background:'#fff', borderBottom:'1px solid var(--ni-border)', gridTemplateColumns:'34px 1.6fr 70px 90px 70px 70px 80px 80px 34px', padding:'8px 16px', fontSize:'13px', fontWeight:400, alignItems:'center' }}>
+                  <div style={{color:'var(--ni-text-light-gray)',fontSize:'11px'}}>{idx + 1}</div>
+                  <div style={{minWidth:0}}>
+                    <input style={{ border:'none', outline:'none', width:'100%', fontSize:'13px', fontFamily:'inherit',color:'var(--ni-text-dark)' }}
+                      value={item.name} onChange={e => onChangeItem(idx, { ...item, name: e.target.value })} placeholder="Product / HSN" />
+                    {item.hsnSac && <div style={{fontSize:'10px',color:'var(--ni-text-light-gray)'}}>HSN: {item.hsnSac}</div>}
                     {showDescription && (
                       <input style={{ border:'none', outline:'none', width:'100%', fontSize:'11px', color:'var(--ni-text-gray)', marginTop:'2px', fontFamily:'inherit' }}
                         value={item.description || ''} onChange={e => onChangeItem(idx, { ...item, description: e.target.value })} placeholder="Description" />
                     )}
                   </div>
-                  <div><input style={{ border:'1px solid var(--ni-border)', borderRadius:'6px', padding:'6px 8px', width:'80%', fontSize:'13px', fontFamily:'inherit' }}
-                    type="number" value={item.quantity} onChange={e => onChangeItem(idx, { ...item, quantity: Number(e.target.value) })} /></div>
-                  <div><input style={{ border:'1px solid var(--ni-border)', borderRadius:'6px', padding:'6px 8px', width:'80%', fontSize:'13px', fontFamily:'inherit' }}
-                    type="number" value={item.unitPrice} onChange={e => onChangeItem(idx, { ...item, unitPrice: Number(e.target.value) })} /></div>
-                  <div style={{ padding:'6px 0' }}>{(item.unitPrice * (1 + item.taxRate / 100)).toFixed(2)}</div>
-                  <div style={{ padding:'6px 0' }}>{item.discountValue || 0}{item.discountType === 'percent' ? '%' : ''}</div>
-                  <div style={{ padding:'6px 0' }}>{(item.quantity * item.unitPrice).toFixed(2)}</div>
-                  <div className="ni-col-total" style={{ padding:'6px 0' }}>
-                    {(item.quantity * item.unitPrice * (1 + item.taxRate / 100)).toFixed(2)}
-                    <span className="ni-sub" style={{ display:'block', fontSize:'10px', color:'var(--ni-text-light-gray)' }}>
-                      ₹ {(item.quantity * item.unitPrice).toFixed(2)} + ₹ {(item.quantity * item.unitPrice * item.taxRate / 100).toFixed(2)}
+                  <div><input style={{ border:'1px solid var(--ni-border)', borderRadius:'6px', padding:'6px 8px', width:'100%', fontSize:'13px', fontFamily:'inherit' }}
+                    type="number" min="0" step="any" value={item.quantity} onChange={e => onChangeItem(idx, { ...item, quantity: Number(e.target.value) || 0 })} /></div>
+                  <div><input style={{ border:'1px solid var(--ni-border)', borderRadius:'6px', padding:'6px 8px', width:'100%', fontSize:'13px', fontFamily:'inherit' }}
+                    type="number" min="0" step="any" value={item.unitPrice} onChange={e => onChangeItem(idx, { ...item, unitPrice: Number(e.target.value) || 0 })} /></div>
+                  <div style={{position:'relative'}}>
+                    <select style={{border:'1px solid var(--ni-border)',borderRadius:'6px',padding:'6px 4px',fontSize:'12px',width:'100%',fontFamily:'inherit',background:'#fff'}}
+                      value={item.taxRate} onChange={e => onChangeItem(idx, { ...item, taxRate: Number(e.target.value) })}>
+                      <option value={0}>0%</option>
+                      <option value={5}>5%</option>
+                      <option value={12}>12%</option>
+                      <option value={18}>18%</option>
+                      <option value={28}>28%</option>
+                    </select>
+                  </div>
+                  <div style={{display:'flex',gap:'2px',alignItems:'center'}}>
+                    <select style={{border:'1px solid var(--ni-border)',borderRadius:'6px',padding:'6px 2px',fontSize:'11px',width:'40px',fontFamily:'inherit',background:'#fff'}}
+                      value={item.discountType} onChange={e => onChangeItem(idx, { ...item, discountType: e.target.value })}>
+                      <option value="percent">%</option>
+                      <option value="fixed">₹</option>
+                    </select>
+                    <input style={{border:'1px solid var(--ni-border)',borderRadius:'6px',padding:'6px 4px',width:'36px',fontSize:'11px',fontFamily:'inherit'}}
+                      type="number" min="0" value={item.discountValue || 0} onChange={e => onChangeItem(idx, { ...item, discountValue: Number(e.target.value) || 0 })} />
+                  </div>
+                  <div style={{textAlign:'right',fontSize:'12px'}}>₹ {lineNet.toFixed(2)}</div>
+                  <div className="ni-col-total" style={{textAlign:'right'}}>
+                    ₹ {lineTotal.toFixed(2)}
+                    <span className="ni-sub" style={{display:'block',fontSize:'10px',color:'var(--ni-text-light-gray)'}}>
+                      ₹ {lineNet.toFixed(2)} + ₹ {lineTax.toFixed(2)}
                     </span>
                   </div>
+                  <div style={{cursor:'pointer',color:'var(--ni-text-light-gray)'}} onClick={() => onRemoveItem(idx)} title="Remove item">
+                    <Icon name="x" size={14} />
+                  </div>
                 </div>
-              ))}
+                );
+              })}
+              <div style={{padding:'8px 16px',display:'flex',gap:'8px',borderTop:'1px solid var(--ni-border)'}}>
+                <button className="ni-btn-outline" onClick={addNewProductLine} style={{fontSize:'12px',padding:'6px 12px'}}>
+                  <Icon name="plus" size={13} /> Add Line
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -777,7 +923,7 @@ export default function CreateInvoice() {
           </div>
           <div className="ni-discount-right">
             <div className="ni-items-summary">Items: {items.length}, Qty: {items.reduce((s, i) => s + Number(i.quantity), 0).toFixed(3)}</div>
-            <button className="ni-btn-outline" onClick={addCharge}><Icon name="plus" /> Additional Charges</button>
+            <button className="ni-btn-outline" onClick={() => setShowChargesModal(true)}><Icon name="plus" /> Additional Charges</button>
           </div>
         </div>
       </div>
@@ -794,14 +940,23 @@ export default function CreateInvoice() {
               <div className="ni-field-block-title"><Icon name="edit" /> Notes <Icon name="info" className="ni-info" /></div>
               <button className="ni-btn-outline" onClick={addNote}><Icon name="plus" /> New Note</button>
             </div>
-            <div className="ni-textarea-wrap">
-              <textarea placeholder="Enter your notes, say thanks, or anything else..."
-                value={notes[0]?.text || ''}
-                onChange={e => {
-                  if (notes.length > 0) updateNote(0, { ...notes[0], text: e.target.value });
-                  else addNote();
-                }} />
-              <button className="ni-btn-ai-assist" onClick={aiSuggestNote}><Icon name="sparkles" /> AI Assist</button>
+            <div className="ni-notes-list">
+              {notes.length === 0 && (
+                <div style={{ color:'var(--ni-text-light-gray)', fontSize:'13px', marginBottom:'8px', padding:'8px 0' }}>
+                  No notes added yet. Click "New Note" to add one.
+                </div>
+              )}
+              {notes.map((n, i) => (
+                <div key={n.id} className="ni-textarea-wrap" style={{ marginBottom:'8px' }}>
+                  <textarea placeholder="Enter your notes, say thanks, or anything else..."
+                    value={n.text}
+                    onChange={e => updateNote(i, { ...n, text: e.target.value })} />
+                  <div style={{ display:'flex', gap:'6px', marginTop:'4px' }}>
+                    {i === 0 && <button className="ni-btn-ai-assist" onClick={aiSuggestNote}><Icon name="sparkles" /> AI Assist</button>}
+                    <span style={{ cursor:'pointer', color:'var(--ni-text-light-gray)', fontSize:'12px', padding:'4px' }} onClick={() => removeNote(i)}><Icon name="x" /> Remove</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -836,7 +991,13 @@ export default function CreateInvoice() {
 
           <div className="ni-attach-block">
             <div className="ni-field-block-title"><Icon name="paperclip" /> Attach files <Icon name="info" className="ni-info" /></div>
-            <button className="ni-btn-attach"><Icon name="upload" /> Attach Files (Max: {5 - attachments.length})</button>
+            <input type="file" ref={fileInputRef} multiple style={{ display:'none' }}
+              onChange={e => {
+                const files = Array.from(e.target.files || []);
+                setAttachments(p => [...p, ...files].slice(0, 5));
+                e.target.value = '';
+              }} />
+            <button className="ni-btn-attach" onClick={() => fileInputRef.current?.click()}><Icon name="upload" /> Attach Files (Max: {5 - attachments.length})</button>
           </div>
         </div>
 
@@ -887,13 +1048,23 @@ export default function CreateInvoice() {
               <div className="ni-field-block-title"><Icon name="landmark" /> Select Bank <Icon name="info" className="ni-info" /></div>
               <div className="ni-link-purple" onClick={() => setBankModal(true)}><Icon name="plus" /> Add New Bank</div>
             </div>
-            <div className="ni-bank-select" onClick={() => {}}>
+            <div className="ni-bank-select" onClick={() => setBankOpen(!bankOpen)}>
               <div className="ni-bank-select-left">
                 <div className="ni-bank-icon"><Icon name="landmark" /></div>
                 {selectedBank ? `${selectedBank.bank_name} (${selectedBank.account_number?.slice(-4) || '...'})` : 'Select a bank'}
               </div>
               <Icon name="chevron-down" className="ni-chev" />
             </div>
+            {bankOpen && (
+              <div className="ni-dropdown" style={{ marginTop: 0, width: '100%' }}>
+                {banks.length === 0 && <div className="ni-dropdown-item" style={{ cursor:'default', color:'var(--ni-text-light-gray)' }}>No banks found</div>}
+                {banks.map(b => (
+                  <div key={b.id} className="ni-dropdown-item" onClick={() => { setSelectedBank(b); setBankOpen(false); }}>
+                    {b.bank_name} ({b.account_number?.slice(-4) || '...'})
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="ni-payment-header-row">
               <div className="ni-label-title">Add payment (Payment Notes, Amount and Mode)</div>
@@ -929,8 +1100,17 @@ export default function CreateInvoice() {
                 <div>
                   <div className="ni-col-label">Payment Mode</div>
                   <div className="ni-pt-input">
-                    <span style={{ color: pmt.mode ? 'inherit' : 'var(--ni-text-light-gray)' }}>{pmt.mode || 'Select mode'}</span>
-                    <Icon name="chevronDown" />
+                    <select style={{ border:'none', outline:'none', fontSize:'13px', fontFamily:'inherit', background:'transparent', width:'100%', cursor:'pointer', color: pmt.mode ? 'inherit' : 'var(--ni-text-light-gray)' }}
+                      value={pmt.mode || ''} onChange={e => updatePayment(i, { ...pmt, mode: e.target.value })}>
+                      <option value="" disabled>Select mode</option>
+                      <option value="Cash">Cash</option>
+                      <option value="UPI">UPI</option>
+                      <option value="Bank">Bank</option>
+                      <option value="Cheque">Cheque</option>
+                      <option value="Card">Card</option>
+                      <option value="NEFT">NEFT</option>
+                      <option value="RTGS">RTGS</option>
+                    </select>
                   </div>
                   <div className="ni-pt-sub">
                     {selectedBank ? `${selectedBank.bank_name?.slice(0, 20)}...` : 'No bank selected'}
@@ -947,10 +1127,20 @@ export default function CreateInvoice() {
               <div className="ni-link-purple" onClick={() => setSignatureModal(true)}><Icon name="plus" /> Add New Signature</div>
             </div>
             <div className="ni-signature-grid">
-              <div className="ni-signature-select" onClick={() => {}}>
+              <div className="ni-signature-select" onClick={() => setSigOpen(!sigOpen)}>
                 {selectedSignature?.name || 'No Signature'}
                 <Icon name="chevronDown" />
               </div>
+              {sigOpen && (
+                <div className="ni-dropdown" style={{ width: '100%' }}>
+                  {signatures.length === 0 && <div className="ni-dropdown-item" style={{ cursor:'default', color:'var(--ni-text-light-gray)' }}>No signatures found</div>}
+                  {signatures.map(s => (
+                    <div key={s.id} className="ni-dropdown-item" onClick={() => { setSelectedSignature(s); setSigOpen(false); }}>
+                      {s.name}
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="ni-signature-preview">
                 <div className="ni-label">Signature on the document</div>
                 <div className="ni-sig">{selectedSignature?.name || '—'}</div>
@@ -976,6 +1166,12 @@ export default function CreateInvoice() {
       <ProductModal open={productModal.open} mode={productModal.mode}
         initial={productModal.product} categories={categories}
         onClose={closeProductModal} onSubmit={submitProduct} />
+
+      <ChargesModal open={showChargesModal} onClose={() => setShowChargesModal(false)}
+        charges={additionalCharges}
+        onAdd={c => { setAdditionalCharges(p => [...p, c]); }}
+        onRemove={i => { setAdditionalCharges(p => p.filter((_, idx) => idx !== i)); }}
+        onUpdate={(i, c) => { setAdditionalCharges(p => p.map((x, idx) => idx === i ? c : x)); }} />
 
       <Modal open={bankModal} onClose={() => setBankModal(false)}
         title="Add New Bank" size="sm"
