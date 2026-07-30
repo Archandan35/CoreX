@@ -2,7 +2,7 @@ import { STORAGE_KEYS } from '../../constants/index.js';
 
 export class ThemeService {
   constructor() {
-    this._mode = this._load() || 'system';
+    this._mode = this._load() || 'light';
     this._observers = new Set();
     this._apply();
   }

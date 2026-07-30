@@ -2,55 +2,14 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Users, Search, Package, ShoppingCart, CreditCard, Zap,
   Calculator, Barcode, Monitor, Grid3X3, ChevronDown, X, Plus, Minus,
-  Trash2, Receipt, Pause, Percent, TrendingUp, TrendingDown,
-  UserPlus, UserCheck, Box, FileText, ChevronUp, Tag, Banknote,
-  SplitSquareHorizontal, Circle, User, LogOut, Settings, HelpCircle,
-  Maximize2, Minimize2, RefreshCw, Save, Printer,
+  Trash2, Pause, ChevronUp, Tag, Banknote,
+  SplitSquareHorizontal, FileText,
+  TrendingUp, TrendingDown,
 } from 'lucide-react';
 import { useToolbar } from '../../components/layout/ToolbarContext.jsx';
-
-const INITIAL_PRODUCTS = [
-  { id: 1, name: 'Formal Shirt', code: 'SH001', category: 'Shirt', price: 850, color: 'blue', sizes: { M: 10, L: 15 } },
-  { id: 2, name: 'Blue Jeans', code: 'JN001', category: 'Jeans', price: 1250, color: 'navy', sizes: { 32: 8, 34: 12 } },
-  { id: 3, name: 'Polo T-Shirt', code: 'TS001', category: 'T-Shirt', price: 650, color: 'darknavy', sizes: { M: 20, L: 18 } },
-  { id: 4, name: 'Casual Shirt', code: 'SH002', category: 'Shirt', price: 750, color: 'pink', sizes: { M: 6, L: 9 } },
-  { id: 5, name: 'Ladies Dress', code: 'DR001', category: 'Dress', price: 1500, color: 'leaf', sizes: { S: 5, M: 8 } },
-  { id: 6, name: 'Slim Fit Jeans', code: 'JN002', category: 'Jeans', price: 1399, color: 'navy', sizes: { 30: 6, 32: 10 } },
-  { id: 7, name: 'Cotton T-Shirt', code: 'TS002', category: 'T-Shirt', price: 499, color: 'blue', sizes: { M: 25, L: 20 } },
-  { id: 8, name: 'Designer Kurta', code: 'KR001', category: 'Kurta', price: 1899, color: 'leaf', sizes: { M: 7, L: 5 } },
-];
-
-const MOCK_CUSTOMERS = [
-  { id: 1, name: 'Rajesh Kumar', mobile: '9876543210', gst: 'GST123456' },
-  { id: 2, name: 'Priya Sharma', mobile: '9876543211', gst: 'GST123457' },
-  { id: 3, name: 'Amit Singh', mobile: '9876543212', gst: 'GST123458' },
-  { id: 4, name: 'Neha Patel', mobile: '9876543213', gst: 'GST123459' },
-  { id: 5, name: 'Vikram Reddy', mobile: '9876543214', gst: 'GST123460' },
-];
-
-const RECENT_ITEMS = [
-  { id: 1, name: 'Formal Shirt', code: 'SH001', thumb: 'blue' },
-  { id: 2, name: 'Blue Jeans', code: 'JN001', thumb: 'navy' },
-  { id: 3, name: 'Polo T-Shirt', code: 'TS001', thumb: 'darknavy' },
-  { id: 4, name: 'Casual Shirt', code: 'SH002', thumb: 'pink' },
-  { id: 5, name: 'Ladies Dress', code: 'DR001', thumb: 'leaf' },
-];
-
-const THUMB_ICONS = {
-  blue: <Package size={18} />,
-  navy: <Package size={18} />,
-  darknavy: <Package size={18} />,
-  pink: <Package size={18} />,
-  leaf: <Package size={18} />,
-};
-
-const THUMB_CLASSES = {
-  blue: 'qs-thumb blue',
-  navy: 'qs-thumb navy',
-  darknavy: 'qs-thumb darknavy',
-  pink: 'qs-thumb pink',
-  leaf: 'qs-thumb leaf',
-};
+import { useFullscreen } from '../../components/layout/FullscreenContext.jsx';
+import { posService } from '../../services/pos/POSService.js';
+import { notificationManager } from '../../managers/NotificationManager.js';
 
 function useDebounce(value, delay = 300) {
   const [debounced, setDebounced] = useState(value);
@@ -61,12 +20,23 @@ function useDebounce(value, delay = 300) {
   return debounced;
 }
 
+const THUMB_COLORS = {
+  blue: '#3b82f6', navy: '#1e40af', darknavy: '#1e2a4a',
+  pink: '#ec4899', leaf: '#22c55e', red: '#ef4444',
+  purple: '#8b5cf6', gray: '#9ca3af',
+};
+
+function ProductThumb({ color, size = 18 }) {
+  const bg = THUMB_COLORS[color] || '#6b7280';
+  return (
+    <div style={{ width: '100%', height: '100%', borderRadius: '6px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Package size={size} color="#fff" />
+    </div>
+  );
+}
+
 export default function QuickSale() {
-  const [cartItems, setCartItems] = useState([
-    { id: 1, name: 'Formal Shirt', code: 'SH001', meta: 'Blue | M', price: 850, qty: 2, thumb: 'blue', productId: 1 },
-    { id: 2, name: 'Blue Jeans', code: 'JN001', meta: '32 | Blue', price: 1250, qty: 1, thumb: 'navy', productId: 2 },
-    { id: 3, name: 'Polo T-Shirt', code: 'TS001', meta: 'M | Navy', price: 650, qty: 1, thumb: 'darknavy', productId: 3 },
-  ]);
+  const [cartItems, setCartItems] = useState([]);
   const [customerSearch, setCustomerSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -79,22 +49,78 @@ export default function QuickSale() {
   const [showCustomerResults, setShowCustomerResults] = useState(false);
   const [showProductResults, setShowProductResults] = useState(false);
   const [productResults, setProductResults] = useState([]);
+  const [productSearchFocused, setProductSearchFocused] = useState(false);
+  const [recentItems, setRecentItems] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [allProducts, setAllProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const cartBodyRef = useRef(null);
   const customerInputRef = useRef(null);
   const productInputRef = useRef(null);
+  const qsAppRef = useRef(null);
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   const debouncedCustomerSearch = useDebounce(customerSearch, 300);
   const debouncedProductSearch = useDebounce(productSearch, 300);
 
+  const [currencySymbol, setCurrencySymbol] = useState('₹');
+  const [defaultTaxRate, setDefaultTaxRate] = useState(0);
+  const [companyState, setCompanyState] = useState('');
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [settings, company, products, stats, recent] = await Promise.all([
+          posService.getSettings(),
+          posService.getCompany(),
+          posService.searchProducts(''),
+          posService.getDashboardStats(),
+          posService.getRecentProducts(5),
+        ]);
+
+        setCurrencySymbol(posService.getCurrencySymbol(settings));
+        setDefaultTaxRate(posService.getDefaultTaxRate(settings, company));
+        setCompanyState(posService.getCompanyState(company));
+        setAllProducts(products);
+        setRecentItems(recent);
+        setDashboardStats(stats);
+      } catch (e) {
+        setError(e.message || 'Failed to load data');
+        notificationManager.error('Load Error', e.message || 'Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
   const filteredCustomers = useMemo(() => {
     if (!debouncedCustomerSearch.trim()) return [];
-    const q = debouncedCustomerSearch.toLowerCase();
-    return MOCK_CUSTOMERS.filter(c =>
-      c.name.toLowerCase().includes(q) ||
-      c.mobile.includes(q) ||
-      c.gst.toLowerCase().includes(q)
-    );
+    return posService.searchCustomers(debouncedCustomerSearch);
   }, [debouncedCustomerSearch]);
+
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      if (!debouncedCustomerSearch.trim()) {
+        setShowCustomerResults(false);
+        return;
+      }
+      try {
+        const results = await posService.searchCustomers(debouncedCustomerSearch);
+        setShowCustomerResults(results.length > 0);
+      } catch {
+        setShowCustomerResults(false);
+      }
+    };
+    fetchCustomers();
+  }, [debouncedCustomerSearch]);
+
+  useEffect(() => {
+    setShowCustomerResults(filteredCustomers.length > 0 && customerSearch.trim().length > 0);
+  }, [filteredCustomers, customerSearch]);
 
   useEffect(() => {
     if (!debouncedProductSearch.trim()) {
@@ -103,17 +129,14 @@ export default function QuickSale() {
       return;
     }
     const q = debouncedProductSearch.toLowerCase();
-    const results = INITIAL_PRODUCTS.filter(p =>
-      p.name.toLowerCase().includes(q) ||
-      p.code.toLowerCase().includes(q)
+    const results = allProducts.filter(p =>
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.code || p.sku || '').toLowerCase().includes(q) ||
+      (p.hsn_code || '').toLowerCase().includes(q)
     );
     setProductResults(results);
     setShowProductResults(true);
-  }, [debouncedProductSearch]);
-
-  useEffect(() => {
-    setShowCustomerResults(filteredCustomers.length > 0 && customerSearch.trim().length > 0);
-  }, [filteredCustomers, customerSearch]);
+  }, [debouncedProductSearch, allProducts]);
 
   const addToCart = useCallback((product) => {
     setCartItems(prev => {
@@ -123,16 +146,18 @@ export default function QuickSale() {
           item.productId === product.id ? { ...item, qty: item.qty + 1 } : item
         );
       }
-      const thumbMap = { blue: 'blue', navy: 'navy', darknavy: 'darknavy', pink: 'pink', leaf: 'leaf' };
+      const price = posService.calculateProductPrice(product, {});
+      const taxRate = posService.calculateTaxRate(product, {});
       return [...prev, {
         id: Date.now(),
         name: product.name,
-        code: product.code,
-        meta: `${product.code} | Default`,
-        price: product.price,
+        code: product.code || product.sku,
+        meta: `${product.code || product.sku} | ${product.color || 'Default'} | ${product.size || 'M'}`,
+        price: price,
         qty: 1,
-        thumb: thumbMap[product.color] || 'blue',
+        thumb: product.color || 'blue',
         productId: product.id,
+        taxRate: taxRate,
       }];
     });
     setProductSearch('');
@@ -140,8 +165,7 @@ export default function QuickSale() {
   }, []);
 
   const addRecentItem = useCallback((item) => {
-    const product = INITIAL_PRODUCTS.find(p => p.code === item.code);
-    if (product) addToCart(product);
+    addToCart(item);
   }, [addToCart]);
 
   const updateQty = useCallback((id, delta) => {
@@ -162,16 +186,32 @@ export default function QuickSale() {
     setShowCustomerResults(false);
   }, []);
 
+  const cartWithTotals = useMemo(() => {
+    return cartItems.map(item => {
+      const { gross, discount: lineDisc, taxable, taxAmount, lineTotal } =
+        posService.calculateLineTotal(item.qty, item.price, discountType, 0, item.taxRate || defaultTaxRate);
+      return { ...item, gross, lineDisc, taxable, taxAmount, lineTotal };
+    });
+  }, [cartItems, discountType, defaultTaxRate]);
+
   const subtotal = useMemo(() =>
-    cartItems.reduce((sum, item) => sum + item.price * item.qty, 0),
-    [cartItems]
+    round2Sum(cartWithTotals.map(i => i.gross)),
+    [cartWithTotals]
   );
+
   const discountAmount = useMemo(() => {
-    if (discountType === '%') return subtotal * (discount / 100);
+    if (discountType === '%') return round2(subtotal * (discount / 100));
     return discount;
   }, [subtotal, discount, discountType]);
-  const tax = useMemo(() => (subtotal - discountAmount) * 0.12, [subtotal, discountAmount]);
-  const grandTotal = useMemo(() => subtotal - discountAmount + tax, [subtotal, discountAmount, tax]);
+
+  const taxableAmount = useMemo(() => subtotal - discountAmount, [subtotal, discountAmount]);
+
+  const tax = useMemo(() => {
+    const rate = defaultTaxRate;
+    return round2(taxableAmount * (rate / 100));
+  }, [taxableAmount, defaultTaxRate]);
+
+  const grandTotal = useMemo(() => taxableAmount + tax, [taxableAmount, tax]);
 
   const handleCalculatorInput = useCallback((value) => {
     if (value === 'C') {
@@ -182,7 +222,7 @@ export default function QuickSale() {
     }
     if (value === '=') {
       try {
-        const result = Function(`"use strict"; return (${calcExpression})`)();
+        const result = Function('"use strict"; return (' + calcExpression + ')')();
         setCalcDisplay(String(result));
         setCalcResult(result);
         setCalcExpression(String(result));
@@ -242,6 +282,8 @@ export default function QuickSale() {
 
   useEffect(() => {
     setToolbarItems([
+      { type: 'tab', label: 'Quick Sale', className: 'topbar__tab active', action: () => {} },
+      { type: 'tab', label: 'Orders', className: 'topbar__tab', action: () => {} },
       {
         icon: <Calculator size={14} />,
         label: ' Calculate',
@@ -254,98 +296,121 @@ export default function QuickSale() {
         action: () => productInputRef.current?.focus(),
         className: 'topbar__qs-btn qs-btn-outline',
       },
+      {
+        icon: <Monitor size={14} />,
+        label: isFullscreen ? ' Exit Full' : ' Full View',
+        action: toggleFullscreen,
+        className: 'topbar__qs-btn topbar__view-toggle',
+      },
     ]);
     return () => setToolbarItems([]);
-  }, [setToolbarItems]);
+  }, [setToolbarItems, isFullscreen, toggleFullscreen]);
+
+  if (loading) {
+    return (
+      <div className="qs-app" ref={qsAppRef}>
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--inv-text-sub, #8B8D9B)' }}>
+          Loading POS...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="qs-app" ref={qsAppRef}>
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--inv-red, #EF4444)' }}>
+          Error: {error}
+        </div>
+      </div>
+    );
+  }
+
+  const formatCurrency = (amount) => `${currencySymbol}${round2(amount).toFixed(2)}`;
 
   return (
-    <div className="qs-app">
-      <header className="qs-topbar">
-        <nav className="qs-tabs">
-          <button className="qs-tab active">Quick Sale</button>
-          <button className="qs-tab">Orders</button>
-        </nav>
-      </header>
-
+    <div className="qs-app" ref={qsAppRef}>
       <div className="qs-dashboard">
         <div className="qs-main-col">
-          <div className="qs-stats-grid">
-            <div className="qs-stat-card qs-card-green">
-              <div className="qs-stat-top">
-                <div className="qs-stat-icon green">
-                  <TrendingUp size={17} />
+          {dashboardStats && (
+            <div className="qs-stats-grid">
+              <div className="qs-stat-card qs-card-green">
+                <div className="qs-stat-top">
+                  <div className="qs-stat-icon green">
+                    <TrendingUp size={17} />
+                  </div>
+                  <div className="qs-stat-label">Today's Total Sale</div>
                 </div>
-                <div className="qs-stat-label">Today&apos;s Total Sale</div>
-              </div>
-              <div className="qs-stat-body">
-                <div className="qs-stat-value">₹ 32,450.00</div>
-                <div className="qs-stat-compare">
-                  vs Yesterday
-                  <span className="qs-change up">
-                    <ChevronUp size={12} strokeWidth={3} />
-                    12.6%
-                  </span>
+                <div className="qs-stat-body">
+                  <div className="qs-stat-value">{formatCurrency(dashboardStats.totalSale)}</div>
+                  <div className="qs-stat-compare">
+                    vs Yesterday
+                    <span className={`qs-change ${dashboardStats.saleChange >= 0 ? 'up' : 'down'}`}>
+                      {dashboardStats.saleChange >= 0 ? <ChevronUp size={12} strokeWidth={3} /> : <ChevronDown size={12} strokeWidth={3} />}
+                      {Math.abs(Number(dashboardStats.saleChange))}%
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="qs-stat-card qs-card-red">
-              <div className="qs-stat-top">
-                <div className="qs-stat-icon red">
-                  <TrendingDown size={17} />
+              <div className="qs-stat-card qs-card-red">
+                <div className="qs-stat-top">
+                  <div className="qs-stat-icon red">
+                    <TrendingDown size={17} />
+                  </div>
+                  <div className="qs-stat-label">Today's Total Return / Exchange</div>
                 </div>
-                <div className="qs-stat-label">Today&apos;s Total Return / Exchange</div>
-              </div>
-              <div className="qs-stat-body">
-                <div className="qs-stat-value">₹ 1,250.00</div>
-                <div className="qs-stat-compare">
-                  vs Yesterday
-                  <span className="qs-change down">
-                    <ChevronDown size={12} strokeWidth={3} />
-                    3.1%
-                  </span>
+                <div className="qs-stat-body">
+                  <div className="qs-stat-value">{formatCurrency(dashboardStats.totalReturn)}</div>
+                  <div className="qs-stat-compare">
+                    vs Yesterday
+                    <span className={`qs-change ${dashboardStats.returnChange >= 0 ? 'down' : 'up'}`}>
+                      {dashboardStats.returnChange >= 0 ? <ChevronDown size={12} strokeWidth={3} /> : <ChevronUp size={12} strokeWidth={3} />}
+                      {Math.abs(Number(dashboardStats.returnChange))}%
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="qs-stat-card qs-card-blue">
-              <div className="qs-stat-top">
-                <div className="qs-stat-icon blue">
-                  <ShoppingCart size={17} />
+              <div className="qs-stat-card qs-card-blue">
+                <div className="qs-stat-top">
+                  <div className="qs-stat-icon blue">
+                    <ShoppingCart size={17} />
+                  </div>
+                  <div className="qs-stat-label">Today's Total Item Sale</div>
                 </div>
-                <div className="qs-stat-label">Today&apos;s Total Item Sale</div>
-              </div>
-              <div className="qs-stat-body">
-                <div className="qs-stat-value">156</div>
-                <div className="qs-stat-compare">
-                  vs Yesterday
-                  <span className="qs-change up">
-                    <ChevronUp size={12} strokeWidth={3} />
-                    18 Items
-                  </span>
+                <div className="qs-stat-body">
+                  <div className="qs-stat-value">{dashboardStats.totalItems}</div>
+                  <div className="qs-stat-compare">
+                    vs Yesterday
+                    <span className="qs-change up">
+                      <ChevronUp size={12} strokeWidth={3} />
+                      {dashboardStats.itemChange} Items
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="qs-stat-card qs-card-violet">
-              <div className="qs-stat-top">
-                <div className="qs-stat-icon violet">
-                  <BarChartIcon size={17} />
+              <div className="qs-stat-card qs-card-violet">
+                <div className="qs-stat-top">
+                  <div className="qs-stat-icon violet">
+                    <BarChartIcon size={17} />
+                  </div>
+                  <div className="qs-stat-label">Today's Total Profit</div>
                 </div>
-                <div className="qs-stat-label">Today&apos;s Total Profit</div>
-              </div>
-              <div className="qs-stat-body">
-                <div className="qs-stat-value">₹ 12,680.00</div>
-                <div className="qs-stat-compare">
-                  vs Yesterday
-                  <span className="qs-change up">
-                    <ChevronUp size={12} strokeWidth={3} />
-                    15.3%
-                  </span>
+                <div className="qs-stat-body">
+                  <div className="qs-stat-value">{formatCurrency(dashboardStats.totalProfit)}</div>
+                  <div className="qs-stat-compare">
+                    vs Yesterday
+                    <span className="qs-change up">
+                      <ChevronUp size={12} strokeWidth={3} />
+                      {dashboardStats.profitChange}%
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="qs-panels-grid">
             <section className="qs-panel">
@@ -373,8 +438,8 @@ export default function QuickSale() {
                   <div className="qs-search-dropdown">
                     {filteredCustomers.map(c => (
                       <button key={c.id} className="qs-search-dropdown-item" onMouseDown={() => selectCustomer(c)}>
-                        <User size={14} />
-                        <span>{c.name} <small>{c.mobile}</small></span>
+                        <Users size={14} />
+                        <span>{c.name} <small>{c.mobile || c.phone || c.contact_number}</small></span>
                       </button>
                     ))}
                   </div>
@@ -394,7 +459,7 @@ export default function QuickSale() {
                 </div>
                 <div className="qs-empty-sub">
                   {selectedCustomer
-                    ? `${selectedCustomer.mobile}`
+                    ? `${selectedCustomer.mobile || selectedCustomer.phone || selectedCustomer.contact_number || ''}`
                     : 'Search customer by mobile number, name or GST number to get started.'}
                 </div>
               </div>
@@ -407,7 +472,7 @@ export default function QuickSale() {
                   Product Search
                 </div>
               </div>
-              <div className="qs-product-search-input" style={{ position: 'relative' }}>
+              <div className={`qs-product-search-input ${productSearchFocused ? 'search-focused' : ''}`} style={{ position: 'relative' }}>
                 <span className="qs-left-icon"><Search size={16} /></span>
                 <input
                   ref={productInputRef}
@@ -415,8 +480,8 @@ export default function QuickSale() {
                   placeholder="Search product by name, code, SKU..."
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
-                  onFocus={() => productResults.length > 0 && setShowProductResults(true)}
-                  onBlur={() => setTimeout(() => setShowProductResults(false), 200)}
+                  onFocus={() => { setProductSearchFocused(true); productResults.length > 0 && setShowProductResults(true); }}
+                  onBlur={() => setTimeout(() => { setShowProductResults(false); setProductSearchFocused(false); }, 200)}
                 />
                 <span className="qs-barcode-btn" onClick={() => alert('Barcode scanner activated')}>
                   <Barcode size={17} />
@@ -426,7 +491,7 @@ export default function QuickSale() {
                     {productResults.map(p => (
                       <button key={p.id} className="qs-search-dropdown-item" onMouseDown={() => addToCart(p)}>
                         <Package size={14} />
-                        <span><b>{p.name}</b> <small>{p.code} - ₹{p.price}</small></span>
+                        <span><b>{p.name}</b> <small>{p.code || p.sku} - {currencySymbol}{posService.calculateProductPrice(p, {})}</small></span>
                       </button>
                     ))}
                   </div>
@@ -443,16 +508,16 @@ export default function QuickSale() {
           </div>
 
           <section className="qs-recent-items">
-            <div className="qs-recent-title">Recent Items</div>
+            <div className="qs-recent-title">Recent Sold Items</div>
             <div className="qs-recent-grid">
-              {RECENT_ITEMS.map(item => (
+              {recentItems.map(item => (
                 <button key={item.id} className="qs-stat-card qs-recent-stat-card" onClick={() => addRecentItem(item)}>
-                  <div className={THUMB_CLASSES[item.thumb]}>
-                    {THUMB_ICONS[item.thumb]}
+                  <div className="qs-thumb" style={{ background: THUMB_COLORS[item.color] || '#6b7280' }}>
+                    <ProductThumb color={item.color} size={16} />
                   </div>
                   <div className="qs-recent-item-text">
                     <div className="qs-stat-value-sm">{item.name}</div>
-                    <div className="qs-stat-label">{item.code}</div>
+                    <div className="qs-stat-label">{item.code || item.sku}</div>
                   </div>
                 </button>
               ))}
@@ -467,7 +532,7 @@ export default function QuickSale() {
         <aside className="qs-cart-panel">
           <div className="qs-cart-header">
             Cart ({cartItems.length})
-            <button onClick={() => { if (cartItems.length > 0 && window.confirm('Clear all items?')) setCartItems([]); }} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex' }}>
+            <button onClick={() => { if (cartItems.length > 0 && window.confirm('Clear all items?')) setCartItems([]); }} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
               <Trash2 size={18} />
             </button>
           </div>
@@ -475,16 +540,13 @@ export default function QuickSale() {
           <div className="qs-cart-body" ref={cartBodyRef}>
             {cartItems.map(item => (
               <div key={item.id} className="qs-cart-item">
-                <div className={`qs-cart-thumb ${item.thumb}`}>
-                  <Package size={22} />
+                <div className={`qs-cart-thumb ${item.thumb || 'blue'}`}>
+                  <ProductThumb color={item.thumb || 'blue'} size={18} />
                 </div>
                 <div className="qs-cart-item-info">
                   <div className="qs-cart-item-top">
                     <div className="qs-cart-item-name">{item.name}</div>
-                    <div className="qs-cart-item-price">₹{item.price.toFixed(2)}</div>
-                    <button className="qs-cart-item-close" onClick={() => removeItem(item.id)}>
-                      <X size={15} />
-                    </button>
+                    <div className="qs-cart-item-price">{currencySymbol}{item.price.toFixed(2)}</div>
                   </div>
                   <div className="qs-cart-item-meta">{item.meta}</div>
                   <div className="qs-cart-item-bottom">
@@ -493,9 +555,13 @@ export default function QuickSale() {
                       <span>{item.qty}</span>
                       <button onClick={() => updateQty(item.id, 1)}><Plus size={13} strokeWidth={2.5} /></button>
                     </div>
-                    <div className="qs-cart-item-total">₹{(item.price * item.qty).toFixed(2)}</div>
+                    <div className="qs-cart-item-total">{currencySymbol}{round2(item.price * item.qty).toFixed(2)}</div>
                   </div>
                 </div>
+                <button className="qs-cart-item-close" onClick={() => removeItem(item.id)} title="Remove item">
+                  <Trash2 size={15} />
+                  <span className="sr-only">Clear</span>
+                </button>
               </div>
             ))}
             {cartItems.length === 0 && (
@@ -508,33 +574,33 @@ export default function QuickSale() {
           <div className="qs-cart-summary">
             <div className="qs-summary-row muted">
               <span>Subtotal ({cartItems.length} Items)</span>
-              <span>₹{subtotal.toFixed(2)}</span>
+              <span>{currencySymbol}{subtotal.toFixed(2)}</span>
             </div>
             <div className="qs-summary-row muted">
               <span>Discount</span>
               <div className="qs-discount-controls">
-                <input className="qs-discount-input" type="number" min="0" step="0.01" value={discount} onChange={(e) => setDiscount(Number(e.target.value) || 0)} />
-                <span className="qs-discount-select" onClick={() => setDiscountType(t => t === '%' ? 'flat' : '%')}>
-                  {discountType === '%' ? '%' : '₹'}
+                <span className="qs-discount-type-toggle" onClick={() => setDiscountType(t => t === '%' ? 'flat' : '%')}>
+                  {discountType === '%' ? 'Percentage' : 'Fixed'}
                   <ChevronDown size={13} />
                 </span>
-                <span>−₹{discountAmount.toFixed(2)}</span>
+                <input className="qs-discount-input" type="number" min="0" step="1" value={discount} onChange={(e) => setDiscount(parseInt(e.target.value) || 0)} />
+                <span>−{currencySymbol}{discountAmount.toFixed(2)}</span>
               </div>
             </div>
             <div className="qs-summary-row muted">
-              <span>Tax (12%)</span>
-              <span>₹{tax.toFixed(2)}</span>
+              <span>Tax ({defaultTaxRate}%)</span>
+              <span>{currencySymbol}{tax.toFixed(2)}</span>
             </div>
             <div className="qs-summary-divider" />
             <div className="qs-grand-total-row">
               <span>Grand Total</span>
-              <span>₹{grandTotal.toFixed(2)}</span>
+              <span>{currencySymbol}{grandTotal.toFixed(2)}</span>
             </div>
           </div>
 
           <div className="qs-cart-actions">
             <div className="qs-action-row">
-              <button className="qs-action-btn qs-pay-now" onClick={() => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert(`Payment of ₹${grandTotal.toFixed(2)} processed!`); }}>
+              <button className="qs-action-btn qs-pay-now" onClick={() => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert(`Payment of ${currencySymbol}${grandTotal.toFixed(2)} processed!`); }}>
                 <CreditCard size={17} />
                 Pay Now <span className="qs-shortcut">F5</span>
               </button>
@@ -570,7 +636,7 @@ export default function QuickSale() {
           { label: 'Customer', icon: <Users size={16} />, cls: 'customer', shortcut: 'F1', action: () => customerInputRef.current?.focus() },
           { label: 'Discount', icon: <Tag size={16} />, cls: 'discount', shortcut: 'F2', action: () => setShowCalculator(true) },
           { label: 'Hold Cart', icon: <ShoppingCart size={16} />, cls: 'hold', shortcut: 'F3', action: () => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert('Cart held!'); } },
-          { label: 'Payment', icon: <CreditCard size={16} />, cls: 'payment', shortcut: 'F4', action: () => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert(`Payment of ₹${grandTotal.toFixed(2)}`); } },
+          { label: 'Payment', icon: <CreditCard size={16} />, cls: 'payment', shortcut: 'F4', action: () => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert(`${currencySymbol}${grandTotal.toFixed(2)}`); } },
           { label: 'Barcode', icon: <Barcode size={16} />, cls: 'barcode', shortcut: 'F5', action: () => productInputRef.current?.focus() },
           { label: 'Cancel', icon: <X size={16} />, cls: 'cancel', shortcut: 'F6', action: () => { if (cartItems.length > 0 && window.confirm('Cancel current sale?')) setCartItems([]); } },
         ].map((btn, i) => (
@@ -620,4 +686,12 @@ function BarChartIcon({ size }) {
       <line x1="6" y1="20" x2="6" y2="16" />
     </svg>
   );
+}
+
+function round2(n) {
+  return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+}
+
+function round2Sum(arr) {
+  return arr.reduce((s, n) => s + (round2(n) || 0), 0);
 }

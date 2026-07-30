@@ -143,7 +143,8 @@ export default function Settings() {
     setLoading(true);
     setError(null);
     try {
-      const data = await settingsApiService.getAll();
+      const res = await settingsApiService.getAll();
+      const data = res?.settings || res || {};
       setValues(data);
       setOriginal(data);
       if (data.logo) setLogoPreview(data.logo);
@@ -305,22 +306,30 @@ export default function Settings() {
 
       const { logo: _logo, ...rest } = finalValues;
       await settingsApiService.update(logoFile ? rest : finalValues);
-      setOriginal({
-        ...values,
-        logo: logoFile ? original.logo : finalValues.logo,
-        favicon: faviconFile ? original.favicon : finalValues.favicon,
-      });
+      setOriginal({ ...finalValues });
       setLogoFile(null);
       setFaviconFile(null);
       setValidationErrors({});
+
+      // Update favicon immediately in browser tab
+      if (finalValues.favicon) {
+        let link = document.querySelector('link[rel="icon"]');
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.head.appendChild(link);
+        }
+        link.href = finalValues.favicon;
+      }
+
       notificationManager.successLoading(loadingId, 'Settings saved', 'All changes have been applied.');
 
       // Broadcast changes to all listeners (live UI sync)
-      Object.entries(values).forEach(([key, value]) => {
+      Object.entries(finalValues).forEach(([key, value]) => {
         settingsManager.listeners.get(key)?.forEach((fn) => fn(value));
       });
       // Notify settingsManager change for global sync
-      settingsManager.notifyChange?.(values);
+      settingsManager.notifyChange?.(finalValues);
       // Invalidate cache for live UI refresh
       await invalidateCache('settings');
     } catch (err) {
@@ -328,7 +337,7 @@ export default function Settings() {
     } finally {
       setSaving(false);
     }
-  }, [values, logoFile]);
+  }, [values, logoFile, faviconFile]);
 
   const handleReset = useCallback(() => {
     if (dirty) {
@@ -431,6 +440,7 @@ export default function Settings() {
             <h2 className="settings-center-title">General Settings</h2>
 
             <div id="section-logo">
+              <h3 className="settings-section-heading">Website Logo</h3>
               <div className="settings-logo-area">
               <div className={`settings-logo-preview${!logoPreview ? ' settings-logo-preview--empty' : ''}`}>
                 {logoPreview ? (
@@ -460,6 +470,7 @@ export default function Settings() {
             </div>
 
             <div id="section-favicon">
+              <h3 className="settings-section-heading">Favicon</h3>
               <div className="settings-logo-area">
               <div className={`settings-logo-preview${!faviconPreview ? ' settings-logo-preview--empty' : ''}`}>
                 {faviconPreview ? (
