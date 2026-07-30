@@ -285,7 +285,8 @@ CREATE INDEX IF NOT EXISTS idx_invoice_items_name ON invoice_items (name);
 CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice_id ON invoice_items (invoice_id);
 CREATE INDEX IF NOT EXISTS idx_invoice_payments_note ON invoice_payments (note);
 CREATE INDEX IF NOT EXISTS idx_invoice_payments_invoice_id ON invoice_payments (invoice_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_table_record ON audit_logs (table_name, record_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_table_name ON audit_logs (table_name);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_record_id ON audit_logs (record_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs (created_at);
 CREATE INDEX IF NOT EXISTS idx_accounting_entries_invoice ON accounting_entries (invoice_id);
 

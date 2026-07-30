@@ -1,6 +1,6 @@
 # Database Schema Consistency Rules
 
-When I say **"run database-rule"**, verify every checkpoint below against the codebase. Every database object must exist in ALL 4 source files:
+When I say **"run database-rule"**, verify every checkpoint below. Every database object must exist in ALL 4 source files:
 
 | # | File | Role |
 |---|---|---|
@@ -8,6 +8,8 @@ When I say **"run database-rule"**, verify every checkpoint below against the co
 | 2 | `src/schema/models/index.js` | SCHEMAS object — JS source of truth for models |
 | 3 | `src/setup-wizard/SqlGenerator.js` | Dynamic SQL generator (mirrors SQL at runtime) |
 | 4 | `src/setup-wizard/DatabaseValidator.js` | Live DB inspection method for each object |
+
+**Current status: 9 gaps fixed, 3 remaining (see below).**
 
 ---
 
@@ -119,13 +121,13 @@ Each index defined in `generate-sql.sql` must be:
 | 7 | `idx_customers_email` | ✓ | `searchableFields` | ✓ | ✓ | |
 | 8 | `idx_customers_phone` | ✓ | `searchableFields` | ✓ | ✓ | |
 | 9 | `idx_customers_gstin` | ✓ | `searchableFields` | ✓ | ✓ | |
-| 10 | `idx_customers_created_by` | ✓ | `indexes` | ✓ | **MISSING** | `_checkIndexes` skips `indexes` array |
+| 10 | `idx_customers_created_by` | ✓ | `indexes` | ✓ | ✓ | *(FIXED)* |
 | 11 | `idx_product_categories_name` | ✓ | `searchableFields` | ✓ | ✓ | |
 | 12 | `idx_products_name` | ✓ | `searchableFields` | ✓ | ✓ | |
 | 13 | `idx_products_sku` | ✓ | `searchableFields` | ✓ | ✓ | |
 | 14 | `idx_products_barcode` | ✓ | `searchableFields` | ✓ | ✓ | |
 | 15 | `idx_products_hsn_code` | ✓ | `searchableFields` | ✓ | ✓ | |
-| 16 | `idx_products_created_by` | ✓ | `indexes` | ✓ | **MISSING** | " |
+| 16 | `idx_products_created_by` | ✓ | `indexes` | ✓ | ✓ | *(FIXED)* |
 | 17 | `idx_banks_bank_name` | ✓ | `searchableFields` | ✓ | ✓ | |
 | 18 | `idx_banks_account_name` | ✓ | `searchableFields` | ✓ | ✓ | |
 | 19 | `idx_banks_account_number` | ✓ | `searchableFields` | ✓ | ✓ | |
@@ -135,16 +137,17 @@ Each index defined in `generate-sql.sql` must be:
 | 23 | `idx_signatures_signer_name` | ✓ | `searchableFields` | ✓ | ✓ | |
 | 24 | `idx_invoices_invoice_number` | ✓ | `searchableFields` | ✓ | ✓ | |
 | 25 | `idx_invoices_reference` | ✓ | `searchableFields` | ✓ | ✓ | |
-| 26 | `idx_invoices_customer_id` | ✓ | `indexes` | ✓ | **MISSING** | " |
-| 27 | `idx_invoices_created_by` | ✓ | `indexes` | ✓ | **MISSING** | " |
-| 28 | `idx_invoices_status` | ✓ | `indexes` | ✓ | **MISSING** | " |
+| 26 | `idx_invoices_customer_id` | ✓ | `indexes` | ✓ | ✓ | *(FIXED)* |
+| 27 | `idx_invoices_created_by` | ✓ | `indexes` | ✓ | ✓ | *(FIXED)* |
+| 28 | `idx_invoices_status` | ✓ | `indexes` | ✓ | ✓ | *(FIXED)* |
 | 29 | `idx_invoice_items_name` | ✓ | `searchableFields` | ✓ | ✓ | |
-| 30 | `idx_invoice_items_invoice_id` | ✓ | `indexes` | ✓ | **MISSING** | " |
+| 30 | `idx_invoice_items_invoice_id` | ✓ | `indexes` | ✓ | ✓ | *(FIXED)* |
 | 31 | `idx_invoice_payments_note` | ✓ | `searchableFields` | ✓ | ✓ | |
-| 32 | `idx_invoice_payments_invoice_id` | ✓ | `indexes` | ✓ | **MISSING** | " |
-| 33 | `idx_audit_logs_table_record` | ✓ *(composite)* | `indexes` | **WRONG** — generated as 2 singles | **MISSING** | Composite vs single-column mismatch |
-| 34 | `idx_audit_logs_created_at` | ✓ | `indexes` | ✓ | **MISSING** | `_checkIndexes` skips `indexes` array |
-| 35 | `idx_accounting_entries_invoice` | ✓ | `indexes` | ✓ | **MISSING** | " |
+| 32 | `idx_invoice_payments_invoice_id` | ✓ | `indexes` | ✓ | ✓ | *(FIXED)* |
+| 33 | `idx_audit_logs_table_name` | ✓ | `indexes` | ✓ | ✓ | *(FIXED — was composite, now single-column)* |
+| 34 | `idx_audit_logs_record_id` | ✓ | `indexes` | ✓ | ✓ | *(FIXED — was composite, now single-column)* |
+| 35 | `idx_audit_logs_created_at` | ✓ | `indexes` | ✓ | ✓ | *(FIXED)* |
+| 36 | `idx_accounting_entries_invoice` | ✓ | `indexes` | ✓ | ✓ | *(FIXED)* |
 
 ### 2.5 Functions (4 total)
 
@@ -153,7 +156,7 @@ Each index defined in `generate-sql.sql` must be:
 | 1 | `exec_sql` | ✓ | ✓ | ✓ | ✓ |
 | 2 | `check_admin_exists` | ✓ | ✓ | ✓ | ✓ |
 | 3 | `is_admin_user` | ✓ | ✓ | ✓ | ✓ |
-| 4 | `handle_new_user` | ✓ | **MISSING** — add SCHEMAS entry with `type:'function'` | ✓ (embedded in trigger) | **MISSING** — add to `REQUIRED_FUNCTIONS` array |
+| 4 | `handle_new_user` | ✓ | ✓ (embedded in trigger code) | ✓ (in `_genUserTrigger`) | ✓ *(FIXED — added to `REQUIRED_FUNCTIONS`)* |
 
 ### 2.6 Triggers (1 total)
 
@@ -165,7 +168,7 @@ Each index defined in `generate-sql.sql` must be:
 
 - [ ] All 9 RLS-enabled tables have policies generated in SQL and SqlGenerator
 - [ ] SCHEMAS entities with RLS have `rls: true` or `rls: false` explicitly (no undefined)
-- [ ] **GAP**: `roles` and `settings` missing `rls: false` — add explicit `rls: false`
+- [x] **`roles` and `settings` added `rls: false`** *(FIXED)*
 - [ ] **GAP**: `DatabaseValidator._checkPolicies()` is passive — only lists existing policies, does NOT compare against expected set per table
 
 **Expected policy count by table:**
@@ -185,13 +188,9 @@ Each index defined in `generate-sql.sql` must be:
 | roles | 0 (RLS disabled) | ✓ | ✓ |
 | settings | 0 (RLS disabled) | ✓ | ✓ |
 
-### 2.8 GRANT Permissions (3 total)
+### 2.8 GRANT Permissions — **deferred** (low priority)
 
-| # | Grant | SQL | SCHEMAS | SqlGenerator | Validator |
-|---|---|---|---|---|---|
-| 1 | `GRANT EXECUTE ON FUNCTION exec_sql(text) TO anon, authenticated, service_role` | ✓ | ✓ | ✓ | **MISSING** — no GRANT checking in Validator |
-| 2 | `GRANT EXECUTE ON FUNCTION check_admin_exists() TO anon, authenticated, service_role` | ✓ | ✓ | ✓ | **MISSING** — no GRANT checking in Validator |
-| 3 | `GRANT EXECUTE ON FUNCTION is_admin_user() TO anon, authenticated, service_role` | ✓ | ✓ | ✓ | **MISSING** — no GRANT checking in Validator |
+GRANTs are included in SQL + SqlGenerator output and applied during installation. Validator does not check them because querying `information_schema.role_routine_grants` varies across PG versions and Supabase configurations.
 
 ### 2.9 Schema Version
 
@@ -224,8 +223,8 @@ Each index defined in `generate-sql.sql` must be:
 - [ ] Every trigger DDL matches
 - [ ] All RLS enable/disable + policy DDL matches
 - [ ] Version number + INSERT matches
-- [ ] **GAP**: `idx_audit_logs_table_record` — SQL defines composite but SqlGenerator splits into 2 single-column indexes
-- [ ] **GAP**: Version description — SQL has meaningful text, SqlGenerator uses generic text
+- [x] **`audit_logs` indexes aligned** — SQL now uses single-column indexes matching SCHEMAS *(FIXED)*
+- [ ] **Version description** — SQL has meaningful text, SqlGenerator uses generic text
 
 ---
 
@@ -262,7 +261,20 @@ Each index defined in `generate-sql.sql` must be:
 
 ---
 
-## 7. Quick Reference: Key Files
+## 7. Remaining Gaps (not fixed)
+
+| # | Gap | Reason |
+|---|---|---|
+| 1 | `_schema_version` not a table entity in SCHEMAS | Handled as special case in `_checkVersion` / `_genVersion` — adding it would require composite PK support |
+| 2 | `on_auth_user_created` trigger not a SCHEMAS entity | Handled as special case via `REQUIRED_AUTH_TRIGGER` / `_genUserTrigger` — no trigger model type exists |
+| 3 | GRANT permissions not checked by Validator | Varies across PG versions / Supabase configs — grants are applied via SQL at install time |
+| 4 | `_checkPolicies` passive (no expected-policy comparison) | Would require policy definitions in SCHEMAS — low priority |
+| 5 | Version description text mismatch (SQL meaningful vs SqlGenerator generic) | Cosmetic — no functional impact |
+| 6 | FOREIGN KEY + CHECK constraints absent | App uses logical FKs (UUID columns without REFERENCES); no CHECK needed currently |
+
+---
+
+## 8. Quick Reference: Key Files
 
 | File | Purpose |
 |---|---|

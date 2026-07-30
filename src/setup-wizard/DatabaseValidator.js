@@ -1,4 +1,4 @@
-const REQUIRED_FUNCTIONS = ['exec_sql', 'check_admin_exists', 'is_admin_user'];
+const REQUIRED_FUNCTIONS = ['exec_sql', 'check_admin_exists', 'is_admin_user', 'handle_new_user'];
 const REQUIRED_AUTH_TRIGGER = 'on_auth_user_created';
 
 export class DatabaseValidator {
@@ -47,13 +47,14 @@ export class DatabaseValidator {
     }
 
     await this._checkFunctions();
-    await this._checkTriggers();
+    await this._checkTriggers(schema);
     await this._checkViews();
-    await this._checkPolicies();
+    await this._checkPolicies(schema);
     await this._checkRequiredFunctions(schema);
     await this._checkVersion(schema);
     await this._checkExtensions(schema);
     await this._checkSeeds(schema);
+    await this._checkGrants(schema);
 
     return this.getReport();
   }
@@ -159,18 +160,20 @@ export class DatabaseValidator {
       const tableExists = this.results.tables.find((t) => t.name === tableName)?.exists;
       if (!tableExists) continue;
 
-      const searchable = definition.searchableFields;
-      if (searchable && Array.isArray(searchable)) {
-        for (const field of searchable) {
-          const exists = await this._indexExists(tableName, field);
-          this.results.indexes.push({
-            table: tableName,
-            index: `idx_${tableName}_${field}`,
-            field,
-            exists,
-            status: exists ? 'existing' : 'missing',
-          });
-        }
+      const allIndexFields = [
+        ...(definition.searchableFields || []),
+        ...(definition.indexes || []),
+      ];
+      for (const field of allIndexFields) {
+        const idxName = `idx_${tableName}_${field}`;
+        const exists = await this._indexExists(tableName, field);
+        this.results.indexes.push({
+          table: tableName,
+          index: idxName,
+          field,
+          exists,
+          status: exists ? 'existing' : 'missing',
+        });
       }
     }
   }
@@ -237,7 +240,7 @@ export class DatabaseValidator {
     } catch {}
   }
 
-  async _checkTriggers() {
+  async _checkTriggers(schema) {
     try {
       const result = await this.db.query(
         `SELECT trigger_name FROM information_schema.triggers WHERE trigger_schema = 'public'`
@@ -249,42 +252,43 @@ export class DatabaseValidator {
       }
     } catch {}
 
-    let authTriggerExists = false;
-
-    try {
-      const result = await this.db.query(
-        `SELECT trigger_name FROM information_schema.triggers
-         WHERE trigger_schema = 'auth' AND event_object_table = 'users'`
-      );
-      authTriggerExists = !!(result && result.some((r) => r.trigger_name === REQUIRED_AUTH_TRIGGER));
-    } catch {}
-
-    if (!authTriggerExists) {
+    const required = schema.requiredTriggers || [];
+    for (const trig of required) {
+      let exists = false;
       try {
         const result = await this.db.query(
-          `SELECT t.tgname::text FROM pg_catalog.pg_trigger t
-           JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid
-           JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-           WHERE NOT t.tgisinternal AND n.nspname = 'auth'
-             AND c.relname = 'users' AND t.tgname = $1`,
-          [REQUIRED_AUTH_TRIGGER]
+          `SELECT trigger_name FROM information_schema.triggers
+           WHERE trigger_schema = $1 AND event_object_table = $2`,
+          [trig.schema, trig.table]
         );
-        authTriggerExists = !!(result && result.length > 0);
+        exists = !!(result && result.some((r) => r.trigger_name === trig.name));
       } catch {}
-    }
-
-    if (authTriggerExists) {
-      if (!this.results.triggers.some((t) => t.name === REQUIRED_AUTH_TRIGGER)) {
-        this.results.triggers.push({ name: REQUIRED_AUTH_TRIGGER, exists: true, status: 'existing' });
+      if (!exists) {
+        try {
+          const result = await this.db.query(
+            `SELECT t.tgname::text FROM pg_catalog.pg_trigger t
+             JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid
+             JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+             WHERE NOT t.tgisinternal AND n.nspname = $1
+               AND c.relname = $2 AND t.tgname = $3`,
+            [trig.schema, trig.table, trig.name]
+          );
+          exists = !!(result && result.length > 0);
+        } catch {}
       }
-    } else {
-      this.results.triggers.push({
-        name: REQUIRED_AUTH_TRIGGER,
-        exists: false,
-        status: 'missing',
-        type: 'trigger',
-        detail: 'on_auth_user_created trigger on auth.users is missing — registration will fail to create a user profile.',
-      });
+      if (exists) {
+        if (!this.results.triggers.some((t) => t.name === trig.name)) {
+          this.results.triggers.push({ name: trig.name, exists: true, status: 'existing' });
+        }
+      } else {
+        this.results.triggers.push({
+          name: trig.name,
+          exists: false,
+          status: 'missing',
+          type: 'trigger',
+          detail: `${trig.name} trigger on ${trig.schema}.${trig.table} is missing — ${trig.function} will not fire.`,
+        });
+      }
     }
   }
 
@@ -301,17 +305,35 @@ export class DatabaseValidator {
     } catch {}
   }
 
-  async _checkPolicies() {
+  async _checkPolicies(schema) {
+    const existingPolicies = [];
     try {
       const result = await this.db.query(
         `SELECT schemaname, tablename, policyname FROM pg_policies WHERE schemaname = 'public'`
       );
       if (result && result.length > 0) {
         for (const row of result) {
+          existingPolicies.push({ table: row.tablename, name: row.policyname });
           this.results.policies.push({ table: row.tablename, name: row.policyname, exists: true, status: 'existing' });
         }
       }
     } catch {}
+
+    // Verify each RLS-enabled table has at least one policy
+    for (const [, def] of Object.entries(schema)) {
+      if (!def || typeof def !== 'object' || !def.table) continue;
+      if (!def.rls) continue;
+      const tablePolicies = existingPolicies.filter((p) => p.table === def.table);
+      if (tablePolicies.length === 0) {
+        this.results.policies.push({
+          table: def.table, name: null, exists: false, status: 'missing',
+          type: 'policy',
+          detail: def.table === 'users'
+            ? 'RLS enabled on users but no policies found — anon key has no read access'
+            : `RLS enabled on ${def.table} but no owner policies found`,
+        });
+      }
+    }
   }
 
   async _constraintExists(table, type, column) {

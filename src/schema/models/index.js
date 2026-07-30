@@ -80,6 +80,7 @@ export const SCHEMAS = {
     nullable: ['description'],
     defaults: { created_at: 'NOW()', updated_at: 'NOW()' },
     unique: { name: 'name' },
+    rls: false,
   },
   settings: {
     table: 'settings',
@@ -88,6 +89,7 @@ export const SCHEMAS = {
     primaryKey: 'key',
     nullable: ['value'],
     defaults: { updated_at: 'NOW()' },
+    rls: false,
   },
   // Built-in functions required by the application runtime.
   // These are modeled here so SqlGenerator can produce them as part
@@ -236,3 +238,6 @@ export const SCHEMAS = {
 SCHEMAS.version = 5;
 SCHEMAS.extensions = [];
 SCHEMAS.seedData = [];
+SCHEMAS.requiredTriggers = [
+  { name: 'on_auth_user_created', schema: 'auth', table: 'users', event: 'AFTER INSERT', function: 'handle_new_user' },
+];
