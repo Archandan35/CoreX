@@ -200,6 +200,21 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .topbar__spacer {
   flex: 1;
 }
+
+.topbar__qs-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 200ms ease;
+  border: none;
+}
 .topbar__search {
   display: flex;
   align-items: center;

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar.jsx';
 import Topbar from './Topbar.jsx';
+import { ToolbarProvider } from './ToolbarContext.jsx';
 
 export default function MainLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -22,10 +23,12 @@ export default function MainLayout() {
         <div className="sidebar-overlay" onClick={() => setMobileOpen(false)} />
       )}
       <div className={`app-main ${collapsed ? 'collapsed' : ''}`}>
-        <Topbar onToggle={toggle} />
-        <main id="main-content" className="page-area">
-          <Outlet />
-        </main>
+        <ToolbarProvider>
+          <Topbar onToggle={toggle} />
+          <main id="main-content" className="page-area">
+            <Outlet />
+          </main>
+        </ToolbarProvider>
       </div>
     </div>
   );

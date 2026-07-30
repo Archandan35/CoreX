@@ -4,12 +4,14 @@ import { ALL_NAV_ITEMS } from '../../routes/navigation.js';
 import { useAuth } from '../../identity/auth/AuthContext.jsx';
 import Icon from '../ui/Icon.jsx';
 import ThemeToggle from '../ui/ThemeToggle.jsx';
+import { useToolbar } from './ToolbarContext.jsx';
 
 export default function Topbar({ onToggle }) {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const { items } = useToolbar();
 
   const current = ALL_NAV_ITEMS.find((i) => (i.end ? i.to === pathname : pathname.startsWith(i.to) && i.to !== '/')) ||
     ALL_NAV_ITEMS.find((i) => i.to === pathname) || { label: 'Dashboard' };
@@ -29,6 +31,13 @@ export default function Topbar({ onToggle }) {
       </button>
       <div className="topbar__title">{current.label}</div>
       <div className="topbar__spacer" />
+
+      {items.map((item, i) => (
+        <button key={i} className={item.className || 'topbar__qs-btn'} onClick={item.action}>
+          {item.icon}
+          {item.label}
+        </button>
+      ))}
 
       <ThemeToggle />
       <div className="usermenu" ref={menuRef}>

@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
-  Users, Search, Package, ShoppingCart, CreditCard, Zap, Sun, Moon,
-  Bell, ChevronDown, Calculator, Barcode, Monitor, Grid3X3, X, Plus, Minus,
+  Users, Search, Package, ShoppingCart, CreditCard, Zap,
+  Calculator, Barcode, Monitor, Grid3X3, X, Plus, Minus,
   Trash2, Receipt, Pause, Percent, TrendingUp, TrendingDown,
   UserPlus, UserCheck, Box, FileText, ChevronUp, Tag, Banknote,
   SplitSquareHorizontal, Circle, User, LogOut, Settings, HelpCircle,
   Maximize2, Minimize2, RefreshCw, Save, Printer,
 } from 'lucide-react';
+import { useToolbar } from '../../components/layout/ToolbarContext.jsx';
 
 const INITIAL_PRODUCTS = [
   { id: 1, name: 'Formal Shirt', code: 'SH001', category: 'Shirt', price: 850, color: 'blue', sizes: { M: 10, L: 15 } },
@@ -237,6 +238,26 @@ export default function QuickSale() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showCalculator, showCustomerResults, showProductResults, cartItems, handleCalculatorInput]);
 
+  const { setToolbarItems } = useToolbar();
+
+  useEffect(() => {
+    setToolbarItems([
+      {
+        icon: <Calculator size={14} />,
+        label: ' Calculate',
+        action: () => setShowCalculator(true),
+        className: 'topbar__qs-btn qs-btn-primary',
+      },
+      {
+        icon: <Barcode size={14} />,
+        label: ' Barcode',
+        action: () => productInputRef.current?.focus(),
+        className: 'topbar__qs-btn qs-btn-outline',
+      },
+    ]);
+    return () => setToolbarItems([]);
+  }, [setToolbarItems]);
+
   return (
     <div className="qs-app">
       <header className="qs-topbar">
@@ -244,49 +265,6 @@ export default function QuickSale() {
           <button className="qs-tab active">Quick Sale</button>
           <button className="qs-tab">Orders</button>
         </nav>
-
-        <div className="qs-topbar-spacer" />
-
-        <button className="qs-btn qs-btn-primary" onClick={() => setShowCalculator(true)}>
-          <Calculator size={16} />
-          Calculate
-        </button>
-
-        <button className="qs-btn qs-btn-outline" onClick={() => productInputRef.current?.focus()}>
-          <Barcode size={16} className="qs-icon-purple" />
-          Scan Barcode <span className="qs-kbd">F6</span>
-        </button>
-
-        <div className="qs-view-toggle">
-          <button className="qs-btn qs-btn-outline active">
-            <Monitor size={16} />
-            Full View
-          </button>
-          <button className="qs-btn qs-btn-outline">
-            <Grid3X3 size={16} />
-            Mini View
-          </button>
-        </div>
-
-        <div className="qs-theme-toggle">
-          <Sun size={15} />
-          <div className="qs-moon-wrap">
-            <Moon size={14} />
-          </div>
-        </div>
-
-        <button className="qs-icon-btn-wrap" aria-label="Notifications">
-          <Bell size={18} />
-          <span className="qs-badge-count">3</span>
-        </button>
-
-        <div className="qs-user-block">
-          <div className="qs-user-avatar">A</div>
-          <div className="qs-user-name">
-            Admin User
-            <ChevronDown size={14} />
-          </div>
-        </div>
       </header>
 
       <div className="qs-dashboard">
