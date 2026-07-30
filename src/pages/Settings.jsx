@@ -279,6 +279,8 @@ export default function Settings() {
     const loadingId = notificationManager.loading('Saving settings', 'Please wait...');
 
     try {
+      let finalValues = { ...values };
+
       if (logoFile) {
         const reader = new FileReader();
         const fileData = await new Promise((resolve, reject) => {
@@ -286,14 +288,17 @@ export default function Settings() {
           reader.onerror = reject;
           reader.readAsDataURL(logoFile);
         });
-        await fetch('/api/settings/logo', {
+        const logoRes = await fetch('/api/settings/logo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fileData }),
         });
+        const logoJson = await logoRes.json().catch(() => ({}));
+        const logoUrl = logoJson?.url || logoJson?.path || fileData;
+        finalValues = { ...finalValues, logo: logoUrl };
+        setLogoPreview(logoUrl);
       }
 
-      let finalValues = { ...values };
       if (faviconFile) {
         const reader = new FileReader();
         const fileData = await new Promise((resolve, reject) => {
@@ -301,11 +306,11 @@ export default function Settings() {
           reader.onerror = reject;
           reader.readAsDataURL(faviconFile);
         });
-        finalValues = { ...values, favicon: fileData };
+        finalValues = { ...finalValues, favicon: fileData };
+        setFaviconPreview(fileData);
       }
 
-      const { logo: _logo, ...rest } = finalValues;
-      await settingsApiService.update(logoFile ? rest : finalValues);
+      await settingsApiService.update(finalValues);
       setOriginal({ ...finalValues });
       setLogoFile(null);
       setFaviconFile(null);

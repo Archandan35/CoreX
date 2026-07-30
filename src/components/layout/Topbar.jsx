@@ -5,6 +5,7 @@ import { useAuth } from '../../identity/auth/AuthContext.jsx';
 import Icon from '../ui/Icon.jsx';
 import { useToolbar } from './ToolbarContext.jsx';
 import { settingsApiService } from '../../services/settings/SettingsApiService.js';
+import { settingsManager } from '../../managers/SettingsManager.js';
 import { themeManager } from '../../managers/ThemeManager.js';
 import { Minimize2 } from 'lucide-react';
 import { useFullscreen } from './FullscreenContext.jsx';
@@ -33,6 +34,27 @@ export default function Topbar({ onToggle }) {
         link.href = s.favicon;
       }
     }).catch(() => {});
+
+    const unsubLogo = settingsManager.onChange('logo', (url) => {
+      if (url) setLogoUrl(url);
+    });
+
+    const unsubFavicon = settingsManager.onChange('favicon', (url) => {
+      if (url) {
+        let link = document.querySelector('link[rel="icon"]');
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.head.appendChild(link);
+        }
+        link.href = url;
+      }
+    });
+
+    return () => {
+      unsubLogo();
+      unsubFavicon();
+    };
   }, []);
 
   const current = ALL_NAV_ITEMS.find((i) => (i.end ? i.to === pathname : pathname.startsWith(i.to) && i.to !== '/')) ||
