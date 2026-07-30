@@ -273,16 +273,6 @@ export class DatabaseValidator {
       } catch {}
     }
 
-    if (!authTriggerExists) {
-      const execSqlExists = this.results.functions.some(
-        (f) => f.name === 'exec_sql' && f.exists
-      );
-      const anyTablesExist = this.results.tables.some((t) => t.exists);
-      if (execSqlExists && anyTablesExist) {
-        authTriggerExists = true;
-      }
-    }
-
     if (authTriggerExists) {
       if (!this.results.triggers.some((t) => t.name === REQUIRED_AUTH_TRIGGER)) {
         this.results.triggers.push({ name: REQUIRED_AUTH_TRIGGER, exists: true, status: 'existing' });
