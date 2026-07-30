@@ -3941,6 +3941,10 @@ select.form-input { cursor: pointer; appearance: auto; }
   border-collapse: collapse;
 }
 
+.inv-ps-table thead tr {
+  height: 45px;
+}
+
 .inv-ps-table thead th {
   text-align: left;
   font-size: 11.5px;
@@ -3965,6 +3969,10 @@ select.form-input { cursor: pointer; appearance: auto; }
   font-weight: 500;
   color: var(--inv-text-sub);
   font-size: 10.5px;
+}
+
+.inv-ps-table tbody tr {
+  height: 45px;
 }
 
 .inv-ps-table tbody td {

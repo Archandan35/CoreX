@@ -519,6 +519,13 @@ export default function Invoices({ variant = 'invoices' }) {
           >
             {(close) => (
               <div style={{ minWidth: 180 }}>
+                <DropdownItem onClick={() => { close(); alert('Bulk Upload'); }}>
+                  <Icon name="upload" size={14} /> Bulk Upload
+                </DropdownItem>
+                <DropdownItem onClick={() => { close(); alert('Bulk Select'); }}>
+                  <Icon name="check-square" size={14} /> Bulk Select
+                </DropdownItem>
+                <div className="invoice-dropdown-divider" />
                 {canExport && (
                   <DropdownItem onClick={() => handleExportCsv(close)}>
                     <Icon name="download" size={14} /> Export CSV
