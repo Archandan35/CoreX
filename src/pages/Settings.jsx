@@ -36,6 +36,23 @@ const TIME_FORMATS = [
   { value: '24-hour', label: '24-Hour' },
 ];
 
+const TOC_ITEMS = [
+  { id: 'section-logo', label: 'Website Logo' },
+  { id: 'section-site-title', label: 'Site Title' },
+  { id: 'section-tagline', label: 'Tagline' },
+  { id: 'section-site-url', label: 'Website URL' },
+  { id: 'section-app-url', label: 'Application URL' },
+  { id: 'section-support-email', label: 'Support Email' },
+  { id: 'section-contact-number', label: 'Contact Number' },
+  { id: 'section-membership', label: 'Membership Mode' },
+  { id: 'section-default-role', label: 'Default Role' },
+  { id: 'section-language', label: 'Language' },
+  { id: 'section-timezone', label: 'Timezone' },
+  { id: 'section-date-format', label: 'Date Format' },
+  { id: 'section-time-format', label: 'Time Format' },
+  { id: 'section-week-start', label: 'Week Starts On' },
+];
+
 const WEEK_STARTS_OPTIONS = [
   { value: 'monday', label: 'Monday' },
   { value: 'sunday', label: 'Sunday' },
@@ -335,31 +352,10 @@ export default function Settings() {
           <nav className="settings-nav">
             <div className="settings-nav-section">
               <div className="settings-nav-section-title">MAIN</div>
-              {[
-                { id:'general', icon:'settings', label:'General Settings' },
-                { id:'org', icon:'users', label:'Org. Settings' },
-                { id:'users', icon:'user', label:'User Mgmt' },
-                { id:'cases', icon:'folder', label:'Case Mgmt' },
-                { id:'court', icon:'landmark', label:'Court Mgmt' },
-                { id:'documents', icon:'file-text', label:'Doc Settings' },
-                { id:'ai', icon:'zap', label:'AI' },
-                { id:'legal', icon:'book', label:'Legal Research' },
-                { id:'notifications', icon:'bell', label:'Notif.' },
-                { id:'calendar', icon:'calendar', label:'Cal.' },
-                { id:'billing', icon:'credit-card', label:'Billing' },
-                { id:'security', icon:'shield', label:'Sec.' },
-                { id:'backup', icon:'database', label:'Backup' },
-                { id:'integrations', icon:'link', label:'Integ.' },
-                { id:'appearance', icon:'palette', label:'Appear.' },
-                { id:'audit', icon:'clipboard', label:'Audit' },
-                { id:'advanced', icon:'sliders', label:'Adv.' },
-              ].map(item => (
-                <button key={item.id} type="button"
-                  className={`settings-nav-item${item.id === 'general' ? ' settings-nav-item--active' : ''}`}>
-                  <Icon name={item.icon} size={16} />
-                  {item.label}
-                </button>
-              ))}
+              <button type="button" className="settings-nav-item settings-nav-item--active">
+                <Icon name="settings" size={16} />
+                General Settings
+              </button>
             </div>
           </nav>
 
@@ -367,7 +363,8 @@ export default function Settings() {
           <div className="settings-center">
             <h2 className="settings-center-title">General Settings</h2>
 
-            <div className="settings-logo-area">
+            <div id="section-logo">
+              <div className="settings-logo-area">
               <div className={`settings-logo-preview${!logoPreview ? ' settings-logo-preview--empty' : ''}`}>
                 {logoPreview ? (
                   <img src={logoPreview} alt="Website logo preview" />
@@ -393,69 +390,109 @@ export default function Settings() {
               </div>
             </div>
 
-            <Field label="Site Title" required>
+            </div>
+
+            <div id="section-site-title">
+              <Field label="Site Title" required>
               <Input value={values.siteTitle || ''} onChange={e => handleChange('siteTitle', e.target.value)} placeholder="Your application name" />
               {validationErrors.siteTitle && <div className="alert alert-danger alert--danger-mt">{validationErrors.siteTitle[0]}</div>}
             </Field>
-            <Field label="Tagline">
+            </div>
+
+            <div id="section-tagline">
+              <Field label="Tagline">
               <Input value={values.tagline || ''} onChange={e => handleChange('tagline', e.target.value)} placeholder="Short description" />
             </Field>
-            <Field label="Website URL">
+            </div>
+
+            <div id="section-site-url">
+              <Field label="Website URL">
               <Input value={values.siteUrl || ''} onChange={e => handleChange('siteUrl', e.target.value)} placeholder="https://example.com" />
               {validationErrors.siteUrl && <div className="alert alert-danger alert--danger-mt">{validationErrors.siteUrl[0]}</div>}
             </Field>
-            <Field label="Application URL">
+            </div>
+
+            <div id="section-app-url">
+              <Field label="Application URL">
               <Input value={values.appUrl || ''} onChange={e => handleChange('appUrl', e.target.value)} placeholder="https://app.example.com" />
               {validationErrors.appUrl && <div className="alert alert-danger alert--danger-mt">{validationErrors.appUrl[0]}</div>}
             </Field>
-            <Field label="Support Email">
+            </div>
+
+            <div id="section-support-email">
+              <Field label="Support Email">
               <Input value={values.supportEmail || ''} onChange={e => handleChange('supportEmail', e.target.value)} placeholder="support@example.com" type="email" />
               {validationErrors.supportEmail && <div className="alert alert-danger alert--danger-mt">{validationErrors.supportEmail[0]}</div>}
             </Field>
-            <Field label="Contact Number">
+            </div>
+
+            <div id="section-contact-number">
+              <Field label="Contact Number">
               <Input value={values.contactNumber || ''} onChange={e => handleChange('contactNumber', e.target.value)} placeholder="+1 555-123-4567" />
               {validationErrors.contactNumber && <div className="alert alert-danger alert--danger-mt">{validationErrors.contactNumber[0]}</div>}
             </Field>
+            </div>
 
-            <Field label="Membership Mode">
+            <div id="section-membership">
+              <Field label="Membership Mode">
               <Select options={MEMBERSHIP_OPTIONS} value={values.membershipMode || ''} onChange={val => handleChange('membershipMode', val)} placeholder="Select membership mode" />
             </Field>
-            <Field label="New User Default Role">
+            </div>
+
+            <div id="section-default-role">
+              <Field label="New User Default Role">
               <Select options={roles.map(r => ({ value: r.id, label: r.name }))} value={values.defaultRole || ''} onChange={val => handleChange('defaultRole', val)} placeholder="Select default role" />
             </Field>
+            </div>
 
-            <Field label="Language">
+            <div id="section-language">
+              <Field label="Language">
               <Select options={languages.map(l => ({ value: l.code, label: `${l.nativeName} (${l.name})` }))} value={values.language || ''} onChange={val => handleChange('language', val)} placeholder="Select language" />
             </Field>
-            <Field label="Timezone">
+            </div>
+
+            <div id="section-timezone">
+              <Field label="Timezone">
               <Select options={tzOptions} value={values.timezone || ''} onChange={val => handleChange('timezone', val)} placeholder="Select timezone" />
             </Field>
+            </div>
 
-            <Field label="Date Format">
+            <div id="section-date-format">
+              <Field label="Date Format">
               <Select options={DATE_FORMATS} value={values.dateFormat || ''} onChange={val => handleChange('dateFormat', val)} placeholder="Select date format" />
               <div className="settings-format-preview">
                 <div className="settings-format-preview__label">Preview</div>
                 <div className="settings-format-preview__value">{formatDatePreview(values.dateFormat || 'DD-MM-YYYY')}</div>
               </div>
             </Field>
-            <Field label="Time Format">
+            </div>
+
+            <div id="section-time-format">
+              <Field label="Time Format">
               <Select options={TIME_FORMATS} value={values.timeFormat || ''} onChange={val => handleChange('timeFormat', val)} placeholder="Select time format" />
               <div className="settings-format-preview">
                 <div className="settings-format-preview__label">Preview</div>
                 <div className="settings-format-preview__value">{formatTimePreview(values.timeFormat || '24-hour')}</div>
               </div>
             </Field>
-            <Field label="Week Starts On">
+            </div>
+
+            <div id="section-week-start">
+              <Field label="Week Starts On">
               <Select options={WEEK_STARTS_OPTIONS} value={values.weekStart || ''} onChange={val => handleChange('weekStart', val)} placeholder="Select first day of week" />
             </Field>
+            </div>
           </div>
 
           {/* ===== Right Sidebar ===== */}
           <aside className="settings-sidebar">
             <div className="settings-sidebar-section">
               <div className="settings-sidebar-title">In This Section</div>
-              {['Website Logo','Site Title','Tagline','Website URL','Application URL','Support Email','Contact Number','Membership Mode','Default Role','Language','Timezone','Date Format','Time Format','Week Starts On'].map(item => (
-                <button key={item} type="button" className="settings-sidebar-item">{item}</button>
+              {TOC_ITEMS.map(item => (
+                <button key={item.id} type="button" className="settings-sidebar-item"
+                  onClick={() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' })}>
+                  {item.label}
+                </button>
               ))}
             </div>
             <div className="settings-help-card">

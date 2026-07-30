@@ -6434,6 +6434,7 @@ select.form-input { cursor: pointer; appearance: auto; }
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 }
 .settings-topbar-left {
   display: flex;
@@ -6682,6 +6683,11 @@ select.form-input { cursor: pointer; appearance: auto; }
 .settings-bottombar-actions {
   display: flex;
   gap: 10px;
+}
+
+/* Remove bottom padding when settings page is active */
+.page-area:has(.settings-topbar) {
+  padding-bottom: 0;
 }
 
 /* Responsive */
