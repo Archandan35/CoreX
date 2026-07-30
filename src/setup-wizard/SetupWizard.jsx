@@ -490,7 +490,10 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
 
             {/* Header for current step */}
             <div style={{ flexShrink: 0, marginBottom: 4 }}>
-              <h2 className="ss-page-title">{STEPS[step].label}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className="ss-step-counter">{step + 1}</span>
+                <h2 className="ss-page-title" style={{ margin: 0 }}>{STEPS[step].label}</h2>
+              </div>
               <p className="ss-page-sub">{STEPS[step].desc}</p>
             </div>
 
@@ -737,8 +740,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
                 )}
                 {!analysis && !busy && (
                   <div className="ss-schema-panel">
-                    <h2 className="ss-page-title">3. Database Schema</h2>
-                    <p className="ss-page-sub">We'll create all the required database objects for your application.</p>
                     <div className="ss-schema-panel-head">
                       <h3>Schema Installation</h3>
                       <button className="ss-btn-customize" type="button">

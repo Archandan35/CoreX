@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import Card from '../components/ui/Card.jsx';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Button from '../components/ui/Button.jsx';
 import { Field, Input } from '../components/ui/Field.jsx';
 import Select from '../components/ui/Select.jsx';
@@ -16,14 +15,6 @@ import { settingsManager } from '../managers/SettingsManager.js';
 import { validateSettings } from '../business/validation/SettingsValidator.js';
 import useSaveHandler from '../hooks/useSaveHandler.js';
 import { invalidateCache } from '../services/ui-sync/index.js';
-
-const SECTIONS = [
-  { id: 'logo', label: 'Website Logo', icon: 'image' },
-  { id: 'site-info', label: 'Site Information', icon: 'info' },
-  { id: 'membership', label: 'Membership', icon: 'lock' },
-  { id: 'localization', label: 'Localization', icon: 'globe' },
-  { id: 'formats', label: 'Formats', icon: 'clock' },
-];
 
 const MEMBERSHIP_OPTIONS = [
   { value: 'public', label: 'Public Registration' },
@@ -93,7 +84,6 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [activeSection, setActiveSection] = useState('logo');
   const [values, setValues] = useState({});
   const [original, setOriginal] = useState({});
   const [dirty, setDirty] = useState(false);
@@ -110,9 +100,6 @@ export default function Settings() {
   const [confirmAction, setConfirmAction] = useState(null);
   const [confirmMode, setConfirmMode] = useState('leave');
   const [validationErrors, setValidationErrors] = useState({});
-
-  const sectionRefs = useRef({});
-  const observerRef = useRef(null);
 
   const fetchRoles = useCallback(async () => {
     try {
@@ -162,26 +149,6 @@ export default function Settings() {
     return () => window.removeEventListener('beforeunload', handler);
   }, [dirty]);
 
-  useEffect(() => {
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveSection(entry.target.dataset.section);
-          }
-        }
-      },
-      { rootMargin: '-80px 0px -60% 0px', threshold: 0 }
-    );
-    const refs = sectionRefs.current;
-    Object.values(refs).forEach((el) => {
-      if (el) observerRef.current?.observe(el);
-    });
-    return () => {
-      if (observerRef.current) observerRef.current.disconnect();
-    };
-  }, [loading]);
-
   const handleChange = useCallback((key, val) => {
     setValues((prev) => ({ ...prev, [key]: val }));
     setValidationErrors((prev) => ({ ...prev, [key]: undefined }));
@@ -230,14 +197,6 @@ export default function Settings() {
 
   const handleLogoDragLeave = useCallback(() => {
     setLogoDragOver(false);
-  }, []);
-
-  const scrollToSection = useCallback((id) => {
-    const el = sectionRefs.current[id];
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      setActiveSection(id);
-    }
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -318,6 +277,7 @@ export default function Settings() {
     setConfirmOpen(false);
   }, [handleSave]);
 
+  const [searchQuery, setSearchQuery] = useState('');
   const tzOptions = useMemo(() => {
     return allTimezones.map((tz) => ({
       value: tz,
@@ -327,18 +287,18 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <div className="page settings-layout">
-        <div className="settings-left-nav">
-          <Skeleton height={32} count={5} />
+      <div className="page" style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
+        <div className="settings-topbar" style={{ justifyContent:'center' }}>
+          <Skeleton height={24} width="200px" />
         </div>
-        <div className="settings-content">
-          <Skeleton height={24} width="60%" />
-          <div style={{ marginTop: 16 }}><Skeleton height={200} /></div>
-          <div style={{ marginTop: 16 }}><Skeleton height={300} /></div>
-        </div>
-        <div className="settings-in-this-section">
-          <Skeleton height={16} width="80%" />
-          <Skeleton height={12} count={5} />
+        <div className="settings-body">
+          <div className="settings-nav"><Skeleton height={20} width="80%" /><Skeleton height={12} count={10} /></div>
+          <div className="settings-center">
+            <Skeleton height={28} width="60%" />
+            <div style={{ marginTop: 16 }}><Skeleton height={200} /></div>
+            <div style={{ marginTop: 16 }}><Skeleton height={300} /></div>
+          </div>
+          <div className="settings-sidebar"><Skeleton height={16} width="80%" /><Skeleton height={12} count={5} /></div>
         </div>
       </div>
     );
@@ -353,319 +313,180 @@ export default function Settings() {
   }
 
   return (
-    <div className="page">
-      <div className="page__header">
-        <h1 className="page__title">General Settings</h1>
+    <div className="page" style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
+      {/* ===== Top Header Bar ===== */}
+      <div className="settings-topbar">
+        <div className="settings-topbar-left">
+          <Icon name="settings" size={20} />
+          <h1 className="settings-topbar-title">Settings</h1>
+        </div>
+        <div className="settings-topbar-right">
+          <div className="settings-search-box">
+            <Icon name="search" size={14} />
+            <input type="text" placeholder="Search anything..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+            <span className="settings-search-hint">Ctrl+K</span>
+          </div>
+          <label className="settings-dev-toggle">
+            <input type="checkbox" checked={devMode} onChange={e => setDevMode(e.target.checked)} />
+            <span className="settings-dev-toggle-label">Dev Mode</span>
+          </label>
+        </div>
       </div>
 
-      <PermissionGate permission={PERMISSIONS.SETTINGS_READ} fallback={<Card><EmptyState icon="lock" title="Access denied" message="You don't have permission to view settings." /></Card>}>
-        <div className="settings-layout">
-          {/* Left Navigation - Desktop */}
-          <nav className="settings-left-nav" aria-label="Settings sections">
-            <div className="settings-left-nav__title">Settings Menu</div>
-            <div className="settings-left-nav__items">
-              {SECTIONS.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`settings-left-nav__item${activeSection === s.id ? ' settings-left-nav__item--active' : ''}`}
-                  onClick={() => scrollToSection(s.id)}
-                >
-                  <Icon name={s.icon} size={16} />
-                  {s.label}
+      <PermissionGate permission={PERMISSIONS.SETTINGS_READ} fallback={<EmptyState icon="lock" title="Access denied" message="You don't have permission to view settings." />}>
+        <div className="settings-body">
+          {/* ===== Left Nav ===== */}
+          <nav className="settings-nav">
+            <div className="settings-nav-section">
+              <div className="settings-nav-section-title">MAIN</div>
+              {[
+                { id:'general', icon:'settings', label:'General Settings' },
+                { id:'org', icon:'users', label:'Org. Settings' },
+                { id:'users', icon:'user', label:'User Mgmt' },
+                { id:'cases', icon:'folder', label:'Case Mgmt' },
+                { id:'court', icon:'landmark', label:'Court Mgmt' },
+                { id:'documents', icon:'file-text', label:'Doc Settings' },
+                { id:'ai', icon:'zap', label:'AI' },
+                { id:'legal', icon:'book', label:'Legal Research' },
+                { id:'notifications', icon:'bell', label:'Notif.' },
+                { id:'calendar', icon:'calendar', label:'Cal.' },
+                { id:'billing', icon:'credit-card', label:'Billing' },
+                { id:'security', icon:'shield', label:'Sec.' },
+                { id:'backup', icon:'database', label:'Backup' },
+                { id:'integrations', icon:'link', label:'Integ.' },
+                { id:'appearance', icon:'palette', label:'Appear.' },
+                { id:'audit', icon:'clipboard', label:'Audit' },
+                { id:'advanced', icon:'sliders', label:'Adv.' },
+              ].map(item => (
+                <button key={item.id} type="button"
+                  className={`settings-nav-item${item.id === 'general' ? ' settings-nav-item--active' : ''}`}>
+                  <Icon name={item.icon} size={16} />
+                  {item.label}
                 </button>
               ))}
             </div>
           </nav>
 
-          {/* Mobile Section Navigation */}
-          <nav className="settings-mobile-nav" aria-label="Settings sections">
-            {SECTIONS.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className={`settings-mobile-nav__item${activeSection === s.id ? ' settings-mobile-nav__item--active' : ''}`}
-                onClick={() => scrollToSection(s.id)}
-              >
-                {s.label}
-              </button>
-            ))}
-          </nav>
+          {/* ===== Center Content ===== */}
+          <div className="settings-center">
+            <h2 className="settings-center-title">General Settings</h2>
 
-          {/* Main Content */}
-          <div className="settings-content">
-            {/* Website Logo Section */}
-            <section
-              id="section-logo"
-              className="settings-section"
-              ref={(el) => { sectionRefs.current.logo = el; }}
-              data-section="logo"
-            >
-              <Card title="Website Logo">
-                <div className="settings-logo-area">
-                  <div className={`settings-logo-preview${!logoPreview ? ' settings-logo-preview--empty' : ''}`}>
-                    {logoPreview ? (
-                      <img src={logoPreview} alt="Website logo preview" />
-                    ) : (
-                      <>
-                        <Icon name="image" size={32} strokeWidth={1.5} />
-                        <span>No logo</span>
-                      </>
-                    )}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div
-                      className={`settings-logo-dropzone${logoDragOver ? ' settings-logo-dropzone--active' : ''}`}
-                      onDragOver={handleLogoDragOver}
-                      onDragLeave={handleLogoDragLeave}
-                      onDrop={handleLogoDrop}
-                      onClick={() => document.getElementById('logo-file-input')?.click()}
-                    >
-                      <Icon name="upload" size={24} strokeWidth={1.5} className="settings-logo-dropzone__icon" />
-                      <div className="settings-logo-dropzone__text">Drag & drop logo here, or click to browse</div>
-                      <div className="settings-logo-dropzone__hint">PNG, JPG, JPEG, SVG, WEBP · Max 5MB</div>
-                      <input
-                        id="logo-file-input"
-                        type="file"
-                        accept=".png,.jpg,.jpeg,.svg,.webp"
-                        style={{ display: 'none' }}
-                        onChange={handleLogoInputChange}
-                      />
-                    </div>
-                    {logoPreview && (
-                      <div className="settings-logo-actions">
-                        <Button variant="secondary" size="sm" onClick={() => document.getElementById('logo-file-input')?.click()}>
-                          Replace
-                        </Button>
-                        <Button variant="danger" size="sm" onClick={handleLogoRemove}>
-                          Remove
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+            <div className="settings-logo-area">
+              <div className={`settings-logo-preview${!logoPreview ? ' settings-logo-preview--empty' : ''}`}>
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Website logo preview" />
+                ) : (
+                  <><Icon name="image" size={32} strokeWidth={1.5} /><span>No logo</span></>
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div className={`settings-logo-dropzone${logoDragOver ? ' settings-logo-dropzone--active' : ''}`}
+                  onDragOver={handleLogoDragOver} onDragLeave={handleLogoDragLeave} onDrop={handleLogoDrop}
+                  onClick={() => document.getElementById('logo-file-input')?.click()}>
+                  <Icon name="upload" size={24} strokeWidth={1.5} className="settings-logo-dropzone__icon" />
+                  <div className="settings-logo-dropzone__text">Drag & drop logo here, or click to browse</div>
+                  <div className="settings-logo-dropzone__hint">PNG, JPG, JPEG, SVG, WEBP &middot; Max 5MB</div>
+                  <input id="logo-file-input" type="file" accept=".png,.jpg,.jpeg,.svg,.webp" style={{ display:'none' }} onChange={handleLogoInputChange} />
                 </div>
-              </Card>
-            </section>
-
-            {/* Site Information Section */}
-            <section
-              id="section-site-info"
-              className="settings-section"
-              ref={(el) => { sectionRefs.current['site-info'] = el; }}
-              data-section="site-info"
-            >
-              <Card title="Site Information" subtitle="Configure your application identity and contact details.">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
-                  <Field label="Site Title" required>
-                    <Input
-                      value={values.siteTitle || ''}
-                      onChange={(e) => handleChange('siteTitle', e.target.value)}
-                      placeholder="Your application name"
-                    />
-                    {validationErrors.siteTitle && (
-                      <div className="alert alert-danger alert--danger-mt">{validationErrors.siteTitle[0]}</div>
-                    )}
-                  </Field>
-                  <Field label="Tagline">
-                    <Input
-                      value={values.tagline || ''}
-                      onChange={(e) => handleChange('tagline', e.target.value)}
-                      placeholder="Short description"
-                    />
-                  </Field>
-                  <Field label="Website URL">
-                    <Input
-                      value={values.siteUrl || ''}
-                      onChange={(e) => handleChange('siteUrl', e.target.value)}
-                      placeholder="https://example.com"
-                    />
-                    {validationErrors.siteUrl && (
-                      <div className="alert alert-danger alert--danger-mt">{validationErrors.siteUrl[0]}</div>
-                    )}
-                  </Field>
-                  <Field label="Application URL">
-                    <Input
-                      value={values.appUrl || ''}
-                      onChange={(e) => handleChange('appUrl', e.target.value)}
-                      placeholder="https://app.example.com"
-                    />
-                    {validationErrors.appUrl && (
-                      <div className="alert alert-danger alert--danger-mt">{validationErrors.appUrl[0]}</div>
-                    )}
-                  </Field>
-                  <Field label="Support Email">
-                    <Input
-                      value={values.supportEmail || ''}
-                      onChange={(e) => handleChange('supportEmail', e.target.value)}
-                      placeholder="support@example.com"
-                      type="email"
-                    />
-                    {validationErrors.supportEmail && (
-                      <div className="alert alert-danger alert--danger-mt">{validationErrors.supportEmail[0]}</div>
-                    )}
-                  </Field>
-                  <Field label="Contact Number">
-                    <Input
-                      value={values.contactNumber || ''}
-                      onChange={(e) => handleChange('contactNumber', e.target.value)}
-                      placeholder="+1 555-123-4567"
-                    />
-                    {validationErrors.contactNumber && (
-                      <div className="alert alert-danger alert--danger-mt">{validationErrors.contactNumber[0]}</div>
-                    )}
-                  </Field>
-                </div>
-              </Card>
-            </section>
-
-            {/* Membership Section */}
-            <section
-              id="section-membership"
-              className="settings-section"
-              ref={(el) => { sectionRefs.current.membership = el; }}
-              data-section="membership"
-            >
-              <Card title="Membership" subtitle="Control how new users register for the application.">
-                <Field label="Membership Mode">
-                  <Select
-                    options={MEMBERSHIP_OPTIONS}
-                    value={values.membershipMode || ''}
-                    onChange={(val) => handleChange('membershipMode', val)}
-                    placeholder="Select membership mode"
-                  />
-                </Field>
-                <Field label="New User Default Role">
-                  <Select
-                    options={roles.map((r) => ({ value: r.id, label: r.name }))}
-                    value={values.defaultRole || ''}
-                    onChange={(val) => handleChange('defaultRole', val)}
-                    placeholder="Select default role"
-                  />
-                </Field>
-              </Card>
-            </section>
-
-            {/* Localization Section */}
-            <section
-              id="section-localization"
-              className="settings-section"
-              ref={(el) => { sectionRefs.current.localization = el; }}
-              data-section="localization"
-            >
-              <Card title="Localization" subtitle="Configure language, timezone, and regional preferences.">
-                <Field label="Language">
-                  <Select
-                    options={languages.map((l) => ({ value: l.code, label: `${l.nativeName} (${l.name})` }))}
-                    value={values.language || ''}
-                    onChange={(val) => handleChange('language', val)}
-                    placeholder="Select language"
-                  />
-                </Field>
-                <Field label="Timezone">
-                  <Select
-                    options={tzOptions}
-                    value={values.timezone || ''}
-                    onChange={(val) => handleChange('timezone', val)}
-                    placeholder="Select timezone"
-                  />
-                </Field>
-              </Card>
-            </section>
-
-            {/* Formats Section */}
-            <section
-              id="section-formats"
-              className="settings-section"
-              ref={(el) => { sectionRefs.current.formats = el; }}
-              data-section="formats"
-            >
-              <Card title="Formats" subtitle="Configure date, time, and calendar preferences.">
-                <Field label="Date Format">
-                  <Select
-                    options={DATE_FORMATS}
-                    value={values.dateFormat || ''}
-                    onChange={(val) => handleChange('dateFormat', val)}
-                    placeholder="Select date format"
-                  />
-                  <div className="settings-format-preview">
-                    <div className="settings-format-preview__label">Preview</div>
-                    <div className="settings-format-preview__value">
-                      {formatDatePreview(values.dateFormat || 'DD-MM-YYYY')}
-                    </div>
+                {logoPreview && (
+                  <div className="settings-logo-actions">
+                    <Button variant="secondary" size="sm" onClick={() => document.getElementById('logo-file-input')?.click()}>Replace</Button>
+                    <Button variant="danger" size="sm" onClick={handleLogoRemove}>Remove</Button>
                   </div>
-                </Field>
-                <Field label="Time Format">
-                  <Select
-                    options={TIME_FORMATS}
-                    value={values.timeFormat || ''}
-                    onChange={(val) => handleChange('timeFormat', val)}
-                    placeholder="Select time format"
-                  />
-                  <div className="settings-format-preview">
-                    <div className="settings-format-preview__label">Preview</div>
-                    <div className="settings-format-preview__value">
-                      {formatTimePreview(values.timeFormat || '24-hour')}
-                    </div>
-                  </div>
-                </Field>
-                <Field label="Week Starts On">
-                  <Select
-                    options={WEEK_STARTS_OPTIONS}
-                    value={values.weekStart || ''}
-                    onChange={(val) => handleChange('weekStart', val)}
-                    placeholder="Select first day of week"
-                  />
-                </Field>
-              </Card>
-            </section>
+                )}
+              </div>
+            </div>
+
+            <Field label="Site Title" required>
+              <Input value={values.siteTitle || ''} onChange={e => handleChange('siteTitle', e.target.value)} placeholder="Your application name" />
+              {validationErrors.siteTitle && <div className="alert alert-danger alert--danger-mt">{validationErrors.siteTitle[0]}</div>}
+            </Field>
+            <Field label="Tagline">
+              <Input value={values.tagline || ''} onChange={e => handleChange('tagline', e.target.value)} placeholder="Short description" />
+            </Field>
+            <Field label="Website URL">
+              <Input value={values.siteUrl || ''} onChange={e => handleChange('siteUrl', e.target.value)} placeholder="https://example.com" />
+              {validationErrors.siteUrl && <div className="alert alert-danger alert--danger-mt">{validationErrors.siteUrl[0]}</div>}
+            </Field>
+            <Field label="Application URL">
+              <Input value={values.appUrl || ''} onChange={e => handleChange('appUrl', e.target.value)} placeholder="https://app.example.com" />
+              {validationErrors.appUrl && <div className="alert alert-danger alert--danger-mt">{validationErrors.appUrl[0]}</div>}
+            </Field>
+            <Field label="Support Email">
+              <Input value={values.supportEmail || ''} onChange={e => handleChange('supportEmail', e.target.value)} placeholder="support@example.com" type="email" />
+              {validationErrors.supportEmail && <div className="alert alert-danger alert--danger-mt">{validationErrors.supportEmail[0]}</div>}
+            </Field>
+            <Field label="Contact Number">
+              <Input value={values.contactNumber || ''} onChange={e => handleChange('contactNumber', e.target.value)} placeholder="+1 555-123-4567" />
+              {validationErrors.contactNumber && <div className="alert alert-danger alert--danger-mt">{validationErrors.contactNumber[0]}</div>}
+            </Field>
+
+            <Field label="Membership Mode">
+              <Select options={MEMBERSHIP_OPTIONS} value={values.membershipMode || ''} onChange={val => handleChange('membershipMode', val)} placeholder="Select membership mode" />
+            </Field>
+            <Field label="New User Default Role">
+              <Select options={roles.map(r => ({ value: r.id, label: r.name }))} value={values.defaultRole || ''} onChange={val => handleChange('defaultRole', val)} placeholder="Select default role" />
+            </Field>
+
+            <Field label="Language">
+              <Select options={languages.map(l => ({ value: l.code, label: `${l.nativeName} (${l.name})` }))} value={values.language || ''} onChange={val => handleChange('language', val)} placeholder="Select language" />
+            </Field>
+            <Field label="Timezone">
+              <Select options={tzOptions} value={values.timezone || ''} onChange={val => handleChange('timezone', val)} placeholder="Select timezone" />
+            </Field>
+
+            <Field label="Date Format">
+              <Select options={DATE_FORMATS} value={values.dateFormat || ''} onChange={val => handleChange('dateFormat', val)} placeholder="Select date format" />
+              <div className="settings-format-preview">
+                <div className="settings-format-preview__label">Preview</div>
+                <div className="settings-format-preview__value">{formatDatePreview(values.dateFormat || 'DD-MM-YYYY')}</div>
+              </div>
+            </Field>
+            <Field label="Time Format">
+              <Select options={TIME_FORMATS} value={values.timeFormat || ''} onChange={val => handleChange('timeFormat', val)} placeholder="Select time format" />
+              <div className="settings-format-preview">
+                <div className="settings-format-preview__label">Preview</div>
+                <div className="settings-format-preview__value">{formatTimePreview(values.timeFormat || '24-hour')}</div>
+              </div>
+            </Field>
+            <Field label="Week Starts On">
+              <Select options={WEEK_STARTS_OPTIONS} value={values.weekStart || ''} onChange={val => handleChange('weekStart', val)} placeholder="Select first day of week" />
+            </Field>
           </div>
 
-          {/* Right Section Navigation - Desktop */}
-          <nav className="settings-in-this-section" aria-label="In this section">
-            <div className="settings-in-this-section__title">In This Section</div>
-            <div className="settings-in-this-section__items">
-              {SECTIONS.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`settings-in-this-section__item${activeSection === s.id ? ' settings-in-this-section__item--active' : ''}`}
-                  onClick={() => scrollToSection(s.id)}
-                >
-                  {s.label}
-                </button>
+          {/* ===== Right Sidebar ===== */}
+          <aside className="settings-sidebar">
+            <div className="settings-sidebar-section">
+              <div className="settings-sidebar-title">In This Section</div>
+              {['Website Logo','Site Title','Tagline','Website URL','Application URL','Support Email','Contact Number','Membership Mode','Default Role','Language','Timezone','Date Format','Time Format','Week Starts On'].map(item => (
+                <button key={item} type="button" className="settings-sidebar-item">{item}</button>
               ))}
             </div>
-          </nav>
+            <div className="settings-help-card">
+              <div className="settings-help-card-title">Need Help?</div>
+              <p className="settings-help-card-desc">Check our documentation or contact support.</p>
+              <button className="settings-help-card-btn"><Icon name="external-link" size={13} /> View Docs</button>
+            </div>
+          </aside>
         </div>
 
-        {/* Sticky Save Bar */}
-        {dirty && (
-          <div className="settings-sticky-bar">
-            <div className="settings-sticky-bar__label">
-              <Icon name="alert-circle" size={16} />
-              Unsaved Changes
-            </div>
-            <div className="settings-sticky-bar__actions">
-              <PermissionGate permission={PERMISSIONS.SETTINGS_UPDATE}>
-                <Button variant="secondary" onClick={handleReset}>Reset</Button>
-                <Button onClick={handleSave} loading={saving} icon="save">Save Changes</Button>
-              </PermissionGate>
-            </div>
+        {/* ===== Bottom Bar ===== */}
+        <div className="settings-bottombar">
+          <div className="settings-bottombar-actions">
+            <PermissionGate permission={PERMISSIONS.SETTINGS_UPDATE}>
+              <Button variant="secondary" onClick={handleReset}>Reset All</Button>
+              <Button onClick={handleSave} loading={saving} icon="save">Save Changes</Button>
+            </PermissionGate>
           </div>
-        )}
+        </div>
       </PermissionGate>
 
-      {/* Confirm Dialog */}
       <ConfirmDialog
         open={confirmOpen}
         onClose={() => { setConfirmOpen(false); setConfirmAction(null); }}
         onConfirm={handleLeaveConfirm}
         title={confirmMode === 'reset' ? 'Reset Changes' : 'Unsaved Changes'}
-        message={
-          confirmMode === 'reset'
-            ? 'Are you sure you want to reset all changes? This will restore the most recently saved configuration.'
-            : 'You have unsaved changes. Would you like to save before leaving?'
-        }
+        message={confirmMode === 'reset' ? 'Are you sure you want to reset all changes? This will restore the most recently saved configuration.' : 'You have unsaved changes. Would you like to save before leaving?'}
         confirmText={confirmMode === 'reset' ? 'Reset' : 'Discard'}
         cancelText="Cancel"
         variant="danger"
