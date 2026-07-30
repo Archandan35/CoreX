@@ -8,8 +8,6 @@ import DocumentSettings from '../../components/invoice/DocumentSettings.jsx';
 import CustomHeaderPanel from '../../components/invoice/CustomHeaderPanel.jsx';
 import ChargesModal from '../../components/invoice/modals/ChargesModal.jsx';
 import DynamicCustomHeaders from '../../components/invoice/DynamicCustomHeaders.jsx';
-import Modal from '../../components/ui/Modal.jsx';
-import Button from '../../components/ui/Button.jsx';
 import { Field, Input } from '../../components/ui/Field.jsx';
 
 import Icon from '../../components/ui/Icon.jsx';
@@ -33,6 +31,7 @@ function generateKey() {
 }
 
 export default function CreateInvoice() {
+  const floatingDragging = useRef(null);
   const navigate = useNavigate();
 
   // --- Master data ---
@@ -95,6 +94,14 @@ export default function CreateInvoice() {
   // --- Notes & Terms ---
   const [notes, setNotes] = useState([]);
   const [terms, setTerms] = useState([]);
+  const [selectedNoteIdx, setSelectedNoteIdx] = useState(-1);
+  const [selectedTermIdx, setSelectedTermIdx] = useState(-1);
+  const [noteText, setNoteText] = useState('');
+  const [termText, setTermText] = useState('');
+  const [notesDrawerOpen, setNotesDrawerOpen] = useState(false);
+  const [termsDrawerOpen, setTermsDrawerOpen] = useState(false);
+  const [draftNoteTexts, setDraftNoteTexts] = useState({});
+  const [draftTermTexts, setDraftTermTexts] = useState({});
 
   // --- Toggles ---
   const [reverseCharge, setReverseCharge] = useState(false);
@@ -120,8 +127,8 @@ export default function CreateInvoice() {
   const [addCustomerPanelOpen, setAddCustomerPanelOpen] = useState(false);
   const [addProductPanelOpen, setAddProductPanelOpen] = useState(false);
   const [productModal, setProductModal] = useState({ open: false, mode: 'create', product: null });
-  const [bankModal, setBankModal] = useState(false);
-  const [signatureModal, setSignatureModal] = useState(false);
+  const [bankDrawerOpen, setBankDrawerOpen] = useState(false);
+  const [signatureDrawerOpen, setSignatureDrawerOpen] = useState(false);
   const [bankForm, setBankForm] = useState({ bank_name: '', account_number: '', ifsc: '', branch: '', upi_id: '' });
   const [sigName, setSigName] = useState('');
 
@@ -332,6 +339,36 @@ export default function CreateInvoice() {
   const removeTerm = useCallback((i) => setTerms(p => p.filter((_, j) => j !== i)), []);
   const updateTerm = useCallback((i, t) => setTerms(p => { const next = [...p]; next[i] = t; return next; }), []);
 
+  // Sync selected note/term into local text buffer
+  useEffect(() => {
+    if (selectedNoteIdx >= 0 && selectedNoteIdx < notes.length) {
+      setNoteText(notes[selectedNoteIdx].text);
+    } else {
+      setNoteText('');
+    }
+  }, [selectedNoteIdx, notes]);
+  useEffect(() => {
+    if (selectedTermIdx >= 0 && selectedTermIdx < terms.length) {
+      setTermText(terms[selectedTermIdx].text);
+    } else {
+      setTermText('');
+    }
+  }, [selectedTermIdx, terms]);
+
+  // Update note/term when textarea is edited
+  const handleNoteTextChange = useCallback((val) => {
+    setNoteText(val);
+    if (selectedNoteIdx >= 0 && selectedNoteIdx < notes.length) {
+      updateNote(selectedNoteIdx, { ...notes[selectedNoteIdx], text: val });
+    }
+  }, [selectedNoteIdx, notes, updateNote]);
+  const handleTermTextChange = useCallback((val) => {
+    setTermText(val);
+    if (selectedTermIdx >= 0 && selectedTermIdx < terms.length) {
+      updateTerm(selectedTermIdx, { ...terms[selectedTermIdx], text: val });
+    }
+  }, [selectedTermIdx, terms, updateTerm]);
+
   // --- AI ---
   const draftWithAI = useCallback(async () => {
     setAiBusy(true);
@@ -345,8 +382,20 @@ export default function CreateInvoice() {
           discountType: 'percent', discountValue: 0,
         })));
       }
-      if (result?.notes) setNotes(p => [...p, { id: generateKey(), text: result.notes }]);
-      if (result?.terms) setTerms(p => [...p, { id: generateKey(), text: result.terms }]);
+      if (result?.notes) {
+        setNotes(p => {
+          const idx = p.length;
+          setSelectedNoteIdx(idx);
+          return [...p, { id: generateKey(), text: result.notes }];
+        });
+      }
+      if (result?.terms) {
+        setTerms(p => {
+          const idx = p.length;
+          setSelectedTermIdx(idx);
+          return [...p, { id: generateKey(), text: result.terms }];
+        });
+      }
       notificationManager.success('AI Draft', 'Invoice draft generated.');
     } catch (e) {
       notificationManager.error('AI Draft', e.message || 'Failed.');
@@ -377,7 +426,7 @@ export default function CreateInvoice() {
       const b = await invoiceService.createBank(bankForm);
       setBanks(p => [...p, b]);
       setSelectedBank(b);
-      setBankModal(false);
+      setBankDrawerOpen(false);
       notificationManager.success('Bank', 'Bank added.');
     } catch (e) { notificationManager.error('Bank', e.message); }
   }, [bankForm]);
@@ -626,19 +675,17 @@ export default function CreateInvoice() {
             </div>
           </div>
           <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
-            <button className="ni-btn-primary" onClick={saveInvoice} disabled={!canSave || saving}
-              style={{borderRadius:'8px'}}>
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-            <button className="ni-btn-secondary" onClick={saveDraft} disabled={!canSave || saving}
-              style={{borderRadius:'8px'}}>
-              Save Draft
-            </button>
             <div style={{position:'relative'}}>
-              <button className="ni-btn-primary" onClick={() => setSaveMenuOpen(!saveMenuOpen)} disabled={!canSave || saving}
-                style={{borderRadius:'8px',padding:'11px 10px'}}>
-                <Icon name="chevronDown" />
-              </button>
+              <div style={{display:'flex'}}>
+                <button className="ni-btn-primary" onClick={saveInvoice} disabled={!canSave || saving}
+                  style={{borderRadius:'8px 0 0 8px'}}>
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+                <button className="ni-btn-primary" onClick={() => setSaveMenuOpen(!saveMenuOpen)} disabled={!canSave || saving}
+                  style={{borderRadius:'0 8px 8px 0', padding:'11px 8px', borderLeft:'1px solid rgba(255,255,255,0.25)'}}>
+                  <Icon name="chevronDown" />
+                </button>
+              </div>
               {saveMenuOpen && (
                 <div style={{position:'absolute',top:'100%',right:0,background:'#fff',border:'1px solid var(--ni-border)',borderRadius:'8px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:100,minWidth:'170px',marginTop:'4px'}}>
                   <div style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:500}}
@@ -653,6 +700,10 @@ export default function CreateInvoice() {
                 </div>
               )}
             </div>
+            <button className="ni-btn-primary" onClick={saveDraft} disabled={!canSave || saving}
+              style={{borderRadius:'8px'}}>
+              Save Draft
+            </button>
           </div>
         </div>
 
@@ -950,41 +1001,74 @@ export default function CreateInvoice() {
           <div className="ni-field-block">
             <div className="ni-field-block-header">
               <div className="ni-field-block-title"><Icon name="edit" /> Notes <Icon name="info" className="ni-info" /></div>
-              <button className="ni-btn-outline" onClick={addNote}><Icon name="plus" /> New Note</button>
+              <button className="ni-btn-outline" onClick={() => { setDraftNoteTexts(Object.fromEntries(notes.map((n,i)=>[i,n.text]))); setNotesDrawerOpen(true); }}><Icon name="plus" /> Add Notes</button>
             </div>
+            {notes.length > 0 && (
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                <select className="ni-select-box" value={selectedNoteIdx >= 0 ? selectedNoteIdx : ''}
+                  onChange={e => setSelectedNoteIdx(Number(e.target.value))}
+                  style={{width:'auto',minWidth:120,fontWeight:400,fontSize:13,padding:'6px 10px'}}>
+                  <option value="" disabled>Select a note</option>
+                  {notes.map((n,i) => (
+                    <option key={n.id} value={i}>Note {i + 1}</option>
+                  ))}
+                </select>
+                <span style={{fontSize:12,color:'var(--ni-text-light-gray)'}}>
+                  {notes.length} note{notes.length > 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
             <div className="ni-notes-list">
-              {notes.length === 0 && (
+              {notes.length === 0 ? (
                 <div style={{ color:'var(--ni-text-light-gray)', fontSize:'13px', marginBottom:'8px', padding:'8px 0' }}>
-                  No notes added yet. Click "New Note" to add one.
+                  No notes added yet.
                 </div>
+              ) : selectedNoteIdx >= 0 && selectedNoteIdx < notes.length ? (
+                <textarea
+                  style={{width:'100%',minHeight:80,border:'1px solid var(--ni-border)',borderRadius:'8px',padding:'10px',fontSize:13,fontFamily:'inherit',resize:'vertical'}}
+                  placeholder="Edit note..."
+                  value={noteText}
+                  onChange={e => handleNoteTextChange(e.target.value)}
+                />
+              ) : (
+                <div style={{fontSize:13,color:'var(--ni-text-light-gray)',padding:'4px 0'}}>Select a note above to edit.</div>
               )}
-              {notes.map((n, i) => (
-                <div key={n.id} className="ni-textarea-wrap" style={{ marginBottom:'8px' }}>
-                  <textarea placeholder="Enter your notes, say thanks, or anything else..."
-                    value={n.text}
-                    onChange={e => updateNote(i, { ...n, text: e.target.value })} />
-                  <div style={{ display:'flex', gap:'6px', marginTop:'4px' }}>
-                    {i === 0 && <button className="ni-btn-ai-assist" onClick={aiSuggestNote}><Icon name="sparkles" /> AI Assist</button>}
-                    <span style={{ cursor:'pointer', color:'var(--ni-text-light-gray)', fontSize:'12px', padding:'4px' }} onClick={() => removeNote(i)}><Icon name="x" /> Remove</span>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
 
           <div className="ni-field-block">
             <div className="ni-field-block-header">
               <div className="ni-field-block-title"><Icon name="file-text" /> Terms &amp; Conditions <Icon name="info" className="ni-info" /></div>
-              <button className="ni-btn-outline" onClick={addTerm}><Icon name="plus" /> New Terms</button>
+              <button className="ni-btn-outline" onClick={() => { setDraftTermTexts(Object.fromEntries(terms.map((t,i)=>[i,t.text]))); setTermsDrawerOpen(true); }}><Icon name="plus" /> Add Terms</button>
             </div>
+            {terms.length > 0 && (
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                <select className="ni-select-box" value={selectedTermIdx >= 0 ? selectedTermIdx : ''}
+                  onChange={e => setSelectedTermIdx(Number(e.target.value))}
+                  style={{width:'auto',minWidth:120,fontWeight:400,fontSize:13,padding:'6px 10px'}}>
+                  <option value="" disabled>Select a term</option>
+                  {terms.map((t,i) => (
+                    <option key={t.id} value={i}>Term {i + 1}</option>
+                  ))}
+                </select>
+                <span style={{fontSize:12,color:'var(--ni-text-light-gray)'}}>
+                  {terms.length} term{terms.length > 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
             <div className="ni-terms-box">
-              {terms.map((t, i) => (
-                <div key={t.id} style={{ display:'flex', gap:'8px', marginBottom:'6px' }}>
-                  <input style={{ border:'1px solid var(--ni-border)', borderRadius:'6px', padding:'8px', fontSize:'13px', width:'100%', fontFamily:'inherit' }}
-                    value={t.text} onChange={e => updateTerm(i, { ...t, text: e.target.value })} placeholder="Enter terms and conditions..." />
-                  <span style={{ cursor:'pointer', color:'var(--ni-text-light-gray)' }} onClick={() => removeTerm(i)}><Icon name="x" /></span>
-                </div>
-              ))}
+              {terms.length === 0 ? (
+                <div style={{ color:'var(--ni-text-light-gray)', fontSize:'13px', padding:'8px 0' }}>No terms added yet.</div>
+              ) : selectedTermIdx >= 0 && selectedTermIdx < terms.length ? (
+                <textarea
+                  style={{width:'100%',minHeight:80,border:'1px solid var(--ni-border)',borderRadius:'8px',padding:'10px',fontSize:13,fontFamily:'inherit',resize:'vertical'}}
+                  placeholder="Edit term..."
+                  value={termText}
+                  onChange={e => handleTermTextChange(e.target.value)}
+                />
+              ) : (
+                <div style={{fontSize:13,color:'var(--ni-text-light-gray)',padding:'4px 0'}}>Select a term above to edit.</div>
+              )}
             </div>
           </div>
 
@@ -1027,12 +1111,15 @@ export default function CreateInvoice() {
               </div>
             </div>
 
-            <div className="ni-discount-selectors">
-              <div className="ni-dd-box">
+            <div className="ni-discount-selectors" style={{position:'relative'}}>
+              <div className="ni-dd-box" onClick={() => setExtraDiscountType(t => t === 'percent' ? 'fixed' : 'percent')} style={{cursor:'pointer'}}>
                 <span className="ni-strike">Extra Discount</span> <Icon name="chevronDown" />
               </div>
-              <div className="ni-dd-box">
-                {extraDiscountValue || 0} <Icon name="chevronDown" />
+              <div className="ni-dd-box" style={{position:'relative',cursor:'pointer'}} onClick={(e) => {
+                const v = prompt('Enter extra discount value:', String(extraDiscountValue));
+                if (v !== null) setExtraDiscountValue(Number(v) || 0);
+              }}>
+                {extraDiscountValue || 0} {extraDiscountType === 'percent' ? '%' : '₹'} <Icon name="chevronDown" />
               </div>
             </div>
 
@@ -1058,7 +1145,7 @@ export default function CreateInvoice() {
           <div className="ni-totals-body">
             <div className="ni-section-row">
               <div className="ni-field-block-title"><Icon name="landmark" /> Select Bank <Icon name="info" className="ni-info" /></div>
-              <div className="ni-link-purple" onClick={() => setBankModal(true)}><Icon name="plus" /> Add New Bank</div>
+              <div className="ni-link-purple" onClick={() => setBankDrawerOpen(true)}><Icon name="plus" /> Add New Bank</div>
             </div>
             <div className="ni-bank-select" onClick={() => setBankOpen(!bankOpen)}>
               <div className="ni-bank-select-left">
@@ -1071,8 +1158,9 @@ export default function CreateInvoice() {
               <div className="ni-dropdown" style={{ marginTop: 0, width: '100%' }}>
                 {banks.length === 0 && <div className="ni-dropdown-item" style={{ cursor:'default', color:'var(--ni-text-light-gray)' }}>No banks found</div>}
                 {banks.map(b => (
-                  <div key={b.id} className="ni-dropdown-item" onClick={() => { setSelectedBank(b); setBankOpen(false); }}>
-                    {b.bank_name} ({b.account_number?.slice(-4) || '...'})
+                  <div key={b.id} className="ni-dropdown-item" onClick={() => { setSelectedBank(b); setBankOpen(false); }} style={{display:'flex',alignItems:'center',gap:8}}>
+                    <Icon name="landmark" size={14} />
+                    <span>{b.bank_name} ({b.account_number?.slice(-4) || '...'})</span>
                   </div>
                 ))}
               </div>
@@ -1134,7 +1222,7 @@ export default function CreateInvoice() {
 
             <div className="ni-signature-row">
               <div className="ni-field-block-title">Select Signature<span className="ni-required-dot"></span></div>
-              <div className="ni-link-purple" onClick={() => setSignatureModal(true)}><Icon name="plus" /> Add New Signature</div>
+              <div className="ni-link-purple" onClick={() => setSignatureDrawerOpen(true)}><Icon name="plus" /> Add New Signature</div>
             </div>
             <div className="ni-signature-grid">
               <div className="ni-signature-select" onClick={() => setSigOpen(!sigOpen)}>
@@ -1183,59 +1271,73 @@ export default function CreateInvoice() {
         onRemove={i => { setAdditionalCharges(p => p.filter((_, idx) => idx !== i)); }}
         onUpdate={(i, c) => { setAdditionalCharges(p => p.map((x, idx) => idx === i ? c : x)); }} />
 
-      <Modal open={bankModal} onClose={() => setBankModal(false)}
-        title="Add New Bank" size="sm"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setBankModal(false)}>Cancel</Button>
-            <Button icon="building" onClick={addNewBank}>Add Bank</Button>
-          </>
-        }>
-        <form className="inv-modal-form" onSubmit={e => { e.preventDefault(); addNewBank(); }}>
-          <Field label="Bank Name" required>
-            <Input value={bankForm.bank_name} onChange={e => setBankForm(p => ({ ...p, bank_name: e.target.value }))} placeholder="Bank name" />
-          </Field>
-          <div className="inv-modal-row">
-            <Field label="Account Number">
-              <Input value={bankForm.account_number} onChange={e => setBankForm(p => ({ ...p, account_number: e.target.value }))} placeholder="Account number" />
-            </Field>
-            <Field label="IFSC">
-              <Input value={bankForm.ifsc} onChange={e => setBankForm(p => ({ ...p, ifsc: e.target.value }))} placeholder="IFSC code" />
-            </Field>
+      {/* ===== Bank Drawer ===== */}
+      {bankDrawerOpen && (
+        <div className="ds-overlay" onClick={() => setBankDrawerOpen(false)}>
+          <div className="ds-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="ds-header">
+              <div className="ds-header-left">
+                <button className="ds-close-btn" onClick={() => setBankDrawerOpen(false)}><Icon name="x" size={18} /></button>
+                <h2>Add New Bank</h2>
+              </div>
+              <button className="ds-btn ds-btn-primary" onClick={addNewBank}><Icon name="building" /> Add Bank</button>
+            </div>
+            <div className="ds-body">
+              <form className="inv-modal-form" onSubmit={e => { e.preventDefault(); addNewBank(); }}>
+                <Field label="Bank Name" required>
+                  <Input value={bankForm.bank_name} onChange={e => setBankForm(p => ({ ...p, bank_name: e.target.value }))} placeholder="Bank name" />
+                </Field>
+                <div className="inv-modal-row">
+                  <Field label="Account Number">
+                    <Input value={bankForm.account_number} onChange={e => setBankForm(p => ({ ...p, account_number: e.target.value }))} placeholder="Account number" />
+                  </Field>
+                  <Field label="IFSC">
+                    <Input value={bankForm.ifsc} onChange={e => setBankForm(p => ({ ...p, ifsc: e.target.value }))} placeholder="IFSC code" />
+                  </Field>
+                </div>
+                <div className="inv-modal-row">
+                  <Field label="Branch">
+                    <Input value={bankForm.branch} onChange={e => setBankForm(p => ({ ...p, branch: e.target.value }))} placeholder="Branch" />
+                  </Field>
+                  <Field label="UPI ID">
+                    <Input value={bankForm.upi_id} onChange={e => setBankForm(p => ({ ...p, upi_id: e.target.value }))} placeholder="UPI ID" />
+                  </Field>
+                </div>
+              </form>
+            </div>
           </div>
-          <div className="inv-modal-row">
-            <Field label="Branch">
-              <Input value={bankForm.branch} onChange={e => setBankForm(p => ({ ...p, branch: e.target.value }))} placeholder="Branch" />
-            </Field>
-            <Field label="UPI ID">
-              <Input value={bankForm.upi_id} onChange={e => setBankForm(p => ({ ...p, upi_id: e.target.value }))} placeholder="UPI ID" />
-            </Field>
-          </div>
-        </form>
-      </Modal>
+        </div>
+      )}
 
-      <Modal open={signatureModal} onClose={() => setSignatureModal(false)}
-        title="Add New Signature" size="sm"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setSignatureModal(false)}>Cancel</Button>
-            <Button icon="pen-tool" onClick={async () => {
-              try {
-                const s = await invoiceService.createSignature({ name: sigName });
-                setSignatures(p => [...p, s]);
-                setSelectedSignature(s);
-                setSignatureModal(false);
-                notificationManager.success('Signature', 'Signature added.');
-              } catch (e) { notificationManager.error('Signature', e.message); }
-            }}>Add Signature</Button>
-          </>
-        }>
-        <form className="inv-modal-form" onSubmit={e => e.preventDefault()}>
-          <Field label="Signature Name" required>
-            <Input value={sigName} onChange={e => setSigName(e.target.value)} placeholder="e.g. Authorised Signatory" />
-          </Field>
-        </form>
-      </Modal>
+      {/* ===== Signature Drawer ===== */}
+      {signatureDrawerOpen && (
+        <div className="ds-overlay" onClick={() => setSignatureDrawerOpen(false)}>
+          <div className="ds-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="ds-header">
+              <div className="ds-header-left">
+                <button className="ds-close-btn" onClick={() => setSignatureDrawerOpen(false)}><Icon name="x" size={18} /></button>
+                <h2>Add New Signature</h2>
+              </div>
+              <button className="ds-btn ds-btn-primary" onClick={async () => {
+                try {
+                  const s = await invoiceService.createSignature({ name: sigName });
+                  setSignatures(p => [...p, s]);
+                  setSelectedSignature(s);
+                  setSignatureDrawerOpen(false);
+                  notificationManager.success('Signature', 'Signature added.');
+                } catch (e) { notificationManager.error('Signature', e.message); }
+              }}><Icon name="pen-tool" /> Add Signature</button>
+            </div>
+            <div className="ds-body">
+              <form className="inv-modal-form" onSubmit={e => e.preventDefault()}>
+                <Field label="Signature Name" required>
+                  <Input value={sigName} onChange={e => setSigName(e.target.value)} placeholder="e.g. Authorised Signatory" />
+                </Field>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       <AddCustomerPanel open={addCustomerPanelOpen} onClose={closeAddCustomerPanel} onSubmit={submitCustomer} />
 
@@ -1244,6 +1346,144 @@ export default function CreateInvoice() {
       <DocumentSettings open={docSettingsOpen} onClose={() => setDocSettingsOpen(false)} />
 
       <CustomHeaderPanel open={customHeaderSettingsOpen} onClose={() => { setCustomHeaderSettingsOpen(false); setHeaderRefreshKey(k => k + 1); }} />
+
+      {/* ===== Notes Drawer ===== */}
+      {notesDrawerOpen && (
+        <div className="ds-overlay" onClick={() => setNotesDrawerOpen(false)}>
+          <div className="ds-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="ds-header">
+              <div className="ds-header-left">
+                <button className="ds-close-btn" onClick={() => setNotesDrawerOpen(false)}><Icon name="x" size={18} /></button>
+                <h2>Notes</h2>
+              </div>
+              <div style={{display:'flex',gap:8}}>
+                <button className="ds-btn ds-btn-ghost" onClick={() => {
+                  const idx = notes.length;
+                  setDraftNoteTexts(p => ({ ...p, [idx]: '' }));
+                  setNotes(p => [...p, { id: generateKey(), text: '' }]);
+                }}><Icon name="plus" size={14} /> Add Note</button>
+                <button className="ds-btn ds-btn-primary" onClick={() => {
+                  setNotesDrawerOpen(false);
+                }}>Done</button>
+              </div>
+            </div>
+            <div className="ds-body">
+              {notes.length === 0 ? (
+                <div style={{padding:20,textAlign:'center',color:'var(--ni-text-light-gray)',fontSize:14}}>No notes yet. Click "Add Note" to create one.</div>
+              ) : (
+                <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                  {notes.map((n, i) => (
+                    <div key={n.id} style={{border:'1px solid var(--ni-border)',borderRadius:'8px',padding:12}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                        <strong style={{fontSize:13}}>Note {i + 1}</strong>
+                        <span style={{cursor:'pointer',color:'#e5484d',fontSize:12}} onClick={() => {
+                          const next = notes.filter((_, j) => j !== i);
+                          setNotes(next);
+                          setSelectedNoteIdx(-1);
+                        }}><Icon name="trash" size={13} /> Remove</span>
+                      </div>
+                      <textarea
+                        style={{width:'100%',minHeight:80,border:'1px solid var(--ni-border)',borderRadius:'6px',padding:'10px',fontSize:13,fontFamily:'inherit',resize:'vertical'}}
+                        placeholder="Enter note..."
+                        value={draftNoteTexts[i] ?? n.text}
+                        onChange={e => {
+                          setDraftNoteTexts(p => ({ ...p, [i]: e.target.value }));
+                          updateNote(i, { ...n, text: e.target.value });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Terms Drawer ===== */}
+      {termsDrawerOpen && (
+        <div className="ds-overlay" onClick={() => setTermsDrawerOpen(false)}>
+          <div className="ds-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="ds-header">
+              <div className="ds-header-left">
+                <button className="ds-close-btn" onClick={() => setTermsDrawerOpen(false)}><Icon name="x" size={18} /></button>
+                <h2>Terms &amp; Conditions</h2>
+              </div>
+              <div style={{display:'flex',gap:8}}>
+                <button className="ds-btn ds-btn-ghost" onClick={() => {
+                  const idx = terms.length;
+                  setDraftTermTexts(p => ({ ...p, [idx]: '' }));
+                  setTerms(p => [...p, { id: generateKey(), text: '' }]);
+                }}><Icon name="plus" size={14} /> Add Term</button>
+                <button className="ds-btn ds-btn-primary" onClick={() => {
+                  setTermsDrawerOpen(false);
+                }}>Done</button>
+              </div>
+            </div>
+            <div className="ds-body">
+              {terms.length === 0 ? (
+                <div style={{padding:20,textAlign:'center',color:'var(--ni-text-light-gray)',fontSize:14}}>No terms yet. Click "Add Term" to create one.</div>
+              ) : (
+                <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                  {terms.map((t, i) => (
+                    <div key={t.id} style={{border:'1px solid var(--ni-border)',borderRadius:'8px',padding:12}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                        <strong style={{fontSize:13}}>Term {i + 1}</strong>
+                        <span style={{cursor:'pointer',color:'#e5484d',fontSize:12}} onClick={() => {
+                          const next = terms.filter((_, j) => j !== i);
+                          setTerms(next);
+                          setSelectedTermIdx(-1);
+                        }}><Icon name="trash" size={13} /> Remove</span>
+                      </div>
+                      <textarea
+                        style={{width:'100%',minHeight:80,border:'1px solid var(--ni-border)',borderRadius:'6px',padding:'10px',fontSize:13,fontFamily:'inherit',resize:'vertical'}}
+                        placeholder="Enter term..."
+                        value={draftTermTexts[i] ?? t.text}
+                        onChange={e => {
+                          setDraftTermTexts(p => ({ ...p, [i]: e.target.value }));
+                          updateTerm(i, { ...t, text: e.target.value });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Floating Notes/Terms Preview (bottom-right draggable) ===== */}
+      {(notes.length > 0 || terms.length > 0) && (
+        <div id="floating-notes-preview"
+          onMouseDown={(e) => {
+            const el = document.getElementById('floating-notes-preview');
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            floatingDragging.current = { offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
+            const onMove = (ev) => {
+              if (!floatingDragging.current) return;
+              el.style.left = (ev.clientX - floatingDragging.current.offsetX) + 'px';
+              el.style.top = (ev.clientY - floatingDragging.current.offsetY) + 'px';
+              el.style.right = 'auto';
+              el.style.bottom = 'auto';
+            };
+            const onUp = () => { floatingDragging.current = null; document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+          }}
+          style={{
+            position:'fixed', bottom:20, right:20, zIndex:1000,
+            background:'#fff', border:'1px solid var(--ni-border)',
+            borderRadius:'12px', boxShadow:'0 4px 16px rgba(0,0,0,0.12)',
+            padding:'12px 16px', maxWidth:'300px', maxHeight:'200px',
+            overflow:'auto', fontSize:'12px', cursor:'grab',
+          }}>
+          {notes.length > 0 && <div><strong>Notes:</strong><div style={{marginTop:4,color:'var(--ni-text-gray)',whiteSpace:'pre-wrap'}}>{notes.map(n=>n.text).join('\n')}</div></div>}
+          {notes.length > 0 && terms.length > 0 && <div style={{height:1,background:'var(--ni-border)',margin:'8px 0'}} />}
+          {terms.length > 0 && <div><strong>Terms:</strong><div style={{marginTop:4,color:'var(--ni-text-gray)',whiteSpace:'pre-wrap'}}>{terms.map(t=>t.text).join('\n')}</div></div>}
+        </div>
+      )}
 
       <ConfirmDialog
         open={showConfirm}

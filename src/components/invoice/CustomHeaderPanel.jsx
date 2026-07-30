@@ -16,21 +16,9 @@ const PAGE_SIZE = 10;
 
 const EMPTY_FORM = {
   displayName: '',
-  internalKey: '',
-  description: '',
-  docTypes: [],
-  displayOrder: 1,
-  columnPosition: '1',
   inputType: 'text',
-  placeholder: '',
-  defaultValue: '',
-  required: false,
-  readOnly: false,
-  visible: true,
-  printable: true,
-  exportable: true,
   active: true,
-  options: '',
+  isDefault: false,
 };
 
 function keyFromName(name) {
@@ -115,21 +103,9 @@ export default function CustomHeaderPanel({ open, onClose }) {
     setEditItem(item);
     setEditForm({
       displayName: item.displayName || '',
-      internalKey: item.internalKey || '',
-      description: item.description || '',
-      docTypes: item.docTypes || [],
-      displayOrder: item.displayOrder ?? item.order ?? 1,
-      columnPosition: String(item.columnPosition || item.column || '1'),
       inputType: item.inputType || 'text',
-      placeholder: item.placeholder || '',
-      defaultValue: item.defaultValue || '',
-      required: item.required ?? false,
-      readOnly: item.readOnly ?? false,
-      visible: item.visible ?? true,
-      printable: item.printable ?? true,
-      exportable: item.exportable ?? true,
       active: item.active ?? true,
-      options: item.options || '',
+      isDefault: item.isDefault ?? item.default ?? false,
     });
     setEditErrors({});
     setEditOpen(true);
@@ -146,23 +122,13 @@ export default function CustomHeaderPanel({ open, onClose }) {
 
     setEditSaving(true);
     try {
+      const internalKey = editForm.displayName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
       const payload = {
         displayName: editForm.displayName.trim(),
-        internalKey: editForm.internalKey.trim(),
-        description: editForm.description.trim(),
-        docTypes: editForm.docTypes,
-        displayOrder: Number(editForm.displayOrder),
-        columnPosition: String(editForm.columnPosition),
+        internalKey,
         inputType: editForm.inputType,
-        placeholder: editForm.placeholder.trim(),
-        defaultValue: editForm.defaultValue.trim(),
-        required: editForm.required,
-        readOnly: editForm.readOnly,
-        visible: editForm.visible,
-        printable: editForm.printable,
-        exportable: editForm.exportable,
         active: editForm.active,
-        options: editForm.options.trim(),
+        isDefault: editForm.isDefault,
       };
 
       if (editItem) {
@@ -264,14 +230,8 @@ export default function CustomHeaderPanel({ open, onClose }) {
   }, []);
 
   const updateForm = useCallback((key, value) => {
-    setEditForm((prev) => {
-      const next = { ...prev, [key]: value };
-      if (!editItem && key === 'displayName' && !prev.internalKey) {
-        next.internalKey = keyFromName(value);
-      }
-      return next;
-    });
-  }, [editItem]);
+    setEditForm((prev) => ({ ...prev, [key]: value }));
+  }, []);
 
   if (!open) return null;
 
@@ -450,50 +410,16 @@ export default function CustomHeaderPanel({ open, onClose }) {
                       <Select options={CUSTOM_HEADER_INPUT_TYPE_OPTIONS} value={editForm.inputType} onChange={(v) => updateForm('inputType', v)} placeholder="Select type" />
                     </Field>
                   </div>
-                  <Field label="Description">
-                    <Input
-                      value={editForm.description}
-                      onChange={(e) => updateForm('description', e.target.value)}
-                      placeholder="Optional description"
-                    />
-                  </Field>
-                  <div className="inv-modal-row">
-                    <Field label="Display Order">
-                      <Input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={editForm.displayOrder}
-                        onChange={(e) => updateForm('displayOrder', e.target.value === '' ? '' : Number(e.target.value))}
-                        aria-invalid={!!editErrors.displayOrder}
-                      />
-                      {editErrors.displayOrder && <span className="inv-field-error">{editErrors.displayOrder}</span>}
-                    </Field>
-                    <Field label="Column Position">
-                      <Select options={[{ value: '1', label: 'Column 1' }, { value: '2', label: 'Column 2' }, { value: '3', label: 'Column 3' }, { value: '4', label: 'Column 4' }]} value={editForm.columnPosition} onChange={(v) => updateForm('columnPosition', v)} />
-                    </Field>
-                  </div>
-                  {(editForm.inputType === 'dropdown' || editForm.inputType === 'multi_select' || editForm.inputType === 'radio') && (
-                    <Field label="Options" required>
-                      <textarea className="form-input" rows={3} value={editForm.options} onChange={(e) => updateForm('options', e.target.value)} placeholder="Comma-separated options" />
-                      {editErrors.options && <span className="inv-field-error">{editErrors.options}</span>}
-                    </Field>
-                  )}
-                  <div style={{ display: 'flex', gap: 20, marginTop: 12, flexWrap: 'wrap' }}>
-                    <label className="ps-toggle-label">
+                  <div className="inv-modal-row" style={{ marginTop: 12 }}>
+                    <label className="ps-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                       <input type="checkbox" checked={editForm.active} onChange={(e) => updateForm('active', e.target.checked)} />
                       <span className={`ps-toggle-slider${editForm.active ? ' on' : ''}`} />
-                      <span style={{ fontSize: 13, marginLeft: 4 }}>Active</span>
+                      <span style={{ fontSize: 13 }}>Active</span>
                     </label>
-                    <label className="ps-toggle-label">
-                      <input type="checkbox" checked={editForm.required} onChange={(e) => updateForm('required', e.target.checked)} />
-                      <span className={`ps-toggle-slider${editForm.required ? ' on' : ''}`} />
-                      <span style={{ fontSize: 13, marginLeft: 4 }}>Required</span>
-                    </label>
-                    <label className="ps-toggle-label">
-                      <input type="checkbox" checked={editForm.printable} onChange={(e) => updateForm('printable', e.target.checked)} />
-                      <span className={`ps-toggle-slider${editForm.printable ? ' on' : ''}`} />
-                      <span style={{ fontSize: 13, marginLeft: 4 }}>Printable</span>
+                    <label className="ps-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={editForm.isDefault} onChange={(e) => updateForm('isDefault', e.target.checked)} />
+                      <span className={`ps-toggle-slider${editForm.isDefault ? ' on' : ''}`} />
+                      <span style={{ fontSize: 13 }}>Default</span>
                     </label>
                   </div>
                 </form>

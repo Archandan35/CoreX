@@ -569,7 +569,7 @@ kbd.cmd__kbd {
 }
 
 /* ===== PAGE ===== */
-.page { max-width: 1200px; }
+.page { width: 100%; }
 .page__header {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
@@ -6930,9 +6930,9 @@ select.form-input { cursor: pointer; appearance: auto; }
   font-weight:600;
   color:var(--ni-text-dark);
 }
-.ni-select-box{width:80px; gap:6px; cursor:pointer;}
+.ni-select-box{width:auto; min-width:110px; gap:6px; cursor:pointer;}
 .ni-select-box svg{width:14px;height:14px;color:var(--ni-text-gray);}
-.ni-input-box{width:90px;}
+.ni-input-box{width:auto; min-width:120px; max-width:160px;}
 .ni-btn-primary{
   display:flex;
   align-items:center;
