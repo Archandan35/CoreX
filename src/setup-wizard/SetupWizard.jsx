@@ -157,6 +157,12 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
         setValidatingStage(3);
         setValidationSuccess({ provider: provider.name, projectInfo: result.projectInfo });
         if (result.client) {
+          try {
+            if (fieldValues.projectUrl && fieldValues.anonKey) {
+              localStorage.setItem('supabase_url', fieldValues.projectUrl);
+              localStorage.setItem('supabase_anon_key', fieldValues.anonKey);
+            }
+          } catch {}
           const supabase = result.client;
           const dbClient = {
             query: async (sql, params) => {

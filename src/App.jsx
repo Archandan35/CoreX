@@ -311,12 +311,12 @@ function AppRoutes() {
     } catch { }
   }
 
-  // Reached when the wizard was opened because the database was INCOMPLETE
-  // (started from Step 1). After Step 1→9 finishes, persist the install
-  // metadata, re-validate with fresh data, and only proceed to the
-  // Administrator Authority check once the database is confirmed compatible.
-  // If it's still incomplete, stay in the wizard (restart at Step 1) — the
-  // spec forbids ever falling through to Login/Register/Dashboard otherwise.
+  // handleSetupComplete — called by <SetupWizard onComplete> when
+  // the user finishes all 10 steps (or re-runs from the banner).
+  // Persists install metadata, re-validates, then:
+  //  - Compatible              → proceed to admin/auth check
+  //  - everInstalled (degraded)→ auth flow — the persistent banner surfaces
+  //  - Never installed (fresh) → stay in wizard (restart at Step 1)
   async function handleSetupComplete(database) {
     const activeDb = database || db;
     await persistSetupMetadata(activeDb);
@@ -329,6 +329,11 @@ function AppRoutes() {
       setDbHealth(health);
 
       if (health.compatible) {
+        await checkAdmin(activeDb);
+      } else if (health.everInstalled) {
+        // Previously installed but still degraded after wizard re-run.
+        // Go to auth — the persistent banner (admin-only) will surface the
+        // issue instead of forcing the wizard open again.
         await checkAdmin(activeDb);
       } else {
         setAppState('setup');
