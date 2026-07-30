@@ -1,88 +1,256 @@
 # Database Schema Consistency Rules
 
-When I say **"run database-rule"**, verify every checkpoint below.
+When I say **"run database-rule"**, verify every checkpoint below against the codebase. Every database object must exist in ALL 4 source files:
+
+| # | File | Role |
+|---|---|---|
+| 1 | `generate-sql.sql` | Canonical master SQL installation script |
+| 2 | `src/schema/models/index.js` | SCHEMAS object — JS source of truth for models |
+| 3 | `src/setup-wizard/SqlGenerator.js` | Dynamic SQL generator (mirrors SQL at runtime) |
+| 4 | `src/setup-wizard/DatabaseValidator.js` | Live DB inspection method for each object |
 
 ---
 
 ## 1. No Assumptions in Validation Code
 
-**Rule**: Every database object must be individually verified. No "if X exists then assume Y exists" fallbacks.
+Every database object must be individually verified. No "if X exists then assume Y exists" fallbacks.
 
-- [ ] `DatabaseValidator._checkTriggers()` — no fallback that assumes trigger exists based on `exec_sql` + tables
+- [ ] `DatabaseValidator._checkTriggers()` — no fallback that assumes trigger exists based on `exec_sql` + tables *(FIXED)*
 - [ ] `DatabaseValidator._checkVersion()` — no assumption that version matches when `_schema_version` is empty
 - [ ] Any `.some()` / fallback logic in validators must directly check the target object, not infer from others
 
-## 2. SCHEMAS ↔ generate-sql.sql Parity
+**Forbidden patterns:**
+```js
+// ❌ BAD — assumes Y exists because X exists
+// ❌ BAD — empty result treated as "present"
+// ✅ GOOD — explicitly check each object
+```
 
-**Rule**: Every object in `generate-sql.sql` must have a corresponding entry in `src/schema/models/index.js` (SCHEMAS).
+---
 
-| Object type | SQL location | SCHEMAS check |
-|---|---|---|
-| Tables | Each `CREATE TABLE` line | Each SCHEMAS entry with `table:` field |
-| Columns | Column definitions inside each `CREATE TABLE` | `columns:` array in matching SCHEMAS entry |
-| Functions | `CREATE OR REPLACE FUNCTION` | SCHEMAS entry with `type: 'function'` or in `REQUIRED_FUNCTIONS` list |
-| Triggers | `CREATE TRIGGER` | Must be checked in `DatabaseValidator._checkTriggers()` |
-| Indexes | `CREATE INDEX` under `===== Indexes =====` | `searchableFields` or `indexes` in SCHEMAS entry |
-| RLS policies | `CREATE POLICY` under `===== Row Level Security =====` | `rls: true` on matching SCHEMAS entry |
-| Schema version | `INSERT INTO _schema_version` | `SCHEMAS.version` number |
-| Extensions | Any `CREATE EXTENSION` | `SCHEMAS.extensions` array |
-| Seed data | Any seed `INSERT` statements | `SCHEMAS.seedData` array |
-| Composite key tables | `_schema_version` with composite PK | Individual SCHEMAS entry |
+## 2. Complete Object Inventory
+
+Every object below must be present in ALL 4 files. Use this as the master checklist.
+
+### 2.1 Tables (14 total)
+
+| # | Table | SQL (CREATE TABLE) | SCHEMAS (`table:` field) | SqlGenerator (`_genTable` / `_genAllTables`) | Validator (`_validateEntity`) |
+|---|---|---|---|---|---|
+| 1 | `users` | ✓ | ✓ | ✓ | ✓ |
+| 2 | `roles` | ✓ | ✓ | ✓ | ✓ |
+| 3 | `settings` | ✓ | ✓ | ✓ | ✓ |
+| 4 | `customers` | ✓ | ✓ | ✓ | ✓ |
+| 5 | `product_categories` | ✓ | ✓ | ✓ | ✓ |
+| 6 | `products` | ✓ | ✓ | ✓ | ✓ |
+| 7 | `banks` | ✓ | ✓ | ✓ | ✓ |
+| 8 | `signatures` | ✓ | ✓ | ✓ | ✓ |
+| 9 | `invoices` | ✓ | ✓ | ✓ | ✓ |
+| 10 | `invoice_items` | ✓ | ✓ | ✓ | ✓ |
+| 11 | `invoice_payments` | ✓ | ✓ | ✓ | ✓ |
+| 12 | `audit_logs` | ✓ | ✓ | ✓ | ✓ |
+| 13 | `accounting_entries` | ✓ | ✓ | ✓ | ✓ |
+| 14 | `_schema_version` | ✓ | **MISSING** — add SCHEMAS entry with `table:'_schema_version'`, composite PK columns | ✓ | ✓ (*_checkVersion, not _validateEntity*) |
+
+### 2.2 Columns per Table
+
+For each table above, EVERY column must have matching: name, type, nullable, default, and PK in all 4 files.
+
+- [ ] All column names match between SQL → SCHEMAS.columns → SqlGenerator → Validator
+- [ ] All column types match (UUID, TEXT, BOOLEAN, NUMERIC, DATE, TIMESTAMPTZ, JSONB, TEXT[], INTEGER)
+- [ ] All nullable rules match (NOT NULL vs nullable)
+- [ ] All default values match
+- [ ] Primary key columns match
+
+### 2.3 Constraints
+
+#### PRIMARY KEY
+
+| Table | PK Column(s) | SQL | SCHEMAS (`primaryKey`) | SqlGenerator | Validator (`_checkConstraints`) |
+|---|---|---|---|---|---|
+| users | id | ✓ | ✓ | ✓ | ✓ |
+| roles | id | ✓ | ✓ | ✓ | ✓ |
+| settings | key | ✓ | ✓ | ✓ | ✓ |
+| customers | id | ✓ | ✓ | ✓ | ✓ |
+| product_categories | id | ✓ | ✓ | ✓ | ✓ |
+| products | id | ✓ | ✓ | ✓ | ✓ |
+| banks | id | ✓ | ✓ | ✓ | ✓ |
+| signatures | id | ✓ | ✓ | ✓ | ✓ |
+| invoices | id | ✓ | ✓ | ✓ | ✓ |
+| invoice_items | id | ✓ | ✓ | ✓ | ✓ |
+| invoice_payments | id | ✓ | ✓ | ✓ | ✓ |
+| audit_logs | id | ✓ | ✓ | ✓ | ✓ |
+| accounting_entries | id | ✓ | ✓ | ✓ | ✓ |
+| _schema_version | (version, applied_at) | ✓ | **MISSING** | ✓ | ✓ |
+
+#### UNIQUE
+
+| Table | Columns | SQL | SCHEMAS (`unique:{}`) | SqlGenerator | Validator (`_checkConstraints`) |
+|---|---|---|---|---|---|
+| users | email | ✓ (inline UNIQUE) | ✓ | ✓ | ✓ |
+| users | username | ✓ (inline UNIQUE) | ✓ | ✓ | ✓ |
+| roles | name | ✓ (inline UNIQUE) | ✓ | ✓ | ✓ |
+| invoices | invoice_number | ✓ (inline UNIQUE) | ✓ | ✓ | ✓ |
+
+#### FOREIGN KEY
+
+- [ ] **Missing entirely** — No `REFERENCES` constraints anywhere in any of the 4 files
+- [ ] Columns like `created_by`, `customer_id`, `category_id`, `bank_id`, `signature_id`, `invoice_id`, `product_id` are UUID references but have no formal FK constraints
+- [ ] If the application requires referential integrity, FKs must be added to SQL + SqlGenerator and validated by Validator
+
+#### CHECK
+
+- [ ] **Missing entirely** — No CHECK constraints in any of the 4 files
+
+### 2.4 Indexes (35 total)
+
+Each index defined in `generate-sql.sql` must be:
+- Defined in SCHEMAS (via `searchableFields[]` or `indexes[]`)
+- Generated by SqlGenerator
+- Checked by Validator (`_checkIndexes`)
+
+| # | Index | SQL | SCHEMAS source | SqlGen | Validator | Validator gap? |
+|---|---|---|---|---|---|---|
+| 1 | `idx_users_name` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 2 | `idx_users_username` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 3 | `idx_users_email` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 4 | `idx_users_phone` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 5 | `idx_customers_name` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 6 | `idx_customers_company` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 7 | `idx_customers_email` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 8 | `idx_customers_phone` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 9 | `idx_customers_gstin` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 10 | `idx_customers_created_by` | ✓ | `indexes` | ✓ | **MISSING** | `_checkIndexes` skips `indexes` array |
+| 11 | `idx_product_categories_name` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 12 | `idx_products_name` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 13 | `idx_products_sku` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 14 | `idx_products_barcode` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 15 | `idx_products_hsn_code` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 16 | `idx_products_created_by` | ✓ | `indexes` | ✓ | **MISSING** | " |
+| 17 | `idx_banks_bank_name` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 18 | `idx_banks_account_name` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 19 | `idx_banks_account_number` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 20 | `idx_banks_ifsc` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 21 | `idx_banks_upi_id` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 22 | `idx_signatures_label` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 23 | `idx_signatures_signer_name` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 24 | `idx_invoices_invoice_number` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 25 | `idx_invoices_reference` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 26 | `idx_invoices_customer_id` | ✓ | `indexes` | ✓ | **MISSING** | " |
+| 27 | `idx_invoices_created_by` | ✓ | `indexes` | ✓ | **MISSING** | " |
+| 28 | `idx_invoices_status` | ✓ | `indexes` | ✓ | **MISSING** | " |
+| 29 | `idx_invoice_items_name` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 30 | `idx_invoice_items_invoice_id` | ✓ | `indexes` | ✓ | **MISSING** | " |
+| 31 | `idx_invoice_payments_note` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 32 | `idx_invoice_payments_invoice_id` | ✓ | `indexes` | ✓ | **MISSING** | " |
+| 33 | `idx_audit_logs_table_record` | ✓ *(composite)* | `indexes` | **WRONG** — generated as 2 singles | **MISSING** | Composite vs single-column mismatch |
+| 34 | `idx_audit_logs_created_at` | ✓ | `indexes` | ✓ | **MISSING** | `_checkIndexes` skips `indexes` array |
+| 35 | `idx_accounting_entries_invoice` | ✓ | `indexes` | ✓ | **MISSING** | " |
+
+### 2.5 Functions (4 total)
+
+| # | Function | SQL | SCHEMAS (`type:'function'`) | SqlGenerator | Validator (`REQUIRED_FUNCTIONS` or `_checkRequiredFunctions`) |
+|---|---|---|---|---|---|
+| 1 | `exec_sql` | ✓ | ✓ | ✓ | ✓ |
+| 2 | `check_admin_exists` | ✓ | ✓ | ✓ | ✓ |
+| 3 | `is_admin_user` | ✓ | ✓ | ✓ | ✓ |
+| 4 | `handle_new_user` | ✓ | **MISSING** — add SCHEMAS entry with `type:'function'` | ✓ (embedded in trigger) | **MISSING** — add to `REQUIRED_FUNCTIONS` array |
+
+### 2.6 Triggers (1 total)
+
+| # | Trigger | SQL | SCHEMAS | SqlGenerator | Validator |
+|---|---|---|---|---|---|
+| 1 | `on_auth_user_created` (AFTER INSERT ON auth.users) | ✓ | **MISSING** — add trigger entity to SCHEMAS | ✓ | ✓ (`REQUIRED_AUTH_TRIGGER`) |
+
+### 2.7 RLS Policies (37 total)
+
+- [ ] All 9 RLS-enabled tables have policies generated in SQL and SqlGenerator
+- [ ] SCHEMAS entities with RLS have `rls: true` or `rls: false` explicitly (no undefined)
+- [ ] **GAP**: `roles` and `settings` missing `rls: false` — add explicit `rls: false`
+- [ ] **GAP**: `DatabaseValidator._checkPolicies()` is passive — only lists existing policies, does NOT compare against expected set per table
+
+**Expected policy count by table:**
+| Table | Policies | SQL | SqlGenerator |
+|---|---|---|---|
+| users | 5 (own select, admin select, auth insert, own update, admin update) | ✓ | ✓ |
+| customers | 4 (owner R/W/U/D) | ✓ | ✓ |
+| product_categories | 4 (owner R/W/U/D) | ✓ | ✓ |
+| products | 4 (owner R/W/U/D) | ✓ | ✓ |
+| banks | 4 (owner R/W/U/D) | ✓ | ✓ |
+| signatures | 4 (owner R/W/U/D) | ✓ | ✓ |
+| invoices | 4 (owner R/W/U/D) | ✓ | ✓ |
+| invoice_items | 4 (owner subquery R/W/U/D) | ✓ | ✓ |
+| invoice_payments | 4 (owner subquery R/W/U/D) | ✓ | ✓ |
+| audit_logs | 0 (RLS disabled) | ✓ | ✓ |
+| accounting_entries | 0 (RLS disabled) | ✓ | ✓ |
+| roles | 0 (RLS disabled) | ✓ | ✓ |
+| settings | 0 (RLS disabled) | ✓ | ✓ |
+
+### 2.8 GRANT Permissions (3 total)
+
+| # | Grant | SQL | SCHEMAS | SqlGenerator | Validator |
+|---|---|---|---|---|---|
+| 1 | `GRANT EXECUTE ON FUNCTION exec_sql(text) TO anon, authenticated, service_role` | ✓ | ✓ | ✓ | **MISSING** — no GRANT checking in Validator |
+| 2 | `GRANT EXECUTE ON FUNCTION check_admin_exists() TO anon, authenticated, service_role` | ✓ | ✓ | ✓ | **MISSING** — no GRANT checking in Validator |
+| 3 | `GRANT EXECUTE ON FUNCTION is_admin_user() TO anon, authenticated, service_role` | ✓ | ✓ | ✓ | **MISSING** — no GRANT checking in Validator |
+
+### 2.9 Schema Version
+
+| Aspect | SQL | SCHEMAS | SqlGenerator | Validator |
+|---|---|---|---|---|
+| `_schema_version` table | ✓ (L540-545) | **MISSING** (not a table entity) | ✓ (`_genVersion`) | ✓ (`_checkVersion`) |
+| Version number (5) | ✓ | `version = 5` | Uses schema.version | Uses schema.version |
+| Version INSERT description | `"Schema v5: user_role_refactor ..."` | N/A | `"Schema installation via Setup Wizard"` *(generic)* | N/A |
+
+### 2.10 Extensions
+
+- [ ] `SCHEMAS.extensions` matches `generate-sql.sql` (currently both empty — no extensions required)
+- [ ] SqlGenerator generates CREATE EXTENSION for any entry in the array
+- [ ] Validator `_checkExtensions` checks each entry exists
+
+### 2.11 Seed Data
+
+- [ ] `SCHEMAS.seedData` matches seed INSERTs in `generate-sql.sql` (currently both empty)
+- [ ] SqlGenerator generates seed INSERTs for any entry
+- [ ] Validator `_checkSeeds` counts rows against `minCount`
+
+---
 
 ## 3. SqlGenerator ↔ generate-sql.sql Parity
 
-**Rule**: `src/setup-wizard/SqlGenerator.js` must emit the same SQL as `generate-sql.sql` for every entity.
-
-- [ ] Every table DDL matches
-- [ ] Every column + type + default + nullable matches
+- [ ] Every table DDL matches (columns, types, defaults, nullability)
 - [ ] Every constraint (PK, UNIQUE) matches
 - [ ] Every index DDL matches
 - [ ] Every function DDL matches
 - [ ] Every trigger DDL matches
 - [ ] All RLS enable/disable + policy DDL matches
-- [ ] `_schema_version` INSERT matches
-- [ ] Seed data INSERTs match
-- [ ] Extension CREATE matches
-- [ ] Version number matches
+- [ ] Version number + INSERT matches
+- [ ] **GAP**: `idx_audit_logs_table_record` — SQL defines composite but SqlGenerator splits into 2 single-column indexes
+- [ ] **GAP**: Version description — SQL has meaningful text, SqlGenerator uses generic text
+
+---
 
 ## 4. Both Health Check Functions ↔ Validator Parity
 
-**Rule**: `getSupabaseSchemaHealth` and `getRawDbSchemaHealth` (in `App.jsx`) must check the same set of things as `DatabaseValidator.validateAll()`.
-
-- [ ] Same 4 tables checked (`users`, `roles`, `settings`, `_schema_version`)
+- [ ] Same tables checked (`users`, `roles`, `settings`, `_schema_version`)
 - [ ] Same trigger check (`on_auth_user_created`)
 - [ ] Same function checks (`exec_sql`, `check_admin_exists`, `is_admin_user`)
 - [ ] Same RLS policy check (policies exist in `public`)
-- [ ] Same version check logic
+- [ ] Same version check (forward-compatible logic)
 - [ ] No additional assumptions in either path
 
-## 5. Anti-Assumption Validation Patterns
+---
 
-**Forbidden patterns** in all validation code:
+## 5. Cross-File Version Consistency
 
-```js
-// ❌ BAD — assumes Y exists because X exists
-if (xExists) assumeYExists = true;
-
-// ❌ BAD — empty result treated as "present"
-if (!error) assumeExists = true;
-
-// ✅ GOOD — explicitly check each object
-const yExists = await checkYExists();
-
-// ✅ GOOD — verify, don't assume
-if (!error && data && data.length > 0) exists = true;
-```
-
-## 6. Cross-File Version Consistency
-
-- [ ] `SCHEMAS.version` in `src/schema/models/index.js` matches the version in `generate-sql.sql` header comment and `INSERT`
+- [ ] `SCHEMAS.version` matches version in `generate-sql.sql` header comment and `INSERT`
 - [ ] `SqlGenerator.js` version output matches
-- [ ] `DatabaseValidator._checkVersion()` uses `schema.version` from SCHEMAS
+- [ ] `DatabaseValidator._checkVersion()` uses `schema.version`
 - [ ] `getSupabaseSchemaHealth` / `getRawDbSchemaHealth` use `SCHEMAS.version`
-- [ ] Health checks are forward-compatible (older DB version + all objects present = compatible)
+- [ ] Forward-compatible: older DB version + all objects present = compatible
 
-## 7. Startup Decision Flow (data-flow.md compliance)
+---
+
+## 6. Startup Decision Flow (data-flow.md)
 
 - [ ] `initApp()` uses `everInstalled` to decide: banner vs wizard
 - [ ] `handleSetupComplete()` uses `everInstalled` — does NOT force wizard for previously-installed DBs
@@ -94,12 +262,12 @@ if (!error && data && data.length > 0) exists = true;
 
 ---
 
-## Quick Reference: Key Files
+## 7. Quick Reference: Key Files
 
 | File | Purpose |
 |---|---|
-| `src/schema/models/index.js` | SCHEMAS object — JS source of truth |
 | `generate-sql.sql` | Canonical master SQL installation script |
+| `src/schema/models/index.js` | SCHEMAS — JS source of truth for all DB objects |
 | `src/setup-wizard/SqlGenerator.js` | Dynamic SQL generator (mirrors SQL) |
 | `src/setup-wizard/DatabaseValidator.js` | Live DB inspection against SCHEMAS |
 | `src/setup-wizard/SchemaAnalyzer.js` | Builds analysis + plan from validator report |

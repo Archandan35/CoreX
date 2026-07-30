@@ -556,16 +556,18 @@ export default function PrefixSuffixPanel({ open, onClose }) {
                   </Field>
 
                   <div style={{ display: 'flex', gap: 20, marginTop: 12 }}>
-                    <label className="ps-toggle-label">
-                      <input type="checkbox" checked={editForm.isActive} onChange={(v) => setEditForm((p) => ({ ...p, isActive: v }))} />
-                      <span className={`ps-toggle-slider${editForm.isActive ? ' on' : ''}`} />
+                    <label className="ps-switch">
+                      <input type="checkbox" checked={editForm.isActive} onChange={(e) => setEditForm((p) => ({ ...p, isActive: e.target.checked }))} />
+                      <span className={`ps-switch-slider${editForm.isActive ? ' on' : ''}`}>
+                        <span className="ps-switch-text">{editForm.isActive ? 'Active' : 'Inactive'}</span>
+                      </span>
                     </label>
-                    <span style={{ fontSize: 13 }}>Active</span>
-                    <label className="ps-toggle-label">
-                      <input type="checkbox" checked={editForm.isDefault} onChange={(v) => setEditForm((p) => ({ ...p, isDefault: v }))} />
-                      <span className={`ps-toggle-slider${editForm.isDefault ? ' on' : ''}`} />
+                    <label className="ps-switch">
+                      <input type="checkbox" checked={editForm.isDefault} onChange={(e) => setEditForm((p) => ({ ...p, isDefault: e.target.checked }))} />
+                      <span className={`ps-switch-slider${editForm.isDefault ? ' on' : ''}`}>
+                        <span className="ps-switch-text">{editForm.isDefault ? 'Enable' : 'Disable'}</span>
+                      </span>
                     </label>
-                    <span style={{ fontSize: 13 }}>Default</span>
                   </div>
 
                   {/* Live Preview */}

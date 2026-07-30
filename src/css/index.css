@@ -6093,58 +6093,76 @@ select.form-input { cursor: pointer; appearance: auto; }
 /* Primary tabs (Prefixes / Suffixes) */
 .ps-primary-tabs {
   display: flex;
-  gap: 0;
-  border-bottom: 1px solid var(--invoice-border);
-  margin-bottom: 16px;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 .ps-primary-tab {
-  padding: 10px 20px;
+  padding: 8px 20px;
   font: inherit;
   font-size: 14px;
   font-weight: 600;
   color: var(--invoice-muted);
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
+  background: var(--invoice-bg);
+  border: 1px solid var(--invoice-border);
+  border-radius: 6px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 .ps-primary-tab.active {
-  color: var(--invoice-indigo);
-  border-bottom-color: var(--invoice-indigo);
+  color: #fff;
+  background: var(--invoice-indigo);
+  border-color: var(--invoice-indigo);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--invoice-indigo) 35%, transparent);
 }
-.ps-primary-tab:hover { color: var(--invoice-text); }
+.ps-primary-tab:hover:not(.active) {
+  color: var(--invoice-text);
+  border-color: var(--invoice-indigo);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+.ps-primary-tab:active:not(.active) {
+  transform: translateY(0);
+}
 
-/* Document type tabs (scrollable, underline style) */
+/* Document type tabs (scrollable, card style) */
 .ps-doc-type-tabs {
   display: flex;
-  gap: 0;
+  gap: 6px;
   flex-wrap: nowrap;
   overflow-x: auto;
   margin-bottom: 16px;
-  border-bottom: 1px solid var(--invoice-border);
   -webkit-overflow-scrolling: touch;
 }
 .ps-doc-type-tab {
-  padding: 10px 20px;
+  padding: 8px 20px;
   font: inherit;
   font-size: 14px;
   font-weight: 500;
   color: var(--invoice-muted);
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
+  background: var(--invoice-bg);
+  border: 1px solid var(--invoice-border);
+  border-radius: 6px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   white-space: nowrap;
   flex-shrink: 0;
 }
 .ps-doc-type-tab.active {
-  color: var(--invoice-indigo);
-  border-bottom-color: var(--invoice-indigo);
+  color: #fff;
+  background: var(--invoice-indigo);
+  border-color: var(--invoice-indigo);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--invoice-indigo) 35%, transparent);
 }
 .ps-doc-type-tab:hover:not(.active) {
   color: var(--invoice-text);
+  border-color: var(--invoice-indigo);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+.ps-doc-type-tab:active:not(.active) {
+  transform: translateY(0);
 }
 
 /* Toolbar */
@@ -6293,6 +6311,56 @@ select.form-input { cursor: pointer; appearance: auto; }
 }
 .ps-toggle-slider.on { background: var(--invoice-indigo); }
 .ps-toggle-slider.on::before { transform: translateX(16px); }
+
+/* Text-label toggle switch (rectangle, medium) */
+.ps-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+.ps-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.ps-switch-slider {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 74px;
+  height: 28px;
+  background: #dc3545;
+  border-radius: 5px;
+  transition: background 0.25s, box-shadow 0.2s, transform 0.15s;
+}
+.ps-switch-slider:hover {
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.3);
+  transform: scale(1.04);
+}
+.ps-switch-slider:active {
+  transform: scale(0.96);
+}
+.ps-switch-slider.on {
+  background: var(--invoice-indigo);
+}
+.ps-switch-slider.on:hover {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--invoice-indigo) 30%, transparent);
+}
+.ps-switch-text {
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
 
 /* Loading state */
 .ps-loading {

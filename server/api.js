@@ -22,7 +22,15 @@ export async function handleApiRequest(req, res, db) {
       try {
         const parts = token.split('.');
         if (parts.length === 3) {
-          currentUser = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+          const raw = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+          const meta = raw.user_metadata || raw.app_metadata || {};
+          currentUser = {
+            ...raw,
+            id: raw.sub || raw.id,
+            permissions: raw.permissions || meta.permissions || [],
+            full_access: raw.full_access === true || meta.full_access === true,
+            role: raw.role || meta.role || 'user',
+          };
         }
       } catch {}
     }
@@ -224,6 +232,358 @@ async function handleMemory(db, path, method, parsed, send, currentUser) {
     if (!parsed.fileData) return send(400, { error: 'No file data provided.' });
     await db.settings.update({ logo: parsed.fileData });
     return send(200, { ok: true, logo: parsed.fileData });
+  }
+
+  // ===== Prefix / Suffix Settings =====
+  const PREFIX_STORE_KEY = '_prefix_settings';
+  async function loadPrefixes() {
+    if (db.settings) {
+      const all = await db.settings.getAll();
+      const raw = all[PREFIX_STORE_KEY];
+      if (raw) {
+        try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch {}
+      }
+    }
+    return [];
+  }
+  async function savePrefixes(items) {
+    if (db.settings) {
+      await db.settings.update({ [PREFIX_STORE_KEY]: JSON.stringify(items) });
+    }
+  }
+
+  if (path === '/api/prefix-settings' && method === 'GET') {
+    if (!checkPermission('settings:read')) return;
+    let items = await loadPrefixes();
+    if (parsed.active === 'true') items = items.filter(p => p.isActive !== false);
+    if (parsed.default === 'true') items = items.filter(p => p.isDefault === true);
+    if (parsed.docType) items = items.filter(p => p.docType === parsed.docType);
+    if (parsed.q) {
+      const q = parsed.q.toLowerCase();
+      items = items.filter(p => (p.value || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
+    }
+    const sortField = parsed.sortField || 'sequenceOrder';
+    const sortDir = parsed.sortDir || 'asc';
+    items = [...items].sort((a, b) => {
+      const va = a[sortField] ?? 0;
+      const vb = b[sortField] ?? 0;
+      if (typeof va === 'string') return sortDir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+      return sortDir === 'desc' ? vb - va : va - vb;
+    });
+    const pageSize = parseInt(parsed.pageSize, 10) || 10;
+    const pageNum = parseInt(parsed.page, 10) || 1;
+    const total = items.length;
+    const paged = items.slice((pageNum - 1) * pageSize, pageNum * pageSize);
+    return send(200, { items: paged, total });
+  }
+
+  if (path === '/api/prefix-settings' && method === 'POST') {
+    if (!checkPermission('settings:update')) return;
+    const items = await loadPrefixes();
+    const prefix = {
+      ...parsed,
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2),
+      createdAt: new Date().toISOString(),
+    };
+    if (prefix.isDefault) {
+      items.forEach(p => { p.isDefault = false; });
+    }
+    items.push(prefix);
+    await savePrefixes(items);
+    return send(201, { prefix });
+  }
+
+  const psMatch = path.match(/^\/api\/prefix-settings\/([^/]+)$/);
+  if (psMatch) {
+    const id = psMatch[1];
+    if (method === 'PUT') {
+      if (!checkPermission('settings:update')) return;
+      const items = await loadPrefixes();
+      const idx = items.findIndex(p => p.id === id);
+      if (idx === -1) return send(404, { error: 'Prefix not found.' });
+      if (parsed.isDefault) {
+        items.forEach(p => { p.isDefault = false; });
+      }
+      items[idx] = { ...items[idx], ...parsed, id };
+      await savePrefixes(items);
+      return send(200, { prefix: items[idx] });
+    }
+    if (method === 'DELETE') {
+      if (!checkPermission('settings:delete')) return;
+      const items = await loadPrefixes();
+      const idx = items.findIndex(p => p.id === id);
+      if (idx === -1) return send(404, { error: 'Prefix not found.' });
+      items.splice(idx, 1);
+      await savePrefixes(items);
+      return send(200, { ok: true });
+    }
+  }
+
+  const psDefaultMatch = path.match(/^\/api\/prefix-settings\/([^/]+)\/default$/);
+  if (psDefaultMatch) {
+    if (method === 'POST') {
+      if (!checkPermission('settings:update')) return;
+      const id = psDefaultMatch[1];
+      const items = await loadPrefixes();
+      const idx = items.findIndex(p => p.id === id);
+      if (idx === -1) return send(404, { error: 'Prefix not found.' });
+      items.forEach(p => { p.isDefault = false; });
+      items[idx].isDefault = true;
+      await savePrefixes(items);
+      return send(200, { prefix: items[idx] });
+    }
+  }
+
+  // ===== Suffix Settings =====
+  const SUFFIX_STORE_KEY = '_suffix_settings';
+  async function loadSuffixes() {
+    if (db.settings) {
+      const all = await db.settings.getAll();
+      const raw = all[SUFFIX_STORE_KEY];
+      if (raw) { try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch {} }
+    }
+    return [];
+  }
+  async function saveSuffixes(items) {
+    if (db.settings) { await db.settings.update({ [SUFFIX_STORE_KEY]: JSON.stringify(items) }); }
+  }
+
+  if (path === '/api/suffix-settings' && method === 'GET') {
+    if (!checkPermission('settings:read')) return;
+    let items = await loadSuffixes();
+    if (parsed.active === 'true') items = items.filter(p => p.isActive !== false);
+    if (parsed.default === 'true') items = items.filter(p => p.isDefault === true);
+    if (parsed.docType) items = items.filter(p => p.docType === parsed.docType);
+    if (parsed.q) {
+      const q = parsed.q.toLowerCase();
+      items = items.filter(p => (p.value || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
+    }
+    const sortField = parsed.sortField || 'sequenceOrder';
+    const sortDir = parsed.sortDir || 'asc';
+    items = [...items].sort((a, b) => {
+      const va = a[sortField] ?? 0;
+      const vb = b[sortField] ?? 0;
+      if (typeof va === 'string') return sortDir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+      return sortDir === 'desc' ? vb - va : va - vb;
+    });
+    const pageSize = parseInt(parsed.pageSize, 10) || 10;
+    const pageNum = parseInt(parsed.page, 10) || 1;
+    const total = items.length;
+    const paged = items.slice((pageNum - 1) * pageSize, pageNum * pageSize);
+    return send(200, { items: paged, total });
+  }
+
+  if (path === '/api/suffix-settings' && method === 'POST') {
+    if (!checkPermission('settings:update')) return;
+    const items = await loadSuffixes();
+    const suffix = {
+      ...parsed,
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2),
+      createdAt: new Date().toISOString(),
+    };
+    if (suffix.isDefault) items.forEach(p => { p.isDefault = false; });
+    items.push(suffix);
+    await saveSuffixes(items);
+    return send(201, { suffix });
+  }
+
+  const ssMatch = path.match(/^\/api\/suffix-settings\/([^/]+)$/);
+  if (ssMatch) {
+    const id = ssMatch[1];
+    if (method === 'PUT') {
+      if (!checkPermission('settings:update')) return;
+      const items = await loadSuffixes();
+      const idx = items.findIndex(p => p.id === id);
+      if (idx === -1) return send(404, { error: 'Suffix not found.' });
+      if (parsed.isDefault) items.forEach(p => { p.isDefault = false; });
+      items[idx] = { ...items[idx], ...parsed, id };
+      await saveSuffixes(items);
+      return send(200, { suffix: items[idx] });
+    }
+    if (method === 'DELETE') {
+      if (!checkPermission('settings:delete')) return;
+      const items = await loadSuffixes();
+      const idx = items.findIndex(p => p.id === id);
+      if (idx === -1) return send(404, { error: 'Suffix not found.' });
+      items.splice(idx, 1);
+      await saveSuffixes(items);
+      return send(200, { ok: true });
+    }
+  }
+
+  const ssDefaultMatch = path.match(/^\/api\/suffix-settings\/([^/]+)\/default$/);
+  if (ssDefaultMatch) {
+    if (method === 'POST') {
+      if (!checkPermission('settings:update')) return;
+      const id = ssDefaultMatch[1];
+      const items = await loadSuffixes();
+      const idx = items.findIndex(p => p.id === id);
+      if (idx === -1) return send(404, { error: 'Suffix not found.' });
+      items.forEach(p => { p.isDefault = false; });
+      items[idx].isDefault = true;
+      await saveSuffixes(items);
+      return send(200, { suffix: items[idx] });
+    }
+  }
+
+  // ===== Document Notes =====
+  const NOTES_STORE_KEY = '_document_notes';
+  async function loadNotes() {
+    if (db.settings) {
+      const all = await db.settings.getAll();
+      const raw = all[NOTES_STORE_KEY];
+      if (raw) { try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch {} }
+    }
+    return [];
+  }
+  async function saveNotes(items) {
+    if (db.settings) { await db.settings.update({ [NOTES_STORE_KEY]: JSON.stringify(items) }); }
+  }
+
+  if (path === '/api/document-notes' && method === 'GET') {
+    if (!checkPermission('settings:read')) return;
+    let items = await loadNotes();
+    if (parsed.docType) items = items.filter(n => n.docType === parsed.docType);
+    if (parsed.q) {
+      const q = parsed.q.toLowerCase();
+      items = items.filter(n => (n.content || '').toLowerCase().includes(q) || (n.title || '').toLowerCase().includes(q));
+    }
+    const sortField = parsed.sortField || 'createdAt';
+    const sortDir = parsed.sortDir || 'desc';
+    items = [...items].sort((a, b) => {
+      const va = a[sortField] ?? 0;
+      const vb = b[sortField] ?? 0;
+      if (typeof va === 'string') return sortDir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+      return sortDir === 'desc' ? vb - va : va - vb;
+    });
+    const pageSize = parseInt(parsed.pageSize, 10) || 10;
+    const pageNum = parseInt(parsed.page, 10) || 1;
+    const total = items.length;
+    const paged = items.slice((pageNum - 1) * pageSize, pageNum * pageSize);
+    return send(200, { items: paged, total });
+  }
+
+  if (path === '/api/document-notes' && method === 'POST') {
+    if (!checkPermission('settings:update')) return;
+    const items = await loadNotes();
+    const note = { ...parsed, id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2), createdAt: new Date().toISOString() };
+    items.push(note);
+    await saveNotes(items);
+    return send(201, { note });
+  }
+
+  const noteMatch = path.match(/^\/api\/document-notes\/([^/]+)$/);
+  if (noteMatch) {
+    const id = noteMatch[1];
+    if (method === 'PUT') {
+      if (!checkPermission('settings:update')) return;
+      const items = await loadNotes();
+      const idx = items.findIndex(n => n.id === id);
+      if (idx === -1) return send(404, { error: 'Note not found.' });
+      items[idx] = { ...items[idx], ...parsed, id };
+      await saveNotes(items);
+      return send(200, { note: items[idx] });
+    }
+    if (method === 'DELETE') {
+      if (!checkPermission('settings:delete')) return;
+      const items = await loadNotes();
+      const idx = items.findIndex(n => n.id === id);
+      if (idx === -1) return send(404, { error: 'Note not found.' });
+      items.splice(idx, 1);
+      await saveNotes(items);
+      return send(200, { ok: true });
+    }
+  }
+
+  // ===== Document Terms =====
+  const TERMS_STORE_KEY = '_document_terms';
+  async function loadTerms() {
+    if (db.settings) {
+      const all = await db.settings.getAll();
+      const raw = all[TERMS_STORE_KEY];
+      if (raw) { try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch {} }
+    }
+    return [];
+  }
+  async function saveTerms(items) {
+    if (db.settings) { await db.settings.update({ [TERMS_STORE_KEY]: JSON.stringify(items) }); }
+  }
+
+  if (path === '/api/document-terms' && method === 'GET') {
+    if (!checkPermission('settings:read')) return;
+    let items = await loadTerms();
+    if (parsed.docType) items = items.filter(t => t.docType === parsed.docType);
+    if (parsed.q) {
+      const q = parsed.q.toLowerCase();
+      items = items.filter(t => (t.content || '').toLowerCase().includes(q) || (t.title || '').toLowerCase().includes(q));
+    }
+    const sortField = parsed.sortField || 'createdAt';
+    const sortDir = parsed.sortDir || 'desc';
+    items = [...items].sort((a, b) => {
+      const va = a[sortField] ?? 0;
+      const vb = b[sortField] ?? 0;
+      if (typeof va === 'string') return sortDir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+      return sortDir === 'desc' ? vb - va : va - vb;
+    });
+    const pageSize = parseInt(parsed.pageSize, 10) || 10;
+    const pageNum = parseInt(parsed.page, 10) || 1;
+    const total = items.length;
+    const paged = items.slice((pageNum - 1) * pageSize, pageNum * pageSize);
+    return send(200, { items: paged, total });
+  }
+
+  if (path === '/api/document-terms' && method === 'POST') {
+    if (!checkPermission('settings:update')) return;
+    const items = await loadTerms();
+    const term = { ...parsed, id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2), createdAt: new Date().toISOString() };
+    items.push(term);
+    await saveTerms(items);
+    return send(201, { term });
+  }
+
+  const termMatch = path.match(/^\/api\/document-terms\/([^/]+)$/);
+  if (termMatch) {
+    const id = termMatch[1];
+    if (method === 'PUT') {
+      if (!checkPermission('settings:update')) return;
+      const items = await loadTerms();
+      const idx = items.findIndex(t => t.id === id);
+      if (idx === -1) return send(404, { error: 'Term not found.' });
+      items[idx] = { ...items[idx], ...parsed, id };
+      await saveTerms(items);
+      return send(200, { term: items[idx] });
+    }
+    if (method === 'DELETE') {
+      if (!checkPermission('settings:delete')) return;
+      const items = await loadTerms();
+      const idx = items.findIndex(t => t.id === id);
+      if (idx === -1) return send(404, { error: 'Term not found.' });
+      items.splice(idx, 1);
+      await saveTerms(items);
+      return send(200, { ok: true });
+    }
+  }
+
+  // ===== Product Columns =====
+  const COLUMNS_STORE_KEY = '_product_columns';
+  async function loadColumns() {
+    if (db.settings) {
+      const all = await db.settings.getAll();
+      const raw = all[COLUMNS_STORE_KEY];
+      if (raw) { try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch {} }
+    }
+    return null;
+  }
+
+  if (path === '/api/product-columns' && method === 'GET') {
+    const columns = await loadColumns();
+    return send(200, { columns: Array.isArray(columns) ? columns : [] });
+  }
+
+  if (path === '/api/product-columns' && method === 'PUT') {
+    if (!checkPermission('settings:update')) return;
+    if (db.settings) { await db.settings.update({ [COLUMNS_STORE_KEY]: JSON.stringify(parsed.columns || []) }); }
+    return send(200, { ok: true });
   }
 
   return send(404, { error: 'Not found.' });
@@ -1063,6 +1423,337 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
 
     await createAuditLog('invoices', created.id, 'created', null, newInv, uid);
     return send(201, { invoice: created });
+  }
+
+  // ===== Prefix / Suffix Settings (Supabase) =====
+  async function loadSupabasePrefixes() {
+    const { data, error } = await adminClient.from('settings').select('value').eq('key', '_prefix_settings').maybeSingle();
+    if (error || !data) return [];
+    try { return JSON.parse(data.value); } catch { return []; }
+  }
+  async function saveSupabasePrefixes(items) {
+    await adminClient.from('settings').upsert(
+      { key: '_prefix_settings', value: JSON.stringify(items) },
+      { onConflict: 'key' }
+    );
+  }
+
+  if (path === '/api/prefix-settings' && method === 'GET') {
+    if (!cp('settings:read')) return;
+    let items = await loadSupabasePrefixes();
+    if (parsed.active === 'true') items = items.filter(p => p.isActive !== false);
+    if (parsed.default === 'true') items = items.filter(p => p.isDefault === true);
+    if (parsed.docType) items = items.filter(p => p.docType === parsed.docType);
+    if (parsed.q) {
+      const q = parsed.q.toLowerCase();
+      items = items.filter(p => (p.value || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
+    }
+    const sortField = parsed.sortField || 'sequenceOrder';
+    const sortDir = parsed.sortDir || 'asc';
+    items = [...items].sort((a, b) => {
+      const va = a[sortField] ?? 0;
+      const vb = b[sortField] ?? 0;
+      if (typeof va === 'string') return sortDir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+      return sortDir === 'desc' ? vb - va : va - vb;
+    });
+    const pageSize = parseInt(parsed.pageSize, 10) || 10;
+    const pageNum = parseInt(parsed.page, 10) || 1;
+    const total = items.length;
+    const paged = items.slice((pageNum - 1) * pageSize, pageNum * pageSize);
+    return send(200, { items: paged, total });
+  }
+
+  if (path === '/api/prefix-settings' && method === 'POST') {
+    if (!cp('settings:update')) return;
+    const items = await loadSupabasePrefixes();
+    const prefix = {
+      ...parsed,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
+    if (prefix.isDefault) items.forEach(p => { p.isDefault = false; });
+    items.push(prefix);
+    await saveSupabasePrefixes(items);
+    return send(201, { prefix });
+  }
+
+  const psMatch2 = path.match(/^\/api\/prefix-settings\/([^/]+)$/);
+  if (psMatch2) {
+    const id = psMatch2[1];
+    if (method === 'PUT') {
+      if (!cp('settings:update')) return;
+      const items = await loadSupabasePrefixes();
+      const idx = items.findIndex(p => p.id === id);
+      if (idx === -1) return send(404, { error: 'Prefix not found.' });
+      if (parsed.isDefault) items.forEach(p => { p.isDefault = false; });
+      items[idx] = { ...items[idx], ...parsed, id };
+      await saveSupabasePrefixes(items);
+      return send(200, { prefix: items[idx] });
+    }
+    if (method === 'DELETE') {
+      if (!cp('settings:delete')) return;
+      const items = await loadSupabasePrefixes();
+      const idx = items.findIndex(p => p.id === id);
+      if (idx === -1) return send(404, { error: 'Prefix not found.' });
+      items.splice(idx, 1);
+      await saveSupabasePrefixes(items);
+      return send(200, { ok: true });
+    }
+  }
+
+  const psDefaultMatch2 = path.match(/^\/api\/prefix-settings\/([^/]+)\/default$/);
+  if (psDefaultMatch2) {
+    if (method === 'POST') {
+      if (!cp('settings:update')) return;
+      const id = psDefaultMatch2[1];
+      const items = await loadSupabasePrefixes();
+      const idx = items.findIndex(p => p.id === id);
+      if (idx === -1) return send(404, { error: 'Prefix not found.' });
+      items.forEach(p => { p.isDefault = false; });
+      items[idx].isDefault = true;
+      await saveSupabasePrefixes(items);
+      return send(200, { prefix: items[idx] });
+    }
+  }
+
+  // ===== Suffix Settings (Supabase) =====
+  async function loadSupabaseSuffixes() {
+    const { data, error } = await adminClient.from('settings').select('value').eq('key', '_suffix_settings').maybeSingle();
+    if (error || !data) return [];
+    try { return JSON.parse(data.value); } catch { return []; }
+  }
+  async function saveSupabaseSuffixes(items) {
+    await adminClient.from('settings').upsert(
+      { key: '_suffix_settings', value: JSON.stringify(items) },
+      { onConflict: 'key' }
+    );
+  }
+
+  if (path === '/api/suffix-settings' && method === 'GET') {
+    if (!cp('settings:read')) return;
+    let items = await loadSupabaseSuffixes();
+    if (parsed.active === 'true') items = items.filter(p => p.isActive !== false);
+    if (parsed.default === 'true') items = items.filter(p => p.isDefault === true);
+    if (parsed.docType) items = items.filter(p => p.docType === parsed.docType);
+    if (parsed.q) {
+      const q = parsed.q.toLowerCase();
+      items = items.filter(p => (p.value || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
+    }
+    const sortField = parsed.sortField || 'sequenceOrder';
+    const sortDir = parsed.sortDir || 'asc';
+    items = [...items].sort((a, b) => {
+      const va = a[sortField] ?? 0;
+      const vb = b[sortField] ?? 0;
+      if (typeof va === 'string') return sortDir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+      return sortDir === 'desc' ? vb - va : va - vb;
+    });
+    const pageSize = parseInt(parsed.pageSize, 10) || 10;
+    const pageNum = parseInt(parsed.page, 10) || 1;
+    const total = items.length;
+    const paged = items.slice((pageNum - 1) * pageSize, pageNum * pageSize);
+    return send(200, { items: paged, total });
+  }
+
+  if (path === '/api/suffix-settings' && method === 'POST') {
+    if (!cp('settings:update')) return;
+    const items = await loadSupabaseSuffixes();
+    const suffix = { ...parsed, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+    if (suffix.isDefault) items.forEach(p => { p.isDefault = false; });
+    items.push(suffix);
+    await saveSupabaseSuffixes(items);
+    return send(201, { suffix });
+  }
+
+  const ssMatch2 = path.match(/^\/api\/suffix-settings\/([^/]+)$/);
+  if (ssMatch2) {
+    const id = ssMatch2[1];
+    if (method === 'PUT') {
+      if (!cp('settings:update')) return;
+      const items = await loadSupabaseSuffixes();
+      const idx = items.findIndex(p => p.id === id);
+      if (idx === -1) return send(404, { error: 'Suffix not found.' });
+      if (parsed.isDefault) items.forEach(p => { p.isDefault = false; });
+      items[idx] = { ...items[idx], ...parsed, id };
+      await saveSupabaseSuffixes(items);
+      return send(200, { suffix: items[idx] });
+    }
+    if (method === 'DELETE') {
+      if (!cp('settings:delete')) return;
+      const items = await loadSupabaseSuffixes();
+      const idx = items.findIndex(p => p.id === id);
+      if (idx === -1) return send(404, { error: 'Suffix not found.' });
+      items.splice(idx, 1);
+      await saveSupabaseSuffixes(items);
+      return send(200, { ok: true });
+    }
+  }
+
+  const ssDefaultMatch2 = path.match(/^\/api\/suffix-settings\/([^/]+)\/default$/);
+  if (ssDefaultMatch2) {
+    if (method === 'POST') {
+      if (!cp('settings:update')) return;
+      const id = ssDefaultMatch2[1];
+      const items = await loadSupabaseSuffixes();
+      const idx = items.findIndex(p => p.id === id);
+      if (idx === -1) return send(404, { error: 'Suffix not found.' });
+      items.forEach(p => { p.isDefault = false; });
+      items[idx].isDefault = true;
+      await saveSupabaseSuffixes(items);
+      return send(200, { suffix: items[idx] });
+    }
+  }
+
+  // ===== Document Notes (Supabase) =====
+  async function loadSupabaseNotes() {
+    const { data, error } = await adminClient.from('settings').select('value').eq('key', '_document_notes').maybeSingle();
+    if (error || !data) return [];
+    try { return JSON.parse(data.value); } catch { return []; }
+  }
+  async function saveSupabaseNotes(items) {
+    await adminClient.from('settings').upsert(
+      { key: '_document_notes', value: JSON.stringify(items) },
+      { onConflict: 'key' }
+    );
+  }
+
+  if (path === '/api/document-notes' && method === 'GET') {
+    if (!cp('settings:read')) return;
+    let items = await loadSupabaseNotes();
+    if (parsed.docType) items = items.filter(n => n.docType === parsed.docType);
+    if (parsed.q) {
+      const q = parsed.q.toLowerCase();
+      items = items.filter(n => (n.content || '').toLowerCase().includes(q) || (n.title || '').toLowerCase().includes(q));
+    }
+    const sortField = parsed.sortField || 'createdAt';
+    const sortDir = parsed.sortDir || 'desc';
+    items = [...items].sort((a, b) => {
+      const va = a[sortField] ?? 0;
+      const vb = b[sortField] ?? 0;
+      if (typeof va === 'string') return sortDir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+      return sortDir === 'desc' ? vb - va : va - vb;
+    });
+    const pageSize = parseInt(parsed.pageSize, 10) || 10;
+    const pageNum = parseInt(parsed.page, 10) || 1;
+    const total = items.length;
+    const paged = items.slice((pageNum - 1) * pageSize, pageNum * pageSize);
+    return send(200, { items: paged, total });
+  }
+
+  if (path === '/api/document-notes' && method === 'POST') {
+    if (!cp('settings:update')) return;
+    const items = await loadSupabaseNotes();
+    const note = { ...parsed, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+    items.push(note);
+    await saveSupabaseNotes(items);
+    return send(201, { note });
+  }
+
+  const noteMatch2 = path.match(/^\/api\/document-notes\/([^/]+)$/);
+  if (noteMatch2) {
+    const id = noteMatch2[1];
+    if (method === 'PUT') {
+      if (!cp('settings:update')) return;
+      const items = await loadSupabaseNotes();
+      const idx = items.findIndex(n => n.id === id);
+      if (idx === -1) return send(404, { error: 'Note not found.' });
+      items[idx] = { ...items[idx], ...parsed, id };
+      await saveSupabaseNotes(items);
+      return send(200, { note: items[idx] });
+    }
+    if (method === 'DELETE') {
+      if (!cp('settings:delete')) return;
+      const items = await loadSupabaseNotes();
+      const idx = items.findIndex(n => n.id === id);
+      if (idx === -1) return send(404, { error: 'Note not found.' });
+      items.splice(idx, 1);
+      await saveSupabaseNotes(items);
+      return send(200, { ok: true });
+    }
+  }
+
+  // ===== Document Terms (Supabase) =====
+  async function loadSupabaseTerms() {
+    const { data, error } = await adminClient.from('settings').select('value').eq('key', '_document_terms').maybeSingle();
+    if (error || !data) return [];
+    try { return JSON.parse(data.value); } catch { return []; }
+  }
+  async function saveSupabaseTerms(items) {
+    await adminClient.from('settings').upsert(
+      { key: '_document_terms', value: JSON.stringify(items) },
+      { onConflict: 'key' }
+    );
+  }
+
+  if (path === '/api/document-terms' && method === 'GET') {
+    if (!cp('settings:read')) return;
+    let items = await loadSupabaseTerms();
+    if (parsed.docType) items = items.filter(t => t.docType === parsed.docType);
+    if (parsed.q) {
+      const q = parsed.q.toLowerCase();
+      items = items.filter(t => (t.content || '').toLowerCase().includes(q) || (t.title || '').toLowerCase().includes(q));
+    }
+    const sortField = parsed.sortField || 'createdAt';
+    const sortDir = parsed.sortDir || 'desc';
+    items = [...items].sort((a, b) => {
+      const va = a[sortField] ?? 0;
+      const vb = b[sortField] ?? 0;
+      if (typeof va === 'string') return sortDir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+      return sortDir === 'desc' ? vb - va : va - vb;
+    });
+    const pageSize = parseInt(parsed.pageSize, 10) || 10;
+    const pageNum = parseInt(parsed.page, 10) || 1;
+    const total = items.length;
+    const paged = items.slice((pageNum - 1) * pageSize, pageNum * pageSize);
+    return send(200, { items: paged, total });
+  }
+
+  if (path === '/api/document-terms' && method === 'POST') {
+    if (!cp('settings:update')) return;
+    const items = await loadSupabaseTerms();
+    const term = { ...parsed, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+    items.push(term);
+    await saveSupabaseTerms(items);
+    return send(201, { term });
+  }
+
+  const termMatch2 = path.match(/^\/api\/document-terms\/([^/]+)$/);
+  if (termMatch2) {
+    const id = termMatch2[1];
+    if (method === 'PUT') {
+      if (!cp('settings:update')) return;
+      const items = await loadSupabaseTerms();
+      const idx = items.findIndex(t => t.id === id);
+      if (idx === -1) return send(404, { error: 'Term not found.' });
+      items[idx] = { ...items[idx], ...parsed, id };
+      await saveSupabaseTerms(items);
+      return send(200, { term: items[idx] });
+    }
+    if (method === 'DELETE') {
+      if (!cp('settings:delete')) return;
+      const items = await loadSupabaseTerms();
+      const idx = items.findIndex(t => t.id === id);
+      if (idx === -1) return send(404, { error: 'Term not found.' });
+      items.splice(idx, 1);
+      await saveSupabaseTerms(items);
+      return send(200, { ok: true });
+    }
+  }
+
+  // ===== Product Columns (Supabase) =====
+  if (path === '/api/product-columns' && method === 'GET') {
+    const { data, error } = await adminClient.from('settings').select('value').eq('key', '_product_columns').maybeSingle();
+    let columns = [];
+    if (!error && data) { try { columns = JSON.parse(data.value); } catch {} }
+    return send(200, { columns: Array.isArray(columns) ? columns : [] });
+  }
+
+  if (path === '/api/product-columns' && method === 'PUT') {
+    if (!cp('settings:update')) return;
+    await adminClient.from('settings').upsert(
+      { key: '_product_columns', value: JSON.stringify(parsed.columns || []) },
+      { onConflict: 'key' }
+    );
+    return send(200, { ok: true });
   }
 
   return send(404, { error: 'Not found.' });

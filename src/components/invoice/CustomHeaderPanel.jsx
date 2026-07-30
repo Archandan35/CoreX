@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Icon from '../ui/Icon.jsx';
 import Button from '../ui/Button.jsx';
 import Select from '../ui/Select.jsx';
@@ -19,6 +19,9 @@ const EMPTY_FORM = {
   inputType: 'text',
   active: true,
   isDefault: false,
+  displayOrder: 1,
+  columnPosition: 1,
+  options: '',
 };
 
 function keyFromName(name) {
@@ -28,14 +31,15 @@ function keyFromName(name) {
 function validateForm(form, existing, currentId) {
   const errs = {};
   if (!form.displayName.trim()) errs.displayName = 'Display name is required.';
-  if (!form.internalKey.trim()) errs.internalKey = 'Internal key is required.';
-  if (!/^[a-z][a-z0-9_]*$/.test(form.internalKey.trim())) errs.internalKey = 'Must start with a letter and contain only lowercase letters, numbers, underscores.';
-  const dupKey = existing.find((h) => h.internalKey === form.internalKey.trim() && h.id !== currentId);
+  const internalKey = keyFromName(form.displayName);
+  if (!internalKey) errs.internalKey = 'Internal key is required.';
+  if (!/^[a-z][a-z0-9_]*$/.test(internalKey)) errs.internalKey = 'Must start with a letter and contain only lowercase letters, numbers, underscores.';
+  const dupKey = existing.find((h) => h.internalKey === internalKey && h.id !== currentId);
   if (dupKey) errs.internalKey = 'This internal key already exists.';
   const dupName = existing.find((h) => h.displayName === form.displayName.trim() && h.id !== currentId);
   if (dupName) errs.displayName = 'This display name already exists.';
   if (form.displayName.trim().length > 100) errs.displayName = 'Maximum 100 characters.';
-  if (form.internalKey.trim().length > 100) errs.internalKey = 'Maximum 100 characters.';
+  if (internalKey.length > 100) errs.internalKey = 'Maximum 100 characters.';
   if (!form.displayOrder || form.displayOrder < 1) errs.displayOrder = 'Must be at least 1.';
   if ((form.inputType === 'dropdown' || form.inputType === 'multi_select' || form.inputType === 'radio') && !form.options.trim()) {
     errs.options = 'Options are required for this input type (comma-separated).';
@@ -106,6 +110,9 @@ export default function CustomHeaderPanel({ open, onClose }) {
       inputType: item.inputType || 'text',
       active: item.active ?? true,
       isDefault: item.isDefault ?? item.default ?? false,
+      displayOrder: item.displayOrder ?? item.order ?? 1,
+      columnPosition: item.columnPosition ?? 1,
+      options: item.options || '',
     });
     setEditErrors({});
     setEditOpen(true);
@@ -122,13 +129,16 @@ export default function CustomHeaderPanel({ open, onClose }) {
 
     setEditSaving(true);
     try {
-      const internalKey = editForm.displayName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+      const internalKey = keyFromName(editForm.displayName);
       const payload = {
         displayName: editForm.displayName.trim(),
         internalKey,
         inputType: editForm.inputType,
         active: editForm.active,
         isDefault: editForm.isDefault,
+        displayOrder: Number(editForm.displayOrder) || 1,
+        columnPosition: Number(editForm.columnPosition) || 1,
+        options: editForm.options.trim(),
       };
 
       if (editItem) {
@@ -232,6 +242,8 @@ export default function CustomHeaderPanel({ open, onClose }) {
   const updateForm = useCallback((key, value) => {
     setEditForm((prev) => ({ ...prev, [key]: value }));
   }, []);
+
+  const computedKey = useMemo(() => keyFromName(editForm.displayName || ''), [editForm.displayName]);
 
   if (!open) return null;
 
@@ -410,16 +422,59 @@ export default function CustomHeaderPanel({ open, onClose }) {
                       <Select options={CUSTOM_HEADER_INPUT_TYPE_OPTIONS} value={editForm.inputType} onChange={(v) => updateForm('inputType', v)} placeholder="Select type" />
                     </Field>
                   </div>
+
+                  {(editForm.inputType === 'dropdown' || editForm.inputType === 'multi_select' || editForm.inputType === 'radio') && (
+                    <div className="inv-modal-row" style={{ marginTop: 12 }}>
+                      <Field label="Options" required>
+                        <Input
+                          value={editForm.options}
+                          onChange={(e) => updateForm('options', e.target.value)}
+                          placeholder="Comma-separated values"
+                          aria-invalid={!!editErrors.options}
+                        />
+                        {editErrors.options && <span className="inv-field-error">{editErrors.options}</span>}
+                      </Field>
+                    </div>
+                  )}
+
                   <div className="inv-modal-row" style={{ marginTop: 12 }}>
-                    <label className="ps-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <Field label="Internal Key">
+                      <Input value={computedKey} disabled placeholder="Auto-generated" />
+                    </Field>
+                    <Field label="Display Order">
+                      <Input
+                        type="number" min="1" step="1"
+                        value={editForm.displayOrder}
+                        onChange={(e) => updateForm('displayOrder', e.target.value === '' ? '' : Number(e.target.value))}
+                        aria-invalid={!!editErrors.displayOrder}
+                      />
+                      {editErrors.displayOrder && <span className="inv-field-error">{editErrors.displayOrder}</span>}
+                    </Field>
+                  </div>
+
+                  <div className="inv-modal-row" style={{ marginTop: 12 }}>
+                    <Field label="Column Position">
+                      <Input
+                        type="number" min="1" step="1"
+                        value={editForm.columnPosition}
+                        onChange={(e) => updateForm('columnPosition', e.target.value === '' ? '' : Number(e.target.value))}
+                      />
+                    </Field>
+                    <div />
+                  </div>
+
+                  <div className="inv-modal-row" style={{ marginTop: 12 }}>
+                    <label className="ps-switch">
                       <input type="checkbox" checked={editForm.active} onChange={(e) => updateForm('active', e.target.checked)} />
-                      <span className={`ps-toggle-slider${editForm.active ? ' on' : ''}`} />
-                      <span style={{ fontSize: 13 }}>Active</span>
+                      <span className={`ps-switch-slider${editForm.active ? ' on' : ''}`}>
+                        <span className="ps-switch-text">{editForm.active ? 'Active' : 'Inactive'}</span>
+                      </span>
                     </label>
-                    <label className="ps-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <label className="ps-switch">
                       <input type="checkbox" checked={editForm.isDefault} onChange={(e) => updateForm('isDefault', e.target.checked)} />
-                      <span className={`ps-toggle-slider${editForm.isDefault ? ' on' : ''}`} />
-                      <span style={{ fontSize: 13 }}>Default</span>
+                      <span className={`ps-switch-slider${editForm.isDefault ? ' on' : ''}`}>
+                        <span className="ps-switch-text">{editForm.isDefault ? 'Enable' : 'Disable'}</span>
+                      </span>
                     </label>
                   </div>
                 </form>
