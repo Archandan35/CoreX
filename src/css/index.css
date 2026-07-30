@@ -5114,7 +5114,7 @@ select.form-input { cursor: pointer; appearance: auto; }
 .ss-step-text { min-width: 0; word-break: break-word; }
 
 .ss-step-list { position: relative; }
-.ss-step-row { display: flex; align-items: flex-start; gap: 12px; position: relative; padding-bottom: 26px; }
+.ss-step-row { display: flex; align-items: flex-start; gap: 12px; position: relative; padding-top: 26px; padding-bottom: 26px; }
 .ss-step-row:last-child { padding-bottom: 0; }
 .ss-connector { position: absolute; left: 15px; top: 34px; bottom: -2px; border-left: 1.5px dashed #D8DCE3; }
 .ss-step-row:last-child .ss-connector { display: none; }
