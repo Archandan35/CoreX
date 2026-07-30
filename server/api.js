@@ -12,6 +12,7 @@ export async function handleApiRequest(req, res, db) {
     try { parsed = body ? JSON.parse(body) : {}; } catch { parsed = {}; }
 
     const send = (status, data) => {
+      if (res.headersSent) return;
       res.writeHead(status, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(data));
     };
