@@ -5,6 +5,7 @@ import { useAuth } from '../../identity/auth/AuthContext.jsx';
 import Icon from '../ui/Icon.jsx';
 import ThemeToggle from '../ui/ThemeToggle.jsx';
 import { useToolbar } from './ToolbarContext.jsx';
+import { settingsApiService } from '../../services/settings/SettingsApiService.js';
 
 export default function Topbar({ onToggle }) {
   const { pathname } = useLocation();
@@ -12,6 +13,23 @@ export default function Topbar({ onToggle }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const { items } = useToolbar();
+  const [logoUrl, setLogoUrl] = useState(null);
+
+  useEffect(() => {
+    settingsApiService.getAll().then((res) => {
+      const s = res?.settings;
+      if (s?.logo) setLogoUrl(s.logo);
+      if (s?.favicon) {
+        let link = document.querySelector('link[rel="icon"]');
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.head.appendChild(link);
+        }
+        link.href = s.favicon;
+      }
+    }).catch(() => {});
+  }, []);
 
   const current = ALL_NAV_ITEMS.find((i) => (i.end ? i.to === pathname : pathname.startsWith(i.to) && i.to !== '/')) ||
     ALL_NAV_ITEMS.find((i) => i.to === pathname) || { label: 'Dashboard' };
@@ -29,7 +47,11 @@ export default function Topbar({ onToggle }) {
       <button className="topbar__toggle" onClick={onToggle} aria-label="Toggle sidebar">
         <Icon name="menu" size={18} />
       </button>
-      <div className="topbar__title">{current.label}</div>
+      {logoUrl ? (
+        <img src={logoUrl} alt="Logo" className="topbar__logo" />
+      ) : (
+        <div className="topbar__title">{current.label}</div>
+      )}
       <div className="topbar__spacer" />
 
       {items.map((item, i) => (

@@ -7815,7 +7815,7 @@ select.form-input { cursor: pointer; appearance: auto; }
   padding: 9px 16px;
   border-radius: 10px;
   font-weight: 600;
-  font-size: 13.5px;
+  font-size: 14px;
   white-space: nowrap;
   cursor: pointer;
   transition: all 200ms ease;

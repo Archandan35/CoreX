@@ -38,6 +38,7 @@ const TIME_FORMATS = [
 
 const TOC_ITEMS = [
   { id: 'section-logo', label: 'Website Logo' },
+  { id: 'section-favicon', label: 'Favicon' },
   { id: 'section-site-title', label: 'Site Title' },
   { id: 'section-tagline', label: 'Tagline' },
   { id: 'section-site-url', label: 'Website URL' },
@@ -113,6 +114,10 @@ export default function Settings() {
   const [logoFile, setLogoFile] = useState(null);
   const [logoDragOver, setLogoDragOver] = useState(false);
 
+  const [faviconPreview, setFaviconPreview] = useState(null);
+  const [faviconFile, setFaviconFile] = useState(null);
+  const [faviconDragOver, setFaviconDragOver] = useState(false);
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [confirmMode, setConfirmMode] = useState('leave');
@@ -142,6 +147,7 @@ export default function Settings() {
       setValues(data);
       setOriginal(data);
       if (data.logo) setLogoPreview(data.logo);
+      if (data.favicon) setFaviconPreview(data.favicon);
       fetchRoles();
       fetchLanguages();
       setAllTimezones(Intl.supportedValuesOf('timeZone'));
@@ -216,6 +222,48 @@ export default function Settings() {
     setLogoDragOver(false);
   }, []);
 
+  const handleFaviconSelect = useCallback((file) => {
+    const validTypes = ['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/svg+xml'];
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(ico|png|svg)$/i)) {
+      notificationManager.error('Invalid format', 'Favicon must be ICO, PNG, or SVG.');
+      return;
+    }
+    if (file.size > 1 * 1024 * 1024) {
+      notificationManager.error('File too large', 'Favicon must be under 1MB.');
+      return;
+    }
+    setFaviconFile(file);
+    const url = URL.createObjectURL(file);
+    setFaviconPreview(url);
+  }, []);
+
+  const handleFaviconInputChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (file) handleFaviconSelect(file);
+  }, [handleFaviconSelect]);
+
+  const handleFaviconDrop = useCallback((e) => {
+    e.preventDefault();
+    setFaviconDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFaviconSelect(file);
+  }, [handleFaviconSelect]);
+
+  const handleFaviconRemove = useCallback(() => {
+    setFaviconPreview(null);
+    setFaviconFile(null);
+    handleChange('favicon', '');
+  }, [handleChange]);
+
+  const handleFaviconDragOver = useCallback((e) => {
+    e.preventDefault();
+    setFaviconDragOver(true);
+  }, []);
+
+  const handleFaviconDragLeave = useCallback(() => {
+    setFaviconDragOver(false);
+  }, []);
+
   const handleSave = useCallback(async () => {
     const validation = validateSettings(values);
     if (!validation.valid) {
@@ -244,10 +292,26 @@ export default function Settings() {
         });
       }
 
-      const { logo: _logo, ...rest } = values;
-      await settingsApiService.update(logoFile ? rest : values);
-      setOriginal({ ...values, logo: logoFile ? original.logo : values.logo });
+      let finalValues = { ...values };
+      if (faviconFile) {
+        const reader = new FileReader();
+        const fileData = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(faviconFile);
+        });
+        finalValues = { ...values, favicon: fileData };
+      }
+
+      const { logo: _logo, ...rest } = finalValues;
+      await settingsApiService.update(logoFile ? rest : finalValues);
+      setOriginal({
+        ...values,
+        logo: logoFile ? original.logo : finalValues.logo,
+        favicon: faviconFile ? original.favicon : finalValues.favicon,
+      });
       setLogoFile(null);
+      setFaviconFile(null);
       setValidationErrors({});
       notificationManager.successLoading(loadingId, 'Settings saved', 'All changes have been applied.');
 
@@ -273,7 +337,10 @@ export default function Settings() {
         setValues({ ...original });
         if (original.logo) setLogoPreview(original.logo);
         else setLogoPreview(null);
+        if (original.favicon) setFaviconPreview(original.favicon);
+        else setFaviconPreview(null);
         setLogoFile(null);
+        setFaviconFile(null);
         setValidationErrors({});
         setDirty(false);
         setConfirmOpen(false);
@@ -390,6 +457,34 @@ export default function Settings() {
               </div>
             </div>
 
+            </div>
+
+            <div id="section-favicon">
+              <div className="settings-logo-area">
+              <div className={`settings-logo-preview${!faviconPreview ? ' settings-logo-preview--empty' : ''}`}>
+                {faviconPreview ? (
+                  <img src={faviconPreview} alt="Favicon preview" style={{ width:48, height:48, objectFit:'contain' }} />
+                ) : (
+                  <><Icon name="image" size={32} strokeWidth={1.5} /><span>No favicon</span></>
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div className={`settings-logo-dropzone${faviconDragOver ? ' settings-logo-dropzone--active' : ''}`}
+                  onDragOver={handleFaviconDragOver} onDragLeave={handleFaviconDragLeave} onDrop={handleFaviconDrop}
+                  onClick={() => document.getElementById('favicon-file-input')?.click()}>
+                  <Icon name="upload" size={24} strokeWidth={1.5} className="settings-logo-dropzone__icon" />
+                  <div className="settings-logo-dropzone__text">Drag & drop favicon here, or click to browse</div>
+                  <div className="settings-logo-dropzone__hint">PNG, ICO, SVG &middot; Max 1MB</div>
+                  <input id="favicon-file-input" type="file" accept=".png,.ico,.svg" style={{ display:'none' }} onChange={handleFaviconInputChange} />
+                </div>
+                {faviconPreview && (
+                  <div className="settings-logo-actions">
+                    <Button variant="secondary" size="sm" onClick={() => document.getElementById('favicon-file-input')?.click()}>Replace</Button>
+                    <Button variant="danger" size="sm" onClick={handleFaviconRemove}>Remove</Button>
+                  </div>
+                )}
+              </div>
+            </div>
             </div>
 
             <div id="section-site-title">
