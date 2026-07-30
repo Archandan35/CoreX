@@ -264,17 +264,22 @@ export default function DocumentSettings({ open, onClose }) {
 
   return (
     <div className="ds-overlay" onClick={onClose}>
-      <div className="ds-panel ds-panel--with-nav" onClick={(e) => e.stopPropagation()}>
-        <div className="ds-header">
-          <div className="ds-header-left">
-            <button className="ds-close-btn" onClick={onClose}><Icon name="x" size={18} /></button>
-            <h2>Document settings</h2>
+      <div className="prefixDrawer" style={{ width: '85%', maxWidth: 960 }} onClick={(e) => e.stopPropagation()}>
+        <div className="drawerHeader">
+          <div className="drawerTitle">
+            <div className="drawerIcon"><Icon name="settings" size={16} /></div>
+            <div>
+              <div className="drawerHeading">Document settings</div>
+            </div>
           </div>
-          <PermissionGate permission={PERMISSIONS.SETTINGS_UPDATE}>
-            <button className="ds-btn ds-btn-primary" onClick={save} disabled={saving || loading}>
-              {saving ? 'Saving…' : 'Save changes'}
-            </button>
-          </PermissionGate>
+          <div className="drawerActions">
+            <PermissionGate permission={PERMISSIONS.SETTINGS_UPDATE}>
+              <button className="btn btnPrimary" style={{ height: 32, padding: '0 14px', borderRadius: 8, fontSize: 12 }} onClick={save} disabled={saving || loading}>
+                {saving ? 'Saving\u2026' : 'Save changes'}
+              </button>
+            </PermissionGate>
+            <button className="drawerAction" onClick={onClose}><Icon name="x" size={16} /></button>
+          </div>
         </div>
 
         <div className="ds-body-layout">
@@ -650,13 +655,17 @@ export default function DocumentSettings({ open, onClose }) {
           </div>
         </div>
 
-        <div className="ds-footer">
-          <PermissionGate permission={PERMISSIONS.SETTINGS_UPDATE}>
-            <button className="ds-btn ds-btn-primary" onClick={save} disabled={saving || loading}>
-              {saving ? 'Saving…' : 'Save changes'}
-            </button>
-          </PermissionGate>
-          <button className="ds-btn ds-btn-secondary" onClick={onClose}>Cancel</button>
+        <div className="drawerFooter">
+          <div className="footerLeft">
+            <button className="btn" onClick={onClose}>Cancel</button>
+          </div>
+          <div className="footerRight">
+            <PermissionGate permission={PERMISSIONS.SETTINGS_UPDATE}>
+              <button className="btn btnPrimary" onClick={save} disabled={saving || loading}>
+                {saving ? 'Saving\u2026' : 'Save changes'}
+              </button>
+            </PermissionGate>
+          </div>
         </div>
       </div>
 

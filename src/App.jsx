@@ -144,13 +144,13 @@ function AppRoutes() {
         database.query(
           `SELECT COUNT(*) as count FROM pg_catalog.pg_proc
            WHERE pronamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'public')
-             AND prokind = 'f' AND proname IN ('exec_sql','check_admin_exists','is_admin_user')`
+             AND prokind = 'f' AND proname IN ('exec_sql','check_admin_exists','is_admin_user','handle_new_user')`
         ),
       ]);
 
       const triggerExists = triggerRows && triggerRows.length > 0;
       const policiesExist = parseInt(policyRows?.[0]?.count || 0, 10) > 0;
-      const functionsOk = parseInt(funcRows?.[0]?.count || 0, 10) >= 3;
+      const functionsOk = parseInt(funcRows?.[0]?.count || 0, 10) >= 4;
 
       if (!triggerExists) missingCount++;
       if (!policiesExist) missingCount++;

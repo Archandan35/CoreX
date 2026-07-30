@@ -1,0 +1,13 @@
+node:_http_server:365
+    throw new ERR_HTTP_HEADERS_SENT('write');
+          ^
+
+Error [ERR_HTTP_HEADERS_SENT]: Cannot write headers after they are sent to the client
+    at ServerResponse.writeHead (node:_http_server:365:11)
+    at send (file:///H:/code/CoreX/vite.config.js.timestamp-1785401210917-1d9e76f5e6c138.mjs:311:11)
+    at IncomingMessage.<anonymous> (file:///H:/code/CoreX/vite.config.js.timestamp-1785401210917-1d9e76f5e6c138.mjs:349:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  code: 'ERR_HTTP_HEADERS_SENT'
+}
+
+Node.js v24.16.0

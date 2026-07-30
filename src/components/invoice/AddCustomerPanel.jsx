@@ -36,18 +36,19 @@ export default function AddCustomerPanel({ open, onClose, onSubmit }) {
 
   return (
     <div className="ds-overlay" onClick={onClose}>
-      <div className="ds-panel" onClick={(e) => e.stopPropagation()}>
-        <div className="ds-header">
-          <div className="ds-header-left">
-            <button className="ds-close-btn" onClick={onClose}><Icon name="x" size={18} /></button>
-            <h2>Add Customer</h2>
+      <div className="prefixDrawer" onClick={(e) => e.stopPropagation()}>
+        <div className="drawerHeader">
+          <div className="drawerTitle">
+            <div className="drawerIcon"><Icon name="user" size={16} /></div>
+            <div>
+              <div className="drawerHeading">Add Customer</div>
+            </div>
           </div>
-          <button type="submit" form="acp-form" className="ds-btn ds-btn-primary" disabled={busy}>
-            {busy ? 'Creating...' : 'Create Customer'}
-          </button>
+          <div className="drawerActions">
+            <button className="drawerAction" onClick={onClose}><Icon name="x" size={16} /></button>
+          </div>
         </div>
-
-        <div className="ds-body">
+        <div className="drawerContent" style={{ padding: 24 }}>
           <form id="acp-form" onSubmit={submit} className="inv-modal-form">
             <Field label="Customer Name" required>
               <Input value={form.name} onChange={set('name')} placeholder="e.g. Acme Pvt Ltd" aria-invalid={!!errors.name} />
@@ -88,12 +89,15 @@ export default function AddCustomerPanel({ open, onClose, onSubmit }) {
             </Field>
           </form>
         </div>
-
-        <div className="ds-footer">
-          <button type="submit" form="acp-form" className="ds-btn ds-btn-primary" disabled={busy}>
-            {busy ? 'Creating...' : 'Create Customer'}
-          </button>
-          <button className="ds-btn ds-btn-secondary" onClick={onClose}>Cancel</button>
+        <div className="drawerFooter">
+          <div className="footerLeft">
+            <button className="btn" onClick={onClose}>Cancel</button>
+          </div>
+          <div className="footerRight">
+            <button type="submit" form="acp-form" className="btn btnPrimary" disabled={busy}>
+              {busy ? 'Creating...' : 'Create Customer'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

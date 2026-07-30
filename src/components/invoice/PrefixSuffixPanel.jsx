@@ -1,8 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import Icon from '../ui/Icon.jsx';
-import Button from '../ui/Button.jsx';
 import { Field, Input } from '../ui/Field.jsx';
-import EmptyState from '../ui/EmptyState.jsx';
 import Pagination from '../ui/Pagination.jsx';
 import PermissionGate from '../ui/PermissionGate.jsx';
 import ConfirmDialog from '../ui/ConfirmDialog.jsx';
@@ -269,239 +267,248 @@ export default function PrefixSuffixPanel({ open, onClose }) {
 
   if (!open) return null;
 
-  const renderTable = () => {
-    if (loading) {
-      return (
-        <div className="ps-loading">
-          <div className="spinner" />
-          <p>Loading {tab}...</p>
-        </div>
-      );
-    }
-
-    const bulkBar = selectedIds.length > 0 ? (
-      <div className="ps-bulk-bar">
-        <span className="ps-bulk-count">{selectedIds.length} selected</span>
-        <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_UPDATE : PERMISSIONS.SUFFIX_UPDATE}>
-          <button className="ps-bulk-btn ps-bulk-btn--activate" onClick={() => handleBulkActivate(true)}>
-            <Icon name="check" size={14} /> Activate
-          </button>
-          <button className="ps-bulk-btn ps-bulk-btn--deactivate" onClick={() => handleBulkActivate(false)}>
-            <Icon name="x" size={14} /> Deactivate
-          </button>
-        </PermissionGate>
-        <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_DELETE : PERMISSIONS.SUFFIX_DELETE}>
-          <button className="ps-bulk-btn ps-bulk-btn--delete" onClick={handleBulkDelete}>
-            <Icon name="trash" size={14} /> Delete
-          </button>
-        </PermissionGate>
-        <button className="ps-bulk-btn" onClick={() => setSelectedIds([])}>
-          <Icon name="x" size={14} /> Clear
-        </button>
-      </div>
-    ) : null;
-
-    if (items.length === 0) {
-      return (
-        <EmptyState
-          icon={isPrefix ? 'list' : 'list'}
-          title={`No ${tab} found`}
-          message={search ? 'Try a different search term.' : `Add a ${isPrefix ? 'prefix' : 'suffix'} to get started.`}
-          action={
-            <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_CREATE : PERMISSIONS.SUFFIX_CREATE}>
-              <Button icon="plus" onClick={openAdd}>Add {isPrefix ? 'Prefix' : 'Suffix'}</Button>
-            </PermissionGate>
-          }
-        />
-      );
-    }
-
-    const SortIcon = ({ field }) => (
-      <Icon name={sortField === field ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'chevrons-up-down'} size={12} />
-    );
-
-    return (
-      <>
-        {bulkBar}
-        <table className="ps-table">
-          <thead>
-            <tr>
-              <th style={{ width: 36 }}>
-                <input type="checkbox" onChange={handleSelectAll} checked={selectedIds.length === items.length && items.length > 0} />
-              </th>
-              <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('value')}>
-                {isPrefix ? 'Prefix' : 'Suffix'} <SortIcon field="value" />
-              </th>
-              <th>Description</th>
-              <th style={{ width: 80, cursor: 'pointer' }} onClick={() => toggleSort('isDefault')}>
-                Default <SortIcon field="isDefault" />
-              </th>
-              <th style={{ width: 80, cursor: 'pointer' }} onClick={() => toggleSort('isActive')}>
-                Active <SortIcon field="isActive" />
-              </th>
-              <th style={{ width: 70, cursor: 'pointer' }} onClick={() => toggleSort('sequenceOrder')}>
-                Order <SortIcon field="sequenceOrder" />
-              </th>
-              <th style={{ width: 100 }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr key={item.id}>
-                <td style={{ width: 36 }}>
-                  <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => handleSelectOne(item.id)} />
-                </td>
-                <td className="ps-value">{item.value}</td>
-                <td className="ps-desc">{item.description || '—'}</td>
-                <td>
-                  <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_UPDATE : PERMISSIONS.SUFFIX_UPDATE}>
-                    <label className="ps-toggle-label" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={!!(item.isDefault ?? item.default ?? false)}
-                        onChange={() => toggleDefault(item)}
-                      />
-                      <span className={`ps-toggle-slider${(item.isDefault ?? item.default ?? false) ? ' on' : ''}`} />
-                    </label>
-                  </PermissionGate>
-                </td>
-                <td>
-                  <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_UPDATE : PERMISSIONS.SUFFIX_UPDATE}>
-                    <label className="ps-toggle-label" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={!!(item.isActive ?? item.active ?? true)}
-                        onChange={() => toggleActive(item)}
-                      />
-                      <span className={`ps-toggle-slider${(item.isActive ?? item.active ?? true) ? ' on' : ''}`} />
-                    </label>
-                  </PermissionGate>
-                </td>
-                <td className="ps-order">{item.sequenceOrder ?? item.order ?? '-'}</td>
-                <td>
-                  <div className="ps-actions">
-                    <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_UPDATE : PERMISSIONS.SUFFIX_UPDATE}>
-                      <button type="button" className="ps-action-btn" onClick={() => openEdit(item)} title="Edit">
-                        <Icon name="edit" size={14} />
-                      </button>
-                    </PermissionGate>
-                    <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_DELETE : PERMISSIONS.SUFFIX_DELETE}>
-                      <button type="button" className="ps-action-btn ps-action-btn--danger" onClick={() => setDeleteTarget(item)} title="Delete">
-                        <Icon name="trash" size={14} />
-                      </button>
-                    </PermissionGate>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </>
-    );
-  };
+  const SortIcon = ({ field }) => (
+    <Icon name={sortField === field ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'chevrons-up-down'} size={12} />
+  );
 
   return (
     <>
       <div className="ds-overlay ds-overlay--nested" onClick={onClose}>
-        <div className="ds-panel ds-panel--nested" onClick={(e) => e.stopPropagation()}>
+        <div className="prefixDrawer" onClick={(e) => e.stopPropagation()}>
           {/* Header */}
-          <div className="ds-header">
-            <div className="ds-header-left">
-              <button className="ds-close-btn" onClick={onClose}><Icon name="x" size={18} /></button>
-              <h2>Prefix &amp; Suffix Management</h2>
+          <div className="drawerHeader">
+            <div className="drawerTitle">
+              <div className="drawerIcon">
+                <Icon name="file-text" size={22} />
+              </div>
+              <div>
+                <div className="drawerHeading">Prefix &amp; Suffix Management</div>
+                <div className="drawerSubtitle">Manage document prefixes and suffix sequences</div>
+              </div>
             </div>
-            <button className="ds-btn ds-btn-ghost" title="Help" onClick={() => notificationManager.info('Help', 'Manage document prefixes and suffixes. Each document type can have multiple prefixes/suffixes, but only one default.')}>
-              <Icon name="help-circle" size={18} />
+            <div className="drawerActions">
+              <button className="drawerAction" title="Help" onClick={() => notificationManager.info('Help', 'Manage document prefixes and suffixes. Each document type can have multiple prefixes/suffixes, but only one default.')}>
+                <Icon name="help-circle" size={18} />
+              </button>
+              <button className="drawerAction" onClick={onClose}>
+                <Icon name="x" size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* Primary Tabs */}
+          <div className="mainTabs">
+            <button className={`mainTab${tab === 'prefixes' ? ' active' : ''}`} onClick={() => setTab('prefixes')}>
+              Prefixes
+            </button>
+            <button className={`mainTab${tab === 'suffixes' ? ' active' : ''}`} onClick={() => setTab('suffixes')}>
+              Suffixes
             </button>
           </div>
 
-          <div className="ds-body">
-            {/* Primary Tabs */}
-            <div className="ps-primary-tabs">
-              <button className={`ps-primary-tab${tab === 'prefixes' ? ' active' : ''}`} onClick={() => setTab('prefixes')}>
-                Prefixes
+          {/* Document Type Tabs */}
+          <div className="documentTabs">
+            {DOC_TYPE_TABS.map((dt) => (
+              <button
+                key={dt}
+                className={`documentTab${docType === dt ? ' active' : ''}`}
+                onClick={() => { setDocType(dt); setPage(1); }}
+              >
+                {dt}
               </button>
-              <button className={`ps-primary-tab${tab === 'suffixes' ? ' active' : ''}`} onClick={() => setTab('suffixes')}>
-                Suffixes
+            ))}
+          </div>
+
+          {/* Toolbar */}
+          <div className="toolbar">
+            <input
+              className="searchBox"
+              type="text"
+              placeholder={`Search ${tab}...`}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <select
+              className="filter"
+              value={filterActive === null ? 'all' : filterActive ? 'active' : 'inactive'}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFilterActive(v === 'all' ? null : v === 'active');
+              }}
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <select
+              className="filter"
+              value={filterDefault === null ? 'all' : filterDefault ? 'default' : 'non-default'}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFilterDefault(v === 'all' ? null : v === 'default');
+              }}
+            >
+              <option value="all">All Defaults</option>
+              <option value="default">Default</option>
+              <option value="non-default">Non-default</option>
+            </select>
+            <button className="refreshBtn" onClick={() => { setPage(1); }} title="Refresh">
+              <Icon name="refresh-cw" size={16} />
+            </button>
+            <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_CREATE : PERMISSIONS.SUFFIX_CREATE}>
+              <button className="addButton" onClick={openAdd}>
+                <Icon name="plus" size={14} /> Add {isPrefix ? 'Prefix' : 'Suffix'}
               </button>
+            </PermissionGate>
+          </div>
+
+          {/* Top Info Bar */}
+          <div className="topBar">
+            <div className="itemCount">{total} {tab}</div>
+            <div className="sortSection">
+              <select className="filter" style={{ width: 130 }} value={`${sortField}:${sortDir}`} onChange={(e) => { const [f, d] = e.target.value.split(':'); setSortField(f); setSortDir(d); }}>
+                <option value="value:asc">{isPrefix ? 'Prefix' : 'Suffix'} A-Z</option>
+                <option value="value:desc">{isPrefix ? 'Prefix' : 'Suffix'} Z-A</option>
+                <option value="sequenceOrder:asc">Order ↑</option>
+                <option value="sequenceOrder:desc">Order ↓</option>
+                <option value="isDefault:desc">Default first</option>
+              </select>
             </div>
+          </div>
 
-{/* Document Type Tabs */}
-<div className="ps-doc-type-tabs">
-  {DOC_TYPE_TABS.map((dt) => (
-    <button
-      key={dt}
-      className={`ps-doc-type-tab${docType === dt ? ' active' : ''}`}
-      onClick={() => { setDocType(dt); setPage(1); }}
-    >
-      {dt}
-    </button>
-  ))}
-</div>
-
-            {/* Toolbar */}
-            <div className="ps-toolbar">
-              <div className="ps-search">
-                <Icon name="search" size={14} />
-                <input
-                  type="text"
-                  placeholder={`Search ${tab}...`}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              <select
-                className="ps-filter-select"
-                value={filterActive === null ? 'all' : filterActive ? 'active' : 'inactive'}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setFilterActive(v === 'all' ? null : v === 'active');
-                }}
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-              <select
-                className="ps-filter-select"
-                value={filterDefault === null ? 'all' : filterDefault ? 'default' : 'non-default'}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setFilterDefault(v === 'all' ? null : v === 'default');
-                }}
-              >
-                <option value="all">All Defaults</option>
-                <option value="default">Default</option>
-                <option value="non-default">Non-default</option>
-              </select>
-              <div className="ps-toolbar-actions">
+          {/* Content Area */}
+          <div className="drawerContent">
+            {loading ? (
+              <div className="ps-loading"><div className="spinner" /><p>Loading {tab}...</p></div>
+            ) : items.length === 0 ? (
+              <div className="emptyState">
+                <div className="emptyIcon">
+                  <Icon name={isPrefix ? 'list' : 'list'} size={36} />
+                </div>
+                <div className="emptyTitle">No {tab} found</div>
+                <div className="emptyDescription">
+                  {search ? 'Try a different search term.' : `Add a ${isPrefix ? 'prefix' : 'suffix'} to get started.`}
+                </div>
                 <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_CREATE : PERMISSIONS.SUFFIX_CREATE}>
-                  <button className="ds-btn ds-btn-primary" onClick={openAdd}>
+                  <button className="addButton" onClick={openAdd}>
                     <Icon name="plus" size={14} /> Add {isPrefix ? 'Prefix' : 'Suffix'}
                   </button>
                 </PermissionGate>
-                <button className="ps-toolbar-refresh" onClick={() => { setPage(1); }} title="Refresh">
-                  <Icon name="refresh-cw" size={16} />
-                </button>
               </div>
-            </div>
-
-            {/* Data Table */}
-            <div className="ps-table-wrap">
-              {renderTable()}
-            </div>
-
-            {/* Pagination */}
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+            ) : (
+              <>
+                {selectedIds.length > 0 && (
+                  <div className="ps-bulk-bar">
+                    <span className="ps-bulk-count">{selectedIds.length} selected</span>
+                    <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_UPDATE : PERMISSIONS.SUFFIX_UPDATE}>
+                      <button className="ps-bulk-btn ps-bulk-btn--activate" onClick={() => handleBulkActivate(true)}>
+                        <Icon name="check" size={14} /> Activate
+                      </button>
+                      <button className="ps-bulk-btn ps-bulk-btn--deactivate" onClick={() => handleBulkActivate(false)}>
+                        <Icon name="x" size={14} /> Deactivate
+                      </button>
+                    </PermissionGate>
+                    <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_DELETE : PERMISSIONS.SUFFIX_DELETE}>
+                      <button className="ps-bulk-btn ps-bulk-btn--delete" onClick={handleBulkDelete}>
+                        <Icon name="trash" size={14} /> Delete
+                      </button>
+                    </PermissionGate>
+                    <button className="ps-bulk-btn" onClick={() => setSelectedIds([])}>
+                      <Icon name="x" size={14} /> Clear
+                    </button>
+                  </div>
+                )}
+                <div className="ps-table-wrap">
+                  <table className="ps-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: 36 }}>
+                          <input type="checkbox" onChange={handleSelectAll} checked={selectedIds.length === items.length && items.length > 0} />
+                        </th>
+                        <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('value')}>
+                          {isPrefix ? 'Prefix' : 'Suffix'} <SortIcon field="value" />
+                        </th>
+                        <th>Description</th>
+                        <th style={{ width: 80, cursor: 'pointer' }} onClick={() => toggleSort('isDefault')}>
+                          Default <SortIcon field="isDefault" />
+                        </th>
+                        <th style={{ width: 80, cursor: 'pointer' }} onClick={() => toggleSort('isActive')}>
+                          Active <SortIcon field="isActive" />
+                        </th>
+                        <th style={{ width: 70, cursor: 'pointer' }} onClick={() => toggleSort('sequenceOrder')}>
+                          Order <SortIcon field="sequenceOrder" />
+                        </th>
+                        <th style={{ width: 100 }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item) => (
+                        <tr key={item.id}>
+                          <td style={{ width: 36 }}>
+                            <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => handleSelectOne(item.id)} />
+                          </td>
+                          <td className="ps-value">{item.value}</td>
+                          <td className="ps-desc">{item.description || '\u2014'}</td>
+                          <td>
+                            <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_UPDATE : PERMISSIONS.SUFFIX_UPDATE}>
+                              <label className="ps-toggle-label" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={!!(item.isDefault ?? item.default ?? false)}
+                                  onChange={() => toggleDefault(item)}
+                                />
+                                <span className={`ps-toggle-slider${(item.isDefault ?? item.default ?? false) ? ' on' : ''}`} />
+                              </label>
+                            </PermissionGate>
+                          </td>
+                          <td>
+                            <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_UPDATE : PERMISSIONS.SUFFIX_UPDATE}>
+                              <label className="ps-toggle-label" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={!!(item.isActive ?? item.active ?? true)}
+                                  onChange={() => toggleActive(item)}
+                                />
+                                <span className={`ps-toggle-slider${(item.isActive ?? item.active ?? true) ? ' on' : ''}`} />
+                              </label>
+                            </PermissionGate>
+                          </td>
+                          <td className="ps-order">{item.sequenceOrder ?? item.order ?? '-'}</td>
+                          <td>
+                            <div className="ps-actions">
+                              <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_UPDATE : PERMISSIONS.SUFFIX_UPDATE}>
+                                <button type="button" className="ps-action-btn" onClick={() => openEdit(item)} title="Edit">
+                                  <Icon name="edit" size={14} />
+                                </button>
+                              </PermissionGate>
+                              <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_DELETE : PERMISSIONS.SUFFIX_DELETE}>
+                                <button type="button" className="ps-action-btn ps-action-btn--danger" onClick={() => setDeleteTarget(item)} title="Delete">
+                                  <Icon name="trash" size={14} />
+                                </button>
+                              </PermissionGate>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+              </>
+            )}
           </div>
 
           {/* Footer */}
-          <div className="ds-footer">
-            <button className="ds-btn ds-btn-primary" onClick={onClose}>Done</button>
-            <button className="ds-btn ds-btn-ghost" onClick={onClose}>Cancel</button>
-            <button className="ds-btn ds-btn-secondary" onClick={handleReset}>
-              <Icon name="refresh-cw" size={14} /> Reset
-            </button>
+          <div className="drawerFooter">
+            <div className="footerLeft">
+              <button className="btn" onClick={onClose}>Cancel</button>
+              <button className="btn" onClick={handleReset}>
+                <Icon name="refresh-cw" size={14} /> Reset
+              </button>
+            </div>
+            <div className="footerRight">
+              <button className="btn btnPrimary" onClick={onClose}>Done</button>
+            </div>
           </div>
         </div>
       </div>
@@ -510,20 +517,25 @@ export default function PrefixSuffixPanel({ open, onClose }) {
       {editOpen && (
         <>
           <div className="ds-overlay ds-overlay--nested" onClick={closeEdit}>
-            <div className="ds-panel ds-panel--nested" onClick={(e) => e.stopPropagation()}>
-              <div className="ds-header">
-                <div className="ds-header-left">
-                  <button className="ds-close-btn" onClick={closeEdit}><Icon name="x" size={18} /></button>
-                  <h2>{editItem ? `Edit ${isPrefix ? 'Prefix' : 'Suffix'}` : `Add ${isPrefix ? 'Prefix' : 'Suffix'}`}</h2>
+            <div className="prefixDrawer" style={{ width: 520 }} onClick={(e) => e.stopPropagation()}>
+              <div className="drawerHeader">
+                <div className="drawerTitle">
+                  <div className="drawerIcon" style={{ width: 44, height: 44, fontSize: 18 }}>
+                    <Icon name={editItem ? 'edit' : 'plus'} size={18} />
+                  </div>
+                  <div>
+                    <div className="drawerHeading" style={{ fontSize: 22 }}>{editItem ? `Edit ${isPrefix ? 'Prefix' : 'Suffix'}` : `Add ${isPrefix ? 'Prefix' : 'Suffix'}`}</div>
+                    <div className="drawerSubtitle" style={{ fontSize: 13 }}>Document Type: {docType}</div>
+                  </div>
+                </div>
+                <div className="drawerActions">
+                  <button className="drawerAction" onClick={closeEdit}>
+                    <Icon name="x" size={18} />
+                  </button>
                 </div>
               </div>
-              <div className="ds-body">
+              <div className="drawerContent" style={{ padding: 32 }}>
                 <form className="inv-modal-form" onSubmit={(e) => { e.preventDefault(); saveEdit(); }}>
-                  <div style={{ marginBottom: 12 }}>
-                    <strong style={{ fontSize: 13, color: 'var(--inv-text-sub)' }}>Document Type:</strong>{' '}
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>{docType}</span>
-                  </div>
-
                   <Field label={isPrefix ? 'Prefix Value' : 'Suffix Value'} required>
                     <Input
                       value={editForm.value}
@@ -555,19 +567,27 @@ export default function PrefixSuffixPanel({ open, onClose }) {
                     {editErrors.sequenceOrder && <span className="inv-field-error">{editErrors.sequenceOrder}</span>}
                   </Field>
 
-                  <div style={{ display: 'flex', gap: 20, marginTop: 12 }}>
-                    <label className="ps-switch">
-                      <input type="checkbox" checked={editForm.isActive} onChange={(e) => setEditForm((p) => ({ ...p, isActive: e.target.checked }))} />
-                      <span className={`ps-switch-slider${editForm.isActive ? ' on' : ''}`}>
-                        <span className="ps-switch-text">{editForm.isActive ? 'Active' : 'Inactive'}</span>
-                      </span>
-                    </label>
-                    <label className="ps-switch">
-                      <input type="checkbox" checked={editForm.isDefault} onChange={(e) => setEditForm((p) => ({ ...p, isDefault: e.target.checked }))} />
-                      <span className={`ps-switch-slider${editForm.isDefault ? ' on' : ''}`}>
-                        <span className="ps-switch-text">{editForm.isDefault ? 'Enable' : 'Disable'}</span>
-                      </span>
-                    </label>
+                  <div style={{ display: 'flex', gap: 32, marginTop: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Status</div>
+                      <label className="ps-switch">
+                        <input type="checkbox" checked={editForm.isActive} onChange={(e) => setEditForm((p) => ({ ...p, isActive: e.target.checked }))} />
+                        <span className="ps-switch-slider">
+                          <span className={`ps-switch-segment${!editForm.isActive ? ' active' : ''}`}>Inactive</span>
+                          <span className={`ps-switch-segment${editForm.isActive ? ' active' : ''}`}>Active</span>
+                        </span>
+                      </label>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Default</div>
+                      <label className="ps-switch">
+                        <input type="checkbox" checked={editForm.isDefault} onChange={(e) => setEditForm((p) => ({ ...p, isDefault: e.target.checked }))} />
+                        <span className="ps-switch-slider">
+                          <span className={`ps-switch-segment${!editForm.isDefault ? ' active' : ''}`}>Disable</span>
+                          <span className={`ps-switch-segment${editForm.isDefault ? ' active' : ''}`}>Enable</span>
+                        </span>
+                      </label>
+                    </div>
                   </div>
 
                   {/* Live Preview */}
@@ -577,11 +597,15 @@ export default function PrefixSuffixPanel({ open, onClose }) {
                   </div>
                 </form>
               </div>
-              <div className="ds-footer">
-                <button className="ds-btn ds-btn-primary" onClick={saveEdit} disabled={editSaving}>
-                  <Icon name="check" size={14} /> {editSaving ? 'Saving...' : (editItem ? 'Save Changes' : 'Add')}
-                </button>
-                <button className="ds-btn ds-btn-ghost" onClick={closeEdit}>Cancel</button>
+              <div className="drawerFooter">
+                <div className="footerLeft">
+                  <button className="btn" onClick={closeEdit}>Cancel</button>
+                </div>
+                <div className="footerRight">
+                  <button className="btn btnPrimary" onClick={saveEdit} disabled={editSaving}>
+                    <Icon name="check" size={14} /> {editSaving ? 'Saving...' : (editItem ? 'Save Changes' : 'Add')}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

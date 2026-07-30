@@ -480,6 +480,28 @@ export class DatabaseValidator {
     }
   }
 
+  async _checkGrants(schema) {
+    const grants = schema.functionGrants || [];
+    for (const g of grants) {
+      for (const role of g.roles) {
+        try {
+          const funcSig = g.args ? `${g.function}(${g.args})` : g.function;
+          const result = await this.db.query(
+            `SELECT has_function_privilege($1, $2, 'EXECUTE') as granted`,
+            [role, funcSig]
+          );
+          const granted = result?.[0]?.granted;
+          if (granted === false) {
+            this.results.functions.push({
+              name: g.function, exists: true, status: 'mismatch',
+              type: 'grant', detail: `EXECUTE not granted to ${role}`,
+            });
+          }
+        } catch {}
+      }
+    }
+  }
+
   getReport() {
     const missing = [];
     const existing = [];

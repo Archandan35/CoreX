@@ -134,13 +134,14 @@ export class SqlGenerator {
     const blocks = [];
     for (const entity of this._entities) {
       if (!entity.def.table) continue;
+      if (entity.def.table === '_schema_version') continue; // handled by _genVersion()
       blocks.push(this._genTable({ name: entity.def.table, _def: entity.def }));
     }
     return blocks;
   }
 
   _genMissingTables(missing) {
-    return missing.filter((i) => i.type === 'table').map((t) => this._genTable(t));
+    return missing.filter((i) => i.type === 'table' && i.name !== '_schema_version').map((t) => this._genTable(t));
   }
 
   _collectTableNames(missing) {
@@ -154,7 +155,7 @@ export class SqlGenerator {
   _genMissingColumns(missing) {
     const createdTableNames = new Set(missing.filter((i) => i.type === 'table').map((t) => t.name));
     const columns = missing.filter(
-      (i) => (i.type === 'column' || (i.column && !i.type)) && !createdTableNames.has(i.table)
+      (i) => (i.type === 'column' || (i.column && !i.type)) && !createdTableNames.has(i.table) && i.table !== '_schema_version'
     );
     const grouped = {};
     for (const col of columns) {

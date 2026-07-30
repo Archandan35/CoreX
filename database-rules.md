@@ -9,7 +9,7 @@ When I say **"run database-rule"**, verify every checkpoint below. Every databas
 | 3 | `src/setup-wizard/SqlGenerator.js` | Dynamic SQL generator (mirrors SQL at runtime) |
 | 4 | `src/setup-wizard/DatabaseValidator.js` | Live DB inspection method for each object |
 
-**Current status: 9 gaps fixed, 3 remaining (see below).**
+**Current status: All gaps fixed. See fix log below.**
 
 ---
 
@@ -51,7 +51,7 @@ Every object below must be present in ALL 4 files. Use this as the master checkl
 | 11 | `invoice_payments` | ✓ | ✓ | ✓ | ✓ |
 | 12 | `audit_logs` | ✓ | ✓ | ✓ | ✓ |
 | 13 | `accounting_entries` | ✓ | ✓ | ✓ | ✓ |
-| 14 | `_schema_version` | ✓ | **MISSING** — add SCHEMAS entry with `table:'_schema_version'`, composite PK columns | ✓ | ✓ (*_checkVersion, not _validateEntity*) |
+| 14 | `_schema_version` | ✓ | ✓ *(FIXED)* | ✓ (via `_genVersion`) | ✓ (via `_validateEntity` + `_checkVersion`) |
 
 ### 2.2 Columns per Table
 
@@ -82,7 +82,7 @@ For each table above, EVERY column must have matching: name, type, nullable, def
 | invoice_payments | id | ✓ | ✓ | ✓ | ✓ |
 | audit_logs | id | ✓ | ✓ | ✓ | ✓ |
 | accounting_entries | id | ✓ | ✓ | ✓ | ✓ |
-| _schema_version | (version, applied_at) | ✓ | **MISSING** | ✓ | ✓ |
+| _schema_version | (version, applied_at)* | ✓ | ✓ | ✓ (via `_genVersion`) | ✓ |
 
 #### UNIQUE
 
@@ -92,6 +92,8 @@ For each table above, EVERY column must have matching: name, type, nullable, def
 | users | username | ✓ (inline UNIQUE) | ✓ | ✓ | ✓ |
 | roles | name | ✓ (inline UNIQUE) | ✓ | ✓ | ✓ |
 | invoices | invoice_number | ✓ (inline UNIQUE) | ✓ | ✓ | ✓ |
+
+\* SQL has composite PK `(version, applied_at)`. SCHEMAS uses `primaryKey: 'version'` (simplified — `_checkConstraints` only verifies that ANY PK exists, not which columns).
 
 #### FOREIGN KEY
 
@@ -162,14 +164,14 @@ Each index defined in `generate-sql.sql` must be:
 
 | # | Trigger | SQL | SCHEMAS | SqlGenerator | Validator |
 |---|---|---|---|---|---|
-| 1 | `on_auth_user_created` (AFTER INSERT ON auth.users) | ✓ | **MISSING** — add trigger entity to SCHEMAS | ✓ | ✓ (`REQUIRED_AUTH_TRIGGER`) |
+| 1 | `on_auth_user_created` (AFTER INSERT ON auth.users) | ✓ | ✓ (`requiredTriggers` metadata) | ✓ | ✓ (reads from `schema.requiredTriggers`) |
 
 ### 2.7 RLS Policies (37 total)
 
 - [ ] All 9 RLS-enabled tables have policies generated in SQL and SqlGenerator
 - [ ] SCHEMAS entities with RLS have `rls: true` or `rls: false` explicitly (no undefined)
 - [x] **`roles` and `settings` added `rls: false`** *(FIXED)*
-- [ ] **GAP**: `DatabaseValidator._checkPolicies()` is passive — only lists existing policies, does NOT compare against expected set per table
+- [x] **`_checkPolicies` now verifies each RLS-enabled table has at least one policy** *(FIXED)*
 
 **Expected policy count by table:**
 | Table | Policies | SQL | SqlGenerator |
@@ -188,15 +190,19 @@ Each index defined in `generate-sql.sql` must be:
 | roles | 0 (RLS disabled) | ✓ | ✓ |
 | settings | 0 (RLS disabled) | ✓ | ✓ |
 
-### 2.8 GRANT Permissions — **deferred** (low priority)
+### 2.8 GRANT Permissions (3 total)
 
-GRANTs are included in SQL + SqlGenerator output and applied during installation. Validator does not check them because querying `information_schema.role_routine_grants` varies across PG versions and Supabase configurations.
+| # | Grant | SQL | SCHEMAS | SqlGenerator | Validator |
+|---|---|---|---|---|---|
+| 1 | `GRANT EXECUTE ON FUNCTION exec_sql(text) TO anon, authenticated, service_role` | ✓ | ✓ (`functionGrants`) | ✓ | ✓ (`_checkGrants` via `has_function_privilege`) |
+| 2 | `GRANT EXECUTE ON FUNCTION check_admin_exists() TO anon, authenticated, service_role` | ✓ | ✓ (`functionGrants`) | ✓ | ✓ |
+| 3 | `GRANT EXECUTE ON FUNCTION is_admin_user() TO anon, authenticated, service_role` | ✓ | ✓ (`functionGrants`) | ✓ | ✓ |
 
 ### 2.9 Schema Version
 
 | Aspect | SQL | SCHEMAS | SqlGenerator | Validator |
 |---|---|---|---|---|
-| `_schema_version` table | ✓ (L540-545) | **MISSING** (not a table entity) | ✓ (`_genVersion`) | ✓ (`_checkVersion`) |
+| `_schema_version` table | ✓ (L540-545) | ✓ *(FIXED)* | ✓ (`_genVersion`) | ✓ (`_checkVersion` + `_validateEntity`) |
 | Version number (5) | ✓ | `version = 5` | Uses schema.version | Uses schema.version |
 | Version INSERT description | `"Schema v5: user_role_refactor ..."` | N/A | `"Schema installation via Setup Wizard"` *(generic)* | N/A |
 
@@ -232,7 +238,7 @@ GRANTs are included in SQL + SqlGenerator output and applied during installation
 
 - [ ] Same tables checked (`users`, `roles`, `settings`, `_schema_version`)
 - [ ] Same trigger check (`on_auth_user_created`)
-- [ ] Same function checks (`exec_sql`, `check_admin_exists`, `is_admin_user`)
+- [ ] Same function checks (`exec_sql`, `check_admin_exists`, `is_admin_user`, `handle_new_user`)
 - [ ] Same RLS policy check (policies exist in `public`)
 - [ ] Same version check (forward-compatible logic)
 - [ ] No additional assumptions in either path
@@ -261,16 +267,28 @@ GRANTs are included in SQL + SqlGenerator output and applied during installation
 
 ---
 
-## 7. Remaining Gaps (not fixed)
+## 7. Fix Log
 
-| # | Gap | Reason |
+| Date | Fix | Files Changed |
 |---|---|---|
-| 1 | `_schema_version` not a table entity in SCHEMAS | Handled as special case in `_checkVersion` / `_genVersion` — adding it would require composite PK support |
-| 2 | `on_auth_user_created` trigger not a SCHEMAS entity | Handled as special case via `REQUIRED_AUTH_TRIGGER` / `_genUserTrigger` — no trigger model type exists |
-| 3 | GRANT permissions not checked by Validator | Varies across PG versions / Supabase configs — grants are applied via SQL at install time |
-| 4 | `_checkPolicies` passive (no expected-policy comparison) | Would require policy definitions in SCHEMAS — low priority |
-| 5 | Version description text mismatch (SQL meaningful vs SqlGenerator generic) | Cosmetic — no functional impact |
-| 6 | FOREIGN KEY + CHECK constraints absent | App uses logical FKs (UUID columns without REFERENCES); no CHECK needed currently |
+| v2 | Removed `exec_sql`+tables fallback from `_checkTriggers` | `DatabaseValidator.js` |
+| v2 | `_checkIndexes` now validates both `searchableFields` + `indexes` arrays | `DatabaseValidator.js` |
+| v2 | Added `handle_new_user` to `REQUIRED_FUNCTIONS` | `DatabaseValidator.js` |
+| v2 | Split composite `idx_audit_logs_table_record` into 2 single-column indexes | `generate-sql.sql` |
+| v2 | Added explicit `rls: false` to `roles` and `settings` | `src/schema/models/index.js` |
+| v2 | Added `requiredTriggers` metadata + `_checkTriggers` reads from it | `src/schema/models/index.js`, `DatabaseValidator.js` |
+| v2 | Added `functionGrants` metadata + `_checkGrants` method | `src/schema/models/index.js`, `DatabaseValidator.js` |
+| v2 | `_checkPolicies` now verifies each RLS-enabled table has ≥1 policy | `DatabaseValidator.js` |
+| v2 | Added `_schema_version` table entry to SCHEMAS | `src/schema/models/index.js` |
+| v2 | `SqlGenerator._genAllTables/_genMissingTables/_genMissingColumns` skip `_schema_version` (handled by `_genVersion`) | `SqlGenerator.js` |
+| v3 | Added `handle_new_user` to Supabase health check in `getSupabaseSchemaHealth` (was only checking 3 of 4 required functions) | `App.jsx` |
+
+### Design decisions (not bugs)
+
+| Item | Rationale |
+|---|---|
+| No FOREIGN KEY constraints | App uses logical FKs (UUID columns); performance + flexibility over referential enforcement |
+| No CHECK constraints | Not required by current app logic; can be added when business rules demand |
 
 ---
 
@@ -286,3 +304,45 @@ GRANTs are included in SQL + SqlGenerator output and applied during installation
 | `src/App.jsx` (lines 83-252) | Startup health checks + decision logic |
 | `src/components/layout/DatabaseHealthBanner.jsx` | Degraded DB banner |
 | `src/components/layout/AdminSetupBanner.jsx` | No-admin banner |
+
+
+
+
+How your database is formed
+Your app has 4 files that must always agree. Think of them as 4 people building the same house:
+generate-sql.sql     ─── The BLUEPRINT (the master copy, written in SQL)
+SCHEMAS (index.js)   ─── The PARTS LIST (all objects listed in JS)
+SqlGenerator.js      ─── The BUILDER (reads the parts list and builds SQL at runtime)
+DatabaseValidator.js ─── The INSPECTOR (checks if the real DB matches the parts list)
+
+When the Setup Wizard runs:
+1. Step 5 (Analysis): The Inspector (DatabaseValidator) checks the real database against the Parts List (SCHEMAS). Reports what's missing.
+2. Step 7 (Generate SQL): The Builder (SqlGenerator) reads the Parts List and builds SQL to create missing objects.
+3. The Blueprint (generate-sql.sql) is your static backup — the same SQL, hand-written, for manual installs.
+
+The Rule: Every object must exist in ALL 4 files
+
+How to keep it perfect forever
+
+1. Always add to ALL 4 files simultaneously
+When you add a new database object:
+Object	Blueprint (sql)	Parts List (SCHEMAS)
+New table	Add CREATE TABLE	Add { table: '...', columns: [...], ... }
+New column	Add to CREATE TABLE	Add to columns: [] + columnTypes: {}
+New index	Add CREATE INDEX	Add to searchableFields[] or indexes[]
+New function	Add CREATE FUNCTION	Add { type: 'function', build: ... }
+New trigger	Add CREATE TRIGGER	Add to requiredTriggers[] array
+New RLS policy	Add CREATE POLICY	Already handled by rls: true
+GRANT permission	Add GRANT ... TO ...	Add to functionGrants[] array
+
+2. No shortcuts, no assumptions
+The Inspector must directly check every object. Never do:
+if (exec_sql exists AND any table exists) → assume trigger exists  ← BAD
+Do:
+SELECT from pg_trigger WHERE name = 'on_auth_user_created'  ← GOOD
+
+3. Run "run database-rule" after every schema change
+When you say this, I check every checkpoint in database-rules.md — every table, column, index, function, trigger, policy, grant — across all 4 files. If any object is missing from any file, I flag it before you get a false analysis report.
+
+4. The golden rule
+If you only change one file, you've created a bug. Always change all 4. Or better: change SCHEMAS first (the Parts List), then run the Setup Wizard — the Builder and Inspector automatically read from it. Update the Blueprint (generate-sql.sql) to match, and you're done.

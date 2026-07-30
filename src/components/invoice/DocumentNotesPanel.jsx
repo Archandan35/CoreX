@@ -1,9 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Icon from '../ui/Icon.jsx';
-import Button from '../ui/Button.jsx';
 import { Field, Input } from '../ui/Field.jsx';
 import Select from '../ui/Select.jsx';
-import EmptyState from '../ui/EmptyState.jsx';
 import PermissionGate from '../ui/PermissionGate.jsx';
 import ConfirmDialog from '../ui/ConfirmDialog.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
@@ -116,25 +114,27 @@ export default function DocumentNotesPanel({ open, onClose }) {
   return (
     <>
       <div className="ds-overlay ds-overlay--nested" onClick={onClose}>
-        <div className="ds-panel ds-panel--nested" onClick={(e) => e.stopPropagation()}>
-          <div className="ds-header">
-            <div className="ds-header-left">
-              <button className="ds-close-btn" onClick={onClose}><Icon name="x" size={18} /></button>
-              <h2>Document {labelPlural}</h2>
+        <div className="prefixDrawer" onClick={(e) => e.stopPropagation()}>
+          <div className="drawerHeader">
+            <div className="drawerTitle">
+              <div className="drawerIcon"><Icon name="file-text" size={16} /></div>
+              <div>
+                <div className="drawerHeading">Document {labelPlural}</div>
+              </div>
+            </div>
+            <div className="drawerActions">
+              <button className="drawerAction" onClick={onClose}><Icon name="x" size={16} /></button>
             </div>
           </div>
-          <div className="ds-body">
-            {/* Tabs */}
-            <div className="ps-primary-tabs">
-              <button className={`ps-primary-tab${tab === 'notes' ? ' active' : ''}`} onClick={() => setTab('notes')}>
-                Notes
-              </button>
-              <button className={`ps-primary-tab${tab === 'terms' ? ' active' : ''}`} onClick={() => setTab('terms')}>
-                Terms
-              </button>
-            </div>
-
-            {/* Document Type */}
+          <div className="mainTabs" style={{ padding: '10px 24px 0', borderBottom: '1px solid var(--border, #E8EAF4)' }}>
+            <button className={`mainTab${tab === 'notes' ? ' active' : ''}`} onClick={() => setTab('notes')}>
+              Notes
+            </button>
+            <button className={`mainTab${tab === 'terms' ? ' active' : ''}`} onClick={() => setTab('terms')}>
+              Terms
+            </button>
+          </div>
+          <div className="drawerContent" style={{ padding: 24 }}>
             <div style={{ marginBottom: 16 }}>
               <Select
                 options={docTypes.map((dt) => ({ value: dt, label: dt }))}
@@ -142,33 +142,25 @@ export default function DocumentNotesPanel({ open, onClose }) {
                 onChange={(v) => { setDocType(v); }}
               />
             </div>
-
-            {/* Toolbar */}
-            <div className="ps-toolbar">
-              <div className="ps-toolbar-actions" style={{ marginLeft: 0 }}>
-                <PermissionGate permission={PERMISSIONS.INVOICE_CREATE}>
-                  <button className="ds-btn ds-btn-primary" onClick={openAdd}>
-                    <Icon name="plus" size={14} /> New {label}
-                  </button>
-                </PermissionGate>
-              </div>
+            <div style={{ marginBottom: 16 }}>
+              <PermissionGate permission={PERMISSIONS.INVOICE_CREATE}>
+                <button className="addButton" onClick={openAdd}>
+                  <Icon name="plus" size={14} /> New {label}
+                </button>
+              </PermissionGate>
             </div>
-
-            {/* List */}
-            <div className="ps-table-wrap">
+            <div className="ps-table-wrap" style={{ flex: 1 }}>
               {loading ? (
                 <div className="ps-loading"><div className="spinner" /><p>Loading {labelPlural}...</p></div>
               ) : items.length === 0 ? (
-                <EmptyState
-                  icon="file-text"
-                  title={`No ${docType} ${labelPlural} found`}
-                  message={`Use the "New ${label}" button to create one.`}
-                  action={
-                    <PermissionGate permission={PERMISSIONS.INVOICE_CREATE}>
-                      <Button icon="plus" onClick={openAdd}>New {label}</Button>
-                    </PermissionGate>
-                  }
-                />
+                <div className="emptyState" style={{ margin: 0 }}>
+                  <div className="emptyIcon"><Icon name="file-text" size={24} /></div>
+                  <div className="emptyTitle">No {docType} {labelPlural} found</div>
+                  <div className="emptyDescription">Use the "New {label}" button to create one.</div>
+                  <PermissionGate permission={PERMISSIONS.INVOICE_CREATE}>
+                    <button className="addButton" onClick={openAdd}><Icon name="plus" size={14} /> New {label}</button>
+                  </PermissionGate>
+                </div>
               ) : (
                 <div className="ps-list">
                   {items.map((item) => (
@@ -194,10 +186,13 @@ export default function DocumentNotesPanel({ open, onClose }) {
               )}
             </div>
           </div>
-
-          <div className="ds-footer">
-            <button className="ds-btn ds-btn-primary" onClick={onClose}>Done</button>
-            <button className="ds-btn ds-btn-ghost" onClick={onClose}>Cancel</button>
+          <div className="drawerFooter">
+            <div className="footerLeft">
+              <button className="btn" onClick={onClose}>Cancel</button>
+            </div>
+            <div className="footerRight">
+              <button className="btn btnPrimary" onClick={onClose}>Done</button>
+            </div>
           </div>
         </div>
       </div>
@@ -206,19 +201,23 @@ export default function DocumentNotesPanel({ open, onClose }) {
       {editOpen && (
         <>
           <div className="ds-overlay ds-overlay--nested" onClick={closeEdit}>
-            <div className="ds-panel ds-panel--nested" onClick={(e) => e.stopPropagation()}>
-              <div className="ds-header">
-                <div className="ds-header-left">
-                  <button className="ds-close-btn" onClick={closeEdit}><Icon name="x" size={18} /></button>
-                  <h2>{editItem ? `Edit ${label}` : `New ${label}`}</h2>
+            <div className="prefixDrawer" style={{ width: 520 }} onClick={(e) => e.stopPropagation()}>
+              <div className="drawerHeader">
+                <div className="drawerTitle">
+                  <div className="drawerIcon" style={{ width: 36, height: 36, fontSize: 16 }}>
+                    <Icon name={editItem ? 'edit' : 'plus'} size={16} />
+                  </div>
+                  <div>
+                    <div className="drawerHeading" style={{ fontSize: 16 }}>{editItem ? `Edit ${label}` : `New ${label}`}</div>
+                    <div className="drawerSubtitle" style={{ fontSize: 12 }}>Document Type: {docType}</div>
+                  </div>
+                </div>
+                <div className="drawerActions">
+                  <button className="drawerAction" onClick={closeEdit}><Icon name="x" size={16} /></button>
                 </div>
               </div>
-              <div className="ds-body">
+              <div className="drawerContent" style={{ padding: 24 }}>
                 <div className="inv-modal-form">
-                  <div style={{ marginBottom: 16 }}>
-                    <strong style={{ fontSize: 13, color: 'var(--inv-text-sub)' }}>Document Type:</strong>{' '}
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>{docType}</span>
-                  </div>
                   <Field label={label}>
                     <textarea
                       className="ds-textarea"
@@ -231,11 +230,15 @@ export default function DocumentNotesPanel({ open, onClose }) {
                   </Field>
                 </div>
               </div>
-              <div className="ds-footer">
-                <button className="ds-btn ds-btn-primary" onClick={saveEdit} disabled={editSaving}>
-                  <Icon name="check" size={14} /> {editSaving ? 'Saving...' : 'Save'}
-                </button>
-                <button className="ds-btn ds-btn-ghost" onClick={closeEdit}>Cancel</button>
+              <div className="drawerFooter">
+                <div className="footerLeft">
+                  <button className="btn" onClick={closeEdit}>Cancel</button>
+                </div>
+                <div className="footerRight">
+                  <button className="btn btnPrimary" onClick={saveEdit} disabled={editSaving}>
+                    <Icon name="check" size={14} /> {editSaving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

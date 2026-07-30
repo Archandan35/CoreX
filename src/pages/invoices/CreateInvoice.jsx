@@ -1274,15 +1274,19 @@ export default function CreateInvoice() {
       {/* ===== Bank Drawer ===== */}
       {bankDrawerOpen && (
         <div className="ds-overlay" onClick={() => setBankDrawerOpen(false)}>
-          <div className="ds-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="ds-header">
-              <div className="ds-header-left">
-                <button className="ds-close-btn" onClick={() => setBankDrawerOpen(false)}><Icon name="x" size={18} /></button>
-                <h2>Add New Bank</h2>
+          <div className="prefixDrawer" onClick={(e) => e.stopPropagation()}>
+            <div className="drawerHeader">
+              <div className="drawerTitle">
+                <div className="drawerIcon"><Icon name="building" size={16} /></div>
+                <div>
+                  <div className="drawerHeading">Add New Bank</div>
+                </div>
               </div>
-              <button className="ds-btn ds-btn-primary" onClick={addNewBank}><Icon name="building" /> Add Bank</button>
+              <div className="drawerActions">
+                <button className="drawerAction" onClick={() => setBankDrawerOpen(false)}><Icon name="x" size={16} /></button>
+              </div>
             </div>
-            <div className="ds-body">
+            <div className="drawerContent" style={{ padding: 24 }}>
               <form className="inv-modal-form" onSubmit={e => { e.preventDefault(); addNewBank(); }}>
                 <Field label="Bank Name" required>
                   <Input value={bankForm.bank_name} onChange={e => setBankForm(p => ({ ...p, bank_name: e.target.value }))} placeholder="Bank name" />
@@ -1305,6 +1309,14 @@ export default function CreateInvoice() {
                 </div>
               </form>
             </div>
+            <div className="drawerFooter">
+              <div className="footerLeft">
+                <button className="btn" onClick={() => setBankDrawerOpen(false)}>Cancel</button>
+              </div>
+              <div className="footerRight">
+                <button className="btn btnPrimary" onClick={addNewBank}><Icon name="building" size={14} /> Add Bank</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1312,28 +1324,40 @@ export default function CreateInvoice() {
       {/* ===== Signature Drawer ===== */}
       {signatureDrawerOpen && (
         <div className="ds-overlay" onClick={() => setSignatureDrawerOpen(false)}>
-          <div className="ds-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="ds-header">
-              <div className="ds-header-left">
-                <button className="ds-close-btn" onClick={() => setSignatureDrawerOpen(false)}><Icon name="x" size={18} /></button>
-                <h2>Add New Signature</h2>
+          <div className="prefixDrawer" onClick={(e) => e.stopPropagation()}>
+            <div className="drawerHeader">
+              <div className="drawerTitle">
+                <div className="drawerIcon"><Icon name="pen-tool" size={16} /></div>
+                <div>
+                  <div className="drawerHeading">Add New Signature</div>
+                </div>
               </div>
-              <button className="ds-btn ds-btn-primary" onClick={async () => {
-                try {
-                  const s = await invoiceService.createSignature({ name: sigName });
-                  setSignatures(p => [...p, s]);
-                  setSelectedSignature(s);
-                  setSignatureDrawerOpen(false);
-                  notificationManager.success('Signature', 'Signature added.');
-                } catch (e) { notificationManager.error('Signature', e.message); }
-              }}><Icon name="pen-tool" /> Add Signature</button>
+              <div className="drawerActions">
+                <button className="drawerAction" onClick={() => setSignatureDrawerOpen(false)}><Icon name="x" size={16} /></button>
+              </div>
             </div>
-            <div className="ds-body">
+            <div className="drawerContent" style={{ padding: 24 }}>
               <form className="inv-modal-form" onSubmit={e => e.preventDefault()}>
                 <Field label="Signature Name" required>
                   <Input value={sigName} onChange={e => setSigName(e.target.value)} placeholder="e.g. Authorised Signatory" />
                 </Field>
               </form>
+            </div>
+            <div className="drawerFooter">
+              <div className="footerLeft">
+                <button className="btn" onClick={() => setSignatureDrawerOpen(false)}>Cancel</button>
+              </div>
+              <div className="footerRight">
+                <button className="btn btnPrimary" onClick={async () => {
+                  try {
+                    const s = await invoiceService.createSignature({ name: sigName });
+                    setSignatures(p => [...p, s]);
+                    setSelectedSignature(s);
+                    setSignatureDrawerOpen(false);
+                    notificationManager.success('Signature', 'Signature added.');
+                  } catch (e) { notificationManager.error('Signature', e.message); }
+                }}><Icon name="pen-tool" size={14} /> Add Signature</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1350,26 +1374,35 @@ export default function CreateInvoice() {
       {/* ===== Notes Drawer ===== */}
       {notesDrawerOpen && (
         <div className="ds-overlay" onClick={() => setNotesDrawerOpen(false)}>
-          <div className="ds-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="ds-header">
-              <div className="ds-header-left">
-                <button className="ds-close-btn" onClick={() => setNotesDrawerOpen(false)}><Icon name="x" size={18} /></button>
-                <h2>Notes</h2>
+          <div className="prefixDrawer" onClick={(e) => e.stopPropagation()}>
+            <div className="drawerHeader">
+              <div className="drawerTitle">
+                <div className="drawerIcon"><Icon name="file-text" size={16} /></div>
+                <div>
+                  <div className="drawerHeading">Notes</div>
+                </div>
               </div>
-              <div style={{display:'flex',gap:8}}>
-                <button className="ds-btn ds-btn-ghost" onClick={() => {
+              <div className="drawerActions">
+                <button className="drawerAction" onClick={() => {
                   const idx = notes.length;
                   setDraftNoteTexts(p => ({ ...p, [idx]: '' }));
                   setNotes(p => [...p, { id: generateKey(), text: '' }]);
-                }}><Icon name="plus" size={14} /> Add Note</button>
-                <button className="ds-btn ds-btn-primary" onClick={() => {
-                  setNotesDrawerOpen(false);
-                }}>Done</button>
+                }} title="Add Note"><Icon name="plus" size={16} /></button>
+                <button className="drawerAction" onClick={() => setNotesDrawerOpen(false)}><Icon name="x" size={16} /></button>
               </div>
             </div>
-            <div className="ds-body">
+            <div className="drawerContent" style={{ padding: 24 }}>
               {notes.length === 0 ? (
-                <div style={{padding:20,textAlign:'center',color:'var(--ni-text-light-gray)',fontSize:14}}>No notes yet. Click "Add Note" to create one.</div>
+                <div className="emptyState" style={{ margin: 0 }}>
+                  <div className="emptyIcon"><Icon name="file-text" size={24} /></div>
+                  <div className="emptyTitle">No notes yet</div>
+                  <div className="emptyDescription">Click "Add Note" to create one.</div>
+                  <button className="addButton" onClick={() => {
+                    const idx = notes.length;
+                    setDraftNoteTexts(p => ({ ...p, [idx]: '' }));
+                    setNotes(p => [...p, { id: generateKey(), text: '' }]);
+                  }}><Icon name="plus" size={14} /> Add Note</button>
+                </div>
               ) : (
                 <div style={{display:'flex',flexDirection:'column',gap:12}}>
                   {notes.map((n, i) => (
@@ -1396,6 +1429,14 @@ export default function CreateInvoice() {
                 </div>
               )}
             </div>
+            <div className="drawerFooter">
+              <div className="footerLeft">
+                <button className="btn" onClick={() => setNotesDrawerOpen(false)}>Cancel</button>
+              </div>
+              <div className="footerRight">
+                <button className="btn btnPrimary" onClick={() => setNotesDrawerOpen(false)}>Done</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1403,26 +1444,35 @@ export default function CreateInvoice() {
       {/* ===== Terms Drawer ===== */}
       {termsDrawerOpen && (
         <div className="ds-overlay" onClick={() => setTermsDrawerOpen(false)}>
-          <div className="ds-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="ds-header">
-              <div className="ds-header-left">
-                <button className="ds-close-btn" onClick={() => setTermsDrawerOpen(false)}><Icon name="x" size={18} /></button>
-                <h2>Terms &amp; Conditions</h2>
+          <div className="prefixDrawer" onClick={(e) => e.stopPropagation()}>
+            <div className="drawerHeader">
+              <div className="drawerTitle">
+                <div className="drawerIcon"><Icon name="file-text" size={16} /></div>
+                <div>
+                  <div className="drawerHeading">Terms &amp; Conditions</div>
+                </div>
               </div>
-              <div style={{display:'flex',gap:8}}>
-                <button className="ds-btn ds-btn-ghost" onClick={() => {
+              <div className="drawerActions">
+                <button className="drawerAction" onClick={() => {
                   const idx = terms.length;
                   setDraftTermTexts(p => ({ ...p, [idx]: '' }));
                   setTerms(p => [...p, { id: generateKey(), text: '' }]);
-                }}><Icon name="plus" size={14} /> Add Term</button>
-                <button className="ds-btn ds-btn-primary" onClick={() => {
-                  setTermsDrawerOpen(false);
-                }}>Done</button>
+                }} title="Add Term"><Icon name="plus" size={16} /></button>
+                <button className="drawerAction" onClick={() => setTermsDrawerOpen(false)}><Icon name="x" size={16} /></button>
               </div>
             </div>
-            <div className="ds-body">
+            <div className="drawerContent" style={{ padding: 24 }}>
               {terms.length === 0 ? (
-                <div style={{padding:20,textAlign:'center',color:'var(--ni-text-light-gray)',fontSize:14}}>No terms yet. Click "Add Term" to create one.</div>
+                <div className="emptyState" style={{ margin: 0 }}>
+                  <div className="emptyIcon"><Icon name="file-text" size={24} /></div>
+                  <div className="emptyTitle">No terms yet</div>
+                  <div className="emptyDescription">Click "Add Term" to create one.</div>
+                  <button className="addButton" onClick={() => {
+                    const idx = terms.length;
+                    setDraftTermTexts(p => ({ ...p, [idx]: '' }));
+                    setTerms(p => [...p, { id: generateKey(), text: '' }]);
+                  }}><Icon name="plus" size={14} /> Add Term</button>
+                </div>
               ) : (
                 <div style={{display:'flex',flexDirection:'column',gap:12}}>
                   {terms.map((t, i) => (
@@ -1448,6 +1498,14 @@ export default function CreateInvoice() {
                   ))}
                 </div>
               )}
+            </div>
+            <div className="drawerFooter">
+              <div className="footerLeft">
+                <button className="btn" onClick={() => setTermsDrawerOpen(false)}>Cancel</button>
+              </div>
+              <div className="footerRight">
+                <button className="btn btnPrimary" onClick={() => setTermsDrawerOpen(false)}>Done</button>
+              </div>
             </div>
           </div>
         </div>

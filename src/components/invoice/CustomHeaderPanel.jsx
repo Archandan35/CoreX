@@ -1,9 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Icon from '../ui/Icon.jsx';
-import Button from '../ui/Button.jsx';
 import Select from '../ui/Select.jsx';
 import { Field, Input } from '../ui/Field.jsx';
-import EmptyState from '../ui/EmptyState.jsx';
 import Pagination from '../ui/Pagination.jsx';
 import PermissionGate from '../ui/PermissionGate.jsx';
 import ConfirmDialog from '../ui/ConfirmDialog.jsx';
@@ -240,89 +238,112 @@ export default function CustomHeaderPanel({ open, onClose }) {
     <Icon name={sortField === field ? (sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : 'chevrons-up-down'} size={12} />
   );
 
-  const inputTypeLabel = CUSTOM_HEADER_INPUT_TYPE_OPTIONS.find((o) => o.value === (editForm.inputType || 'text'))?.label || 'Text';
-
   return (
     <>
       <div className="ds-overlay ds-overlay--nested" onClick={onClose}>
-        <div className="ds-panel ds-panel--nested" onClick={(e) => e.stopPropagation()}>
-          <div className="ds-header">
-            <div className="ds-header-left">
-              <button className="ds-close-btn" onClick={onClose}><Icon name="x" size={18} /></button>
-              <h2>Custom Header Management</h2>
+        <div className="prefixDrawer" onClick={(e) => e.stopPropagation()}>
+          {/* Header */}
+          <div className="drawerHeader">
+            <div className="drawerTitle">
+              <div className="drawerIcon">
+                <Icon name="gear" size={22} />
+              </div>
+              <div>
+                <div className="drawerHeading">Custom Header Management</div>
+                <div className="drawerSubtitle">Create reusable custom document fields</div>
+              </div>
             </div>
-            <button className="ds-btn ds-btn-ghost" title="Help" onClick={() => notificationManager.info('Help', 'Create reusable custom document fields. These fields automatically appear on all configured document entry forms.')}>
-              <Icon name="help-circle" size={18} />
-            </button>
+            <div className="drawerActions">
+              <button className="drawerAction" title="Help" onClick={() => notificationManager.info('Help', 'Create reusable custom document fields. These fields automatically appear on all configured document entry forms.')}>
+                <Icon name="help-circle" size={18} />
+              </button>
+              <button className="drawerAction" onClick={onClose}>
+                <Icon name="x" size={18} />
+              </button>
+            </div>
           </div>
 
-          <div className="ds-body">
-            <div className="ps-toolbar">
-              <div className="ps-search">
-                <Icon name="search" size={14} />
-                <input type="text" placeholder="Search headers..." value={search} onChange={(e) => setSearch(e.target.value)} />
-              </div>
-              <select className="ps-filter-select" value={filterActive === null ? 'all' : filterActive ? 'active' : 'inactive'}
-                onChange={(e) => { const v = e.target.value; setFilterActive(v === 'all' ? null : v === 'active'); }}>
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+          {/* Toolbar */}
+          <div className="toolbar">
+            <input className="searchBox" type="text" placeholder="Search headers..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <select className="filter" value={filterActive === null ? 'all' : filterActive ? 'active' : 'inactive'}
+              onChange={(e) => { const v = e.target.value; setFilterActive(v === 'all' ? null : v === 'active'); }}>
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <select className="filter" value={filterInputType} onChange={(e) => setFilterInputType(e.target.value)}>
+              <option value="">All Types</option>
+              {CUSTOM_HEADER_INPUT_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <button className="refreshBtn" onClick={() => setPage(1)} title="Refresh">
+              <Icon name="refresh-cw" size={16} />
+            </button>
+            <PermissionGate permission={PERMISSIONS.CUSTOM_HEADER_CREATE}>
+              <button className="addButton" onClick={openAdd}>
+                <Icon name="plus" size={14} /> Add Custom Header
+              </button>
+            </PermissionGate>
+          </div>
+
+          {/* Top Info Bar */}
+          <div className="topBar">
+            <div className="itemCount">{total} custom headers</div>
+            <div className="sortSection">
+              <select className="filter" style={{ width: 130 }} value={`${sortField}:${sortDir}`} onChange={(e) => { const [f, d] = e.target.value.split(':'); setSortField(f); setSortDir(d); }}>
+                <option value="displayName:asc">Name A-Z</option>
+                <option value="displayName:desc">Name Z-A</option>
+                <option value="displayOrder:asc">Order ↑</option>
+                <option value="displayOrder:desc">Order ↓</option>
               </select>
-              <select className="ps-filter-select" value={filterInputType} onChange={(e) => setFilterInputType(e.target.value)}>
-                <option value="">All Types</option>
-                {CUSTOM_HEADER_INPUT_TYPE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-              <div className="ps-toolbar-actions">
+            </div>
+          </div>
+
+          {/* Content Area */}
+          <div className="drawerContent">
+            {loading ? (
+              <div className="ps-loading"><div className="spinner" /><p>Loading custom headers...</p></div>
+            ) : items.length === 0 ? (
+              <div className="emptyState">
+                <div className="emptyIcon">
+                  <Icon name="gear" size={36} />
+                </div>
+                <div className="emptyTitle">No custom headers found</div>
+                <div className="emptyDescription">
+                  {search ? 'Try a different search term.' : 'Create a custom header to get started.'}
+                </div>
                 <PermissionGate permission={PERMISSIONS.CUSTOM_HEADER_CREATE}>
-                  <button className="ds-btn ds-btn-primary" onClick={openAdd}>
+                  <button className="addButton" onClick={openAdd}>
                     <Icon name="plus" size={14} /> Add Custom Header
                   </button>
                 </PermissionGate>
-                <button className="ps-toolbar-refresh" onClick={() => setPage(1)} title="Refresh">
-                  <Icon name="refresh-cw" size={16} />
-                </button>
               </div>
-            </div>
-
-            <div className="ps-table-wrap">
-              {loading ? (
-                <div className="ps-loading"><div className="spinner" /><p>Loading custom headers...</p></div>
-              ) : items.length === 0 ? (
-                <EmptyState
-                  icon="gear"
-                  title="No custom headers found"
-                  message={search ? 'Try a different search term.' : 'Create a custom header to get started.'}
-                  action={
-                    <PermissionGate permission={PERMISSIONS.CUSTOM_HEADER_CREATE}>
-                      <Button icon="plus" onClick={openAdd}>Add Custom Header</Button>
-                    </PermissionGate>
-                  }
-                />
-              ) : (
-                <>
-                  {selectedIds.length > 0 && (
-                    <div className="ps-bulk-bar">
-                      <span className="ps-bulk-count">{selectedIds.length} selected</span>
-                      <PermissionGate permission={PERMISSIONS.CUSTOM_HEADER_UPDATE}>
-                        <button className="ps-bulk-btn ps-bulk-btn--activate" onClick={() => handleBulkActivate(true)}>
-                          <Icon name="check" size={14} /> Activate
-                        </button>
-                        <button className="ps-bulk-btn ps-bulk-btn--deactivate" onClick={() => handleBulkActivate(false)}>
-                          <Icon name="x" size={14} /> Deactivate
-                        </button>
-                      </PermissionGate>
-                      <PermissionGate permission={PERMISSIONS.CUSTOM_HEADER_DELETE}>
-                        <button className="ps-bulk-btn ps-bulk-btn--delete" onClick={handleBulkDelete}>
-                          <Icon name="trash" size={14} /> Delete
-                        </button>
-                      </PermissionGate>
-                      <button className="ps-bulk-btn" onClick={() => setSelectedIds([])}>
-                        <Icon name="x" size={14} /> Clear
+            ) : (
+              <>
+                {selectedIds.length > 0 && (
+                  <div className="ps-bulk-bar">
+                    <span className="ps-bulk-count">{selectedIds.length} selected</span>
+                    <PermissionGate permission={PERMISSIONS.CUSTOM_HEADER_UPDATE}>
+                      <button className="ps-bulk-btn ps-bulk-btn--activate" onClick={() => handleBulkActivate(true)}>
+                        <Icon name="check" size={14} /> Activate
                       </button>
-                    </div>
-                  )}
+                      <button className="ps-bulk-btn ps-bulk-btn--deactivate" onClick={() => handleBulkActivate(false)}>
+                        <Icon name="x" size={14} /> Deactivate
+                      </button>
+                    </PermissionGate>
+                    <PermissionGate permission={PERMISSIONS.CUSTOM_HEADER_DELETE}>
+                      <button className="ps-bulk-btn ps-bulk-btn--delete" onClick={handleBulkDelete}>
+                        <Icon name="trash" size={14} /> Delete
+                      </button>
+                    </PermissionGate>
+                    <button className="ps-bulk-btn" onClick={() => setSelectedIds([])}>
+                      <Icon name="x" size={14} /> Clear
+                    </button>
+                  </div>
+                )}
+                <div className="ps-table-wrap">
                   <table className="ps-table" style={{ tableLayout: 'fixed' }}>
                     <thead>
                       <tr>
@@ -367,19 +388,23 @@ export default function CustomHeaderPanel({ open, onClose }) {
                       ))}
                     </tbody>
                   </table>
-                </>
-              )}
-            </div>
-
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                </div>
+                <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+              </>
+            )}
           </div>
 
-          <div className="ds-footer">
-            <button className="ds-btn ds-btn-primary" onClick={onClose}>Done</button>
-            <button className="ds-btn ds-btn-ghost" onClick={onClose}>Cancel</button>
-            <button className="ds-btn ds-btn-secondary" onClick={handleReset}>
-              <Icon name="refresh-cw" size={14} /> Reset
-            </button>
+          {/* Footer */}
+          <div className="drawerFooter">
+            <div className="footerLeft">
+              <button className="btn" onClick={onClose}>Cancel</button>
+              <button className="btn" onClick={handleReset}>
+                <Icon name="refresh-cw" size={14} /> Reset
+              </button>
+            </div>
+            <div className="footerRight">
+              <button className="btn btnPrimary" onClick={onClose}>Done</button>
+            </div>
           </div>
         </div>
       </div>
@@ -388,14 +413,23 @@ export default function CustomHeaderPanel({ open, onClose }) {
       {editOpen && (
         <>
           <div className="ds-overlay ds-overlay--nested" onClick={closeEdit}>
-            <div className="ds-panel ds-panel--nested" onClick={(e) => e.stopPropagation()}>
-              <div className="ds-header">
-                <div className="ds-header-left">
-                  <button className="ds-close-btn" onClick={closeEdit}><Icon name="x" size={18} /></button>
-                  <h2>{editItem ? 'Edit Custom Header' : 'Add Custom Header'}</h2>
+            <div className="prefixDrawer" style={{ width: 520 }} onClick={(e) => e.stopPropagation()}>
+              <div className="drawerHeader">
+                <div className="drawerTitle">
+                  <div className="drawerIcon" style={{ width: 44, height: 44, fontSize: 18 }}>
+                    <Icon name={editItem ? 'edit' : 'plus'} size={18} />
+                  </div>
+                  <div>
+                    <div className="drawerHeading" style={{ fontSize: 22 }}>{editItem ? 'Edit Custom Header' : 'Add Custom Header'}</div>
+                  </div>
+                </div>
+                <div className="drawerActions">
+                  <button className="drawerAction" onClick={closeEdit}>
+                    <Icon name="x" size={18} />
+                  </button>
                 </div>
               </div>
-              <div className="ds-body">
+              <div className="drawerContent" style={{ padding: 32 }}>
                 <form className="inv-modal-form" onSubmit={(e) => { e.preventDefault(); saveEdit(); }}>
                   <div className="inv-modal-row">
                     <Field label="Display Name" required>
@@ -427,26 +461,38 @@ export default function CustomHeaderPanel({ open, onClose }) {
                   )}
 
                   <div className="inv-modal-row" style={{ marginTop: 12 }}>
-                    <label className="ps-switch">
-                      <input type="checkbox" checked={editForm.active} onChange={(e) => updateForm('active', e.target.checked)} />
-                      <span className={`ps-switch-slider${editForm.active ? ' on' : ''}`}>
-                        <span className="ps-switch-text">{editForm.active ? 'Active' : 'Inactive'}</span>
-                      </span>
-                    </label>
-                    <label className="ps-switch">
-                      <input type="checkbox" checked={editForm.isDefault} onChange={(e) => updateForm('isDefault', e.target.checked)} />
-                      <span className={`ps-switch-slider${editForm.isDefault ? ' on' : ''}`}>
-                        <span className="ps-switch-text">{editForm.isDefault ? 'Enable' : 'Disable'}</span>
-                      </span>
-                    </label>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Status</div>
+                      <label className="ps-switch">
+                        <input type="checkbox" checked={editForm.active} onChange={(e) => updateForm('active', e.target.checked)} />
+                        <span className="ps-switch-slider">
+                          <span className={`ps-switch-segment${!editForm.active ? ' active' : ''}`}>Inactive</span>
+                          <span className={`ps-switch-segment${editForm.active ? ' active' : ''}`}>Active</span>
+                        </span>
+                      </label>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Default</div>
+                      <label className="ps-switch">
+                        <input type="checkbox" checked={editForm.isDefault} onChange={(e) => updateForm('isDefault', e.target.checked)} />
+                        <span className="ps-switch-slider">
+                          <span className={`ps-switch-segment${!editForm.isDefault ? ' active' : ''}`}>Disable</span>
+                          <span className={`ps-switch-segment${editForm.isDefault ? ' active' : ''}`}>Enable</span>
+                        </span>
+                      </label>
+                    </div>
                   </div>
                 </form>
               </div>
-              <div className="ds-footer">
-                <button className="ds-btn ds-btn-primary" onClick={saveEdit} disabled={editSaving}>
-                  <Icon name="check" size={14} /> {editSaving ? 'Saving...' : (editItem ? 'Save Changes' : 'Add')}
-                </button>
-                <button className="ds-btn ds-btn-ghost" onClick={closeEdit}>Cancel</button>
+              <div className="drawerFooter">
+                <div className="footerLeft">
+                  <button className="btn" onClick={closeEdit}>Cancel</button>
+                </div>
+                <div className="footerRight">
+                  <button className="btn btnPrimary" onClick={saveEdit} disabled={editSaving}>
+                    <Icon name="check" size={14} /> {editSaving ? 'Saving...' : (editItem ? 'Save Changes' : 'Add')}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

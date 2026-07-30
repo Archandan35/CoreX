@@ -233,6 +233,15 @@ export const SCHEMAS = {
     rls: false,
     indexes: ['invoice_id'],
   },
+  _schema_version: {
+    table: '_schema_version',
+    columns: ['version', 'applied_at', 'description'],
+    columnTypes: { version: 'INTEGER', applied_at: 'TIMESTAMPTZ', description: 'TEXT' },
+    primaryKey: 'version',
+    nullable: ['applied_at', 'description'],
+    defaults: { applied_at: 'NOW()' },
+    rls: false,
+  },
 };
 
 SCHEMAS.version = 5;
@@ -240,4 +249,9 @@ SCHEMAS.extensions = [];
 SCHEMAS.seedData = [];
 SCHEMAS.requiredTriggers = [
   { name: 'on_auth_user_created', schema: 'auth', table: 'users', event: 'AFTER INSERT', function: 'handle_new_user' },
+];
+SCHEMAS.functionGrants = [
+  { function: 'exec_sql', args: 'text', roles: ['anon', 'authenticated', 'service_role'] },
+  { function: 'check_admin_exists', args: '', roles: ['anon', 'authenticated', 'service_role'] },
+  { function: 'is_admin_user', args: '', roles: ['anon', 'authenticated', 'service_role'] },
 ];

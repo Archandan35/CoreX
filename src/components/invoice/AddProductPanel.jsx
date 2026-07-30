@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Icon from '../ui/Icon.jsx';
-import Button from '../ui/Button.jsx';
 import Select from '../ui/Select.jsx';
 import { Field, Input } from '../ui/Field.jsx';
 import Checkbox from '../ui/Checkbox.jsx';
@@ -167,22 +166,25 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
 
   return (
     <div className="ds-overlay" onClick={onClose}>
-      <div className="ds-panel ds-panel--wide" onClick={e => e.stopPropagation()}>
-        <div className="ds-header">
-          <div className="ds-header-left">
-            <button className="ds-close-btn" onClick={onClose}><Icon name="x" size={18} /></button>
-            <h2>Add Item</h2>
+      <div className="prefixDrawer" style={{ width: '85%', maxWidth: 960 }} onClick={e => e.stopPropagation()}>
+        <div className="drawerHeader">
+          <div className="drawerTitle">
+            <div className="drawerIcon"><Icon name="package" size={16} /></div>
+            <div>
+              <div className="drawerHeading">Add Item</div>
+            </div>
           </div>
-          <Button onClick={handleSubmit} loading={busy} icon="package">Add Item</Button>
+          <div className="drawerActions">
+            <button className="drawerAction" onClick={onClose}><Icon name="x" size={16} /></button>
+          </div>
+        </div>
+        <div className="mainTabs" style={{ padding: '10px 24px 0', borderBottom: '1px solid var(--border, #E8EAF4)' }}>
+          <button className={`mainTab${tab === 'details' ? ' active' : ''}`} onClick={() => setTab('details')}>Details</button>
+          <button className={`mainTab${tab === 'prices' ? ' active' : ''}`} onClick={() => setTab('prices')}>Price Lists</button>
+          <button className={`mainTab${tab === 'attachments' ? ' active' : ''}`} onClick={() => setTab('attachments')}>Attachments</button>
         </div>
 
-        <div className="ds-body">
-          <div className="ps-primary-tabs">
-            <button className={`ps-primary-tab${tab === 'details' ? ' active' : ''}`} onClick={() => setTab('details')}>Details</button>
-            <button className={`ps-primary-tab${tab === 'prices' ? ' active' : ''}`} onClick={() => setTab('prices')}>Price Lists</button>
-            <button className={`ps-primary-tab${tab === 'attachments' ? ' active' : ''}`} onClick={() => setTab('attachments')}>Attachments</button>
-          </div>
-
+        <div className="drawerContent" style={{ padding: 24 }}>
           {tab === 'details' && (
             <>
               <div className="ds-section">
@@ -387,12 +389,15 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
             </div>
           )}
         </div>
-
-        <div className="ds-footer">
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSubmit} loading={busy} icon="package">
-            Add Item
-          </Button>
+        <div className="drawerFooter">
+          <div className="footerLeft">
+            <button className="btn" onClick={onClose}>Cancel</button>
+          </div>
+          <div className="footerRight">
+            <button className="btn btnPrimary" onClick={handleSubmit} disabled={busy}>
+              {busy ? 'Adding...' : 'Add Item'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
