@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Users, Search, Package, ShoppingCart, CreditCard, Zap,
-  Calculator, Barcode, Monitor, Grid3X3, X, Plus, Minus,
+  Calculator, Barcode, Monitor, Grid3X3, ChevronDown, X, Plus, Minus,
   Trash2, Receipt, Pause, Percent, TrendingUp, TrendingDown,
   UserPlus, UserCheck, Box, FileText, ChevronUp, Tag, Banknote,
   SplitSquareHorizontal, Circle, User, LogOut, Settings, HelpCircle,

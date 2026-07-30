@@ -7821,7 +7821,9 @@ select.form-input { cursor: pointer; appearance: auto; }
   transition: all 200ms ease;
 }
 
+.topbar__qs-btn.qs-btn-primary,
 .qs-btn-primary { background: #4A3FD8; color: #fff; }
+.topbar__qs-btn.qs-btn-primary:hover,
 .qs-btn-primary:hover { background: #584DE2; box-shadow: 0 2px 8px rgba(91,79,233,0.3); }
 
 .qs-btn-outline {
@@ -8544,9 +8546,13 @@ select.form-input { cursor: pointer; appearance: auto; }
   transition: all 200ms ease;
 }
 
+.qs-action-btn.qs-pay-now,
 .qs-pay-now { background: #4A3FD8; color: #fff; }
+.qs-action-btn.qs-pay-now:hover,
 .qs-pay-now:hover { background: #584DE2; box-shadow: 0 2px 8px rgba(91,79,233,0.3); }
+.qs-action-btn.qs-hold,
 .qs-hold { background: #D4901D; color: #fff; }
+.qs-action-btn.qs-hold:hover,
 .qs-hold:hover { background: #DFA030; box-shadow: 0 2px 8px rgba(245,166,35,0.3); }
 
 .qs-shortcut {
@@ -8555,11 +8561,12 @@ select.form-input { cursor: pointer; appearance: auto; }
   opacity: 0.85;
 }
 
+button.qs-cancel,
 .qs-cancel {
   width: 100%;
   border-radius: 5px;
   border: none;
-  background: #B3261E;
+  background: #8B1A14;
   color: #fff;
   padding: 13px;
   font-weight: 700;
@@ -8572,7 +8579,7 @@ select.form-input { cursor: pointer; appearance: auto; }
   gap: 8px;
 }
 
-.qs-cancel { background: #8B1A14; color: #fff; }
+button.qs-cancel:hover,
 .qs-cancel:hover { background: #A0241D; }
 
 .qs-payment-methods {
