@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import Button from '../components/ui/Button.jsx';
+import { Field, Input } from '../components/ui/Field.jsx';
 import Select from '../components/ui/Select.jsx';
 import Icon from '../components/ui/Icon.jsx';
 import Skeleton from '../components/ui/Skeleton.jsx';
@@ -11,6 +13,7 @@ import { settingsApiService } from '../services/settings/SettingsApiService.js';
 import { notificationManager } from '../managers/NotificationManager.js';
 import { settingsManager } from '../managers/SettingsManager.js';
 import { validateSettings } from '../business/validation/SettingsValidator.js';
+import useSaveHandler from '../hooks/useSaveHandler.js';
 import { invalidateCache } from '../services/ui-sync/index.js';
 
 const MEMBERSHIP_OPTIONS = [
@@ -234,7 +237,6 @@ export default function Settings() {
           reader.onerror = reject;
           reader.readAsDataURL(logoFile);
         });
-        values.logo = fileData;
         await fetch('/api/settings/logo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -242,8 +244,9 @@ export default function Settings() {
         });
       }
 
-      await settingsApiService.update(values);
-      setOriginal({ ...values });
+      const { logo: _logo, ...rest } = values;
+      await settingsApiService.update(logoFile ? rest : values);
+      setOriginal({ ...values, logo: logoFile ? original.logo : values.logo });
       setLogoFile(null);
       setValidationErrors({});
       notificationManager.successLoading(loadingId, 'Settings saved', 'All changes have been applied.');
@@ -301,18 +304,18 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <div className="gs-page">
-        <div className="gs-topbar" style={{ justifyContent:'center' }}>
+      <div className="page" style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
+        <div className="settings-topbar" style={{ justifyContent:'center' }}>
           <Skeleton height={24} width="200px" />
         </div>
-        <div className="gs-layout">
-          <div className="gs-sidenav"><Skeleton height={20} width="80%" /><Skeleton height={12} count={10} /></div>
-          <div className="gs-content">
+        <div className="settings-body">
+          <div className="settings-nav"><Skeleton height={20} width="80%" /><Skeleton height={12} count={10} /></div>
+          <div className="settings-center">
             <Skeleton height={28} width="60%" />
             <div style={{ marginTop: 16 }}><Skeleton height={200} /></div>
             <div style={{ marginTop: 16 }}><Skeleton height={300} /></div>
           </div>
-          <div className="gs-toc"><Skeleton height={16} width="80%" /><Skeleton height={12} count={5} /></div>
+          <div className="settings-sidebar"><Skeleton height={16} width="80%" /><Skeleton height={12} count={5} /></div>
         </div>
       </div>
     );
@@ -327,306 +330,189 @@ export default function Settings() {
   }
 
   return (
-    <div className="gs-page">
-      {/* ===== Top Bar ===== */}
-      <div className="gs-topbar">
-        <div className="gs-topbar__left">
-          <div className="gs-topbar__icon"><Icon name="settings" size={18} /></div>
-          <h1 className="gs-topbar__title">Settings</h1>
+    <div className="page" style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
+      {/* ===== Top Header Bar ===== */}
+      <div className="settings-topbar">
+        <div className="settings-topbar-left">
+          <Icon name="settings" size={20} />
+          <h1 className="settings-topbar-title">Settings</h1>
         </div>
-        <div className="gs-topbar__right">
-          <div className="gs-topbar__search">
+        <div className="settings-topbar-right">
+          <div className="settings-search-box">
             <Icon name="search" size={14} />
             <input type="text" placeholder="Search anything..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-            <span className="gs-topbar__kbd">Ctrl+K</span>
+            <span className="settings-search-hint">Ctrl+K</span>
           </div>
         </div>
       </div>
 
-      <div className="gs-layout">
-        {/* ===== Side Nav ===== */}
-        <nav className="gs-sidenav">
-          <div className="gs-sidenav__section-label">MAIN</div>
-          <div className="gs-sidenav__nav">
-            <button type="button" className="gs-sidenav__item gs-sidenav__item--active">
-              <Icon name="settings" size={16} />
-              General Settings
-              <Icon name="chevron-right" size={14} className="gs-sidenav__chevron" />
-            </button>
+      <PermissionGate permission={PERMISSIONS.SETTINGS_READ} fallback={<EmptyState icon="lock" title="Access denied" message="You don't have permission to view settings." />}>
+        <div className="settings-body">
+          {/* ===== Left Nav ===== */}
+          <nav className="settings-nav">
+            <div className="settings-nav-section">
+              <div className="settings-nav-section-title">MAIN</div>
+              <button type="button" className="settings-nav-item settings-nav-item--active">
+                <Icon name="settings" size={16} />
+                General Settings
+              </button>
+            </div>
+          </nav>
+
+          {/* ===== Center Content ===== */}
+          <div className="settings-center">
+            <h2 className="settings-center-title">General Settings</h2>
+
+            <div id="section-logo">
+              <div className="settings-logo-area">
+              <div className={`settings-logo-preview${!logoPreview ? ' settings-logo-preview--empty' : ''}`}>
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Website logo preview" />
+                ) : (
+                  <><Icon name="image" size={32} strokeWidth={1.5} /><span>No logo</span></>
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div className={`settings-logo-dropzone${logoDragOver ? ' settings-logo-dropzone--active' : ''}`}
+                  onDragOver={handleLogoDragOver} onDragLeave={handleLogoDragLeave} onDrop={handleLogoDrop}
+                  onClick={() => document.getElementById('logo-file-input')?.click()}>
+                  <Icon name="upload" size={24} strokeWidth={1.5} className="settings-logo-dropzone__icon" />
+                  <div className="settings-logo-dropzone__text">Drag & drop logo here, or click to browse</div>
+                  <div className="settings-logo-dropzone__hint">PNG, JPG, JPEG, SVG, WEBP &middot; Max 5MB</div>
+                  <input id="logo-file-input" type="file" accept=".png,.jpg,.jpeg,.svg,.webp" style={{ display:'none' }} onChange={handleLogoInputChange} />
+                </div>
+                {logoPreview && (
+                  <div className="settings-logo-actions">
+                    <Button variant="secondary" size="sm" onClick={() => document.getElementById('logo-file-input')?.click()}>Replace</Button>
+                    <Button variant="danger" size="sm" onClick={handleLogoRemove}>Remove</Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            </div>
+
+            <div id="section-site-title">
+              <Field label="Site Title" required>
+              <Input value={values.siteTitle || ''} onChange={e => handleChange('siteTitle', e.target.value)} placeholder="Your application name" />
+              {validationErrors.siteTitle && <div className="alert alert-danger alert--danger-mt">{validationErrors.siteTitle[0]}</div>}
+            </Field>
+            </div>
+
+            <div id="section-tagline">
+              <Field label="Tagline">
+              <Input value={values.tagline || ''} onChange={e => handleChange('tagline', e.target.value)} placeholder="Short description" />
+            </Field>
+            </div>
+
+            <div id="section-site-url">
+              <Field label="Website URL">
+              <Input value={values.siteUrl || ''} onChange={e => handleChange('siteUrl', e.target.value)} placeholder="https://example.com" />
+              {validationErrors.siteUrl && <div className="alert alert-danger alert--danger-mt">{validationErrors.siteUrl[0]}</div>}
+            </Field>
+            </div>
+
+            <div id="section-app-url">
+              <Field label="Application URL">
+              <Input value={values.appUrl || ''} onChange={e => handleChange('appUrl', e.target.value)} placeholder="https://app.example.com" />
+              {validationErrors.appUrl && <div className="alert alert-danger alert--danger-mt">{validationErrors.appUrl[0]}</div>}
+            </Field>
+            </div>
+
+            <div id="section-support-email">
+              <Field label="Support Email">
+              <Input value={values.supportEmail || ''} onChange={e => handleChange('supportEmail', e.target.value)} placeholder="support@example.com" type="email" />
+              {validationErrors.supportEmail && <div className="alert alert-danger alert--danger-mt">{validationErrors.supportEmail[0]}</div>}
+            </Field>
+            </div>
+
+            <div id="section-contact-number">
+              <Field label="Contact Number">
+              <Input value={values.contactNumber || ''} onChange={e => handleChange('contactNumber', e.target.value)} placeholder="+1 555-123-4567" />
+              {validationErrors.contactNumber && <div className="alert alert-danger alert--danger-mt">{validationErrors.contactNumber[0]}</div>}
+            </Field>
+            </div>
+
+            <div id="section-membership">
+              <Field label="Membership Mode">
+              <Select options={MEMBERSHIP_OPTIONS} value={values.membershipMode || ''} onChange={val => handleChange('membershipMode', val)} placeholder="Select membership mode" />
+            </Field>
+            </div>
+
+            <div id="section-default-role">
+              <Field label="New User Default Role">
+              <Select options={roles.map(r => ({ value: r.id, label: r.name }))} value={values.defaultRole || ''} onChange={val => handleChange('defaultRole', val)} placeholder="Select default role" />
+            </Field>
+            </div>
+
+            <div id="section-language">
+              <Field label="Language">
+              <Select options={languages.map(l => ({ value: l.code, label: `${l.nativeName} (${l.name})` }))} value={values.language || ''} onChange={val => handleChange('language', val)} placeholder="Select language" />
+            </Field>
+            </div>
+
+            <div id="section-timezone">
+              <Field label="Timezone">
+              <Select options={tzOptions} value={values.timezone || ''} onChange={val => handleChange('timezone', val)} placeholder="Select timezone" />
+            </Field>
+            </div>
+
+            <div id="section-date-format">
+              <Field label="Date Format">
+              <Select options={DATE_FORMATS} value={values.dateFormat || ''} onChange={val => handleChange('dateFormat', val)} placeholder="Select date format" />
+              <div className="settings-format-preview">
+                <div className="settings-format-preview__label">Preview</div>
+                <div className="settings-format-preview__value">{formatDatePreview(values.dateFormat || 'DD-MM-YYYY')}</div>
+              </div>
+            </Field>
+            </div>
+
+            <div id="section-time-format">
+              <Field label="Time Format">
+              <Select options={TIME_FORMATS} value={values.timeFormat || ''} onChange={val => handleChange('timeFormat', val)} placeholder="Select time format" />
+              <div className="settings-format-preview">
+                <div className="settings-format-preview__label">Preview</div>
+                <div className="settings-format-preview__value">{formatTimePreview(values.timeFormat || '24-hour')}</div>
+              </div>
+            </Field>
+            </div>
+
+            <div id="section-week-start">
+              <Field label="Week Starts On">
+              <Select options={WEEK_STARTS_OPTIONS} value={values.weekStart || ''} onChange={val => handleChange('weekStart', val)} placeholder="Select first day of week" />
+            </Field>
+            </div>
           </div>
-        </nav>
 
-        {/* ===== Center Content ===== */}
-        <PermissionGate permission={PERMISSIONS.SETTINGS_READ} fallback={<EmptyState icon="lock" title="Access denied" message="You don't have permission to view settings." />}>
-          <div className="gs-content">
-            <div className="gs-content__header">
-              <div>
-                <h2 className="gs-content__title">General Settings</h2>
-                <p className="gs-content__subtitle">Configure your application settings</p>
-              </div>
-              <PermissionGate permission={PERMISSIONS.SETTINGS_UPDATE}>
-                <button className="gs-save-btn gs-save-btn--sm" onClick={handleSave} disabled={saving}>
-                  <Icon name="save" size={14} /> Save Changes
+          {/* ===== Right Sidebar ===== */}
+          <aside className="settings-sidebar">
+            <div className="settings-sidebar-section">
+              <div className="settings-sidebar-title">In This Section</div>
+              {TOC_ITEMS.map(item => (
+                <button key={item.id} type="button" className="settings-sidebar-item"
+                  onClick={() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' })}>
+                  {item.label}
                 </button>
-              </PermissionGate>
+              ))}
             </div>
-
-            {/* ===== Logo Panel ===== */}
-            <div className="gs-panel" id="section-logo">
-              <div className="gs-panel__accent" />
-              <div className="gs-panel__inner">
-                <div className="gs-panel__header"><Icon name="image" size={16} /> Website Logo</div>
-                <div className="gs-fields">
-                  <div className="gs-field-row">
-                    <div className="gs-field-label-col">
-                      <label className="gs-field-label">Logo</label>
-                      <span className="gs-field-desc">Upload your brand logo</span>
-                    </div>
-                    <div className="gs-field-control-col" style={{ flexDirection:'column', alignItems:'flex-start' }}>
-                      {logoPreview ? (
-                        <div className="gs-logo-upload__preview">
-                          <img src={logoPreview} alt="Website logo preview" className="gs-logo-upload__img" />
-                          <div className="gs-logo-upload__actions">
-                            <button className="gs-file-upload" onClick={() => document.getElementById('logo-file-input')?.click()}>Replace</button>
-                            <button className="gs-file-upload gs-logo-upload__remove" onClick={handleLogoRemove}>Remove</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className={`gs-logo-upload__placeholder${logoDragOver ? ' gs-logo-upload__placeholder--active' : ''}`}
-                          onDragOver={handleLogoDragOver} onDragLeave={handleLogoDragLeave} onDrop={handleLogoDrop}
-                          onClick={() => document.getElementById('logo-file-input')?.click()}>
-                          <Icon name="upload" size={22} />
-                          <span>Upload logo</span>
-                        </div>
-                      )}
-                      <input id="logo-file-input" type="file" accept=".png,.jpg,.jpeg,.svg,.webp" className="gs-logo-upload__input" onChange={handleLogoInputChange} />
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="settings-help-card">
+              <div className="settings-help-card-title">Need Help?</div>
+              <p className="settings-help-card-desc">Check our documentation or contact support.</p>
+              <button className="settings-help-card-btn"><Icon name="external-link" size={13} /> View Docs</button>
             </div>
+          </aside>
+        </div>
 
-            {/* ===== Site Information Panel ===== */}
-            <div className="gs-panel">
-              <div className="gs-panel__accent" />
-              <div className="gs-panel__inner">
-                <div className="gs-panel__header"><Icon name="info" size={16} /> Site Information</div>
-                <div className="gs-fields">
-                  <div className="gs-field-row" id="section-site-title">
-                    <div className="gs-field-label-col">
-                      <label className="gs-field-label">Site Title</label>
-                      <span className="gs-field-desc">Your application name</span>
-                    </div>
-                    <div className="gs-field-control-col" style={{ flexDirection:'column', alignItems:'flex-start' }}>
-                      <input className="gs-plain-input" value={values.siteTitle || ''} onChange={e => handleChange('siteTitle', e.target.value)} placeholder="Your application name" />
-                      {validationErrors.siteTitle && <div className="alert alert-danger alert--danger-mt">{validationErrors.siteTitle[0]}</div>}
-                    </div>
-                  </div>
-                  <div className="gs-field-row" id="section-tagline">
-                    <div className="gs-field-label-col">
-                      <label className="gs-field-label">Tagline</label>
-                      <span className="gs-field-desc">Short description of your app</span>
-                    </div>
-                    <div className="gs-field-control-col">
-                      <input className="gs-plain-input" value={values.tagline || ''} onChange={e => handleChange('tagline', e.target.value)} placeholder="Short description" />
-                    </div>
-                  </div>
-                  <div className="gs-field-row" id="section-site-url">
-                    <div className="gs-field-label-col">
-                      <label className="gs-field-label">Website URL</label>
-                      <span className="gs-field-desc">Your public website address</span>
-                    </div>
-                    <div className="gs-field-control-col" style={{ flexDirection:'column', alignItems:'flex-start' }}>
-                      <input className="gs-plain-input" value={values.siteUrl || ''} onChange={e => handleChange('siteUrl', e.target.value)} placeholder="https://example.com" />
-                      {validationErrors.siteUrl && <div className="alert alert-danger alert--danger-mt">{validationErrors.siteUrl[0]}</div>}
-                    </div>
-                  </div>
-                  <div className="gs-field-row" id="section-app-url">
-                    <div className="gs-field-label-col">
-                      <label className="gs-field-label">Application URL</label>
-                      <span className="gs-field-desc">Your app instance address</span>
-                    </div>
-                    <div className="gs-field-control-col" style={{ flexDirection:'column', alignItems:'flex-start' }}>
-                      <input className="gs-plain-input" value={values.appUrl || ''} onChange={e => handleChange('appUrl', e.target.value)} placeholder="https://app.example.com" />
-                      {validationErrors.appUrl && <div className="alert alert-danger alert--danger-mt">{validationErrors.appUrl[0]}</div>}
-                    </div>
-                  </div>
-                  <div className="gs-field-row" id="section-support-email">
-                    <div className="gs-field-label-col">
-                      <label className="gs-field-label">Support Email</label>
-                      <span className="gs-field-desc">Contact email for support</span>
-                    </div>
-                    <div className="gs-field-control-col" style={{ flexDirection:'column', alignItems:'flex-start' }}>
-                      <input className="gs-plain-input" value={values.supportEmail || ''} onChange={e => handleChange('supportEmail', e.target.value)} placeholder="support@example.com" type="email" />
-                      {validationErrors.supportEmail && <div className="alert alert-danger alert--danger-mt">{validationErrors.supportEmail[0]}</div>}
-                    </div>
-                  </div>
-                  <div className="gs-field-row" id="section-contact-number">
-                    <div className="gs-field-label-col">
-                      <label className="gs-field-label">Contact Number</label>
-                      <span className="gs-field-desc">Primary contact phone</span>
-                    </div>
-                    <div className="gs-field-control-col" style={{ flexDirection:'column', alignItems:'flex-start' }}>
-                      <input className="gs-plain-input" value={values.contactNumber || ''} onChange={e => handleChange('contactNumber', e.target.value)} placeholder="+1 555-123-4567" />
-                      {validationErrors.contactNumber && <div className="alert alert-danger alert--danger-mt">{validationErrors.contactNumber[0]}</div>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ===== Membership Panel ===== */}
-            <div className="gs-panel">
-              <div className="gs-panel__accent" />
-              <div className="gs-panel__inner">
-                <div className="gs-panel__header"><Icon name="users" size={16} /> Membership</div>
-                <div className="gs-fields">
-                  <div className="gs-field-row" id="section-membership">
-                    <div className="gs-field-label-col">
-                      <label className="gs-field-label">Membership Mode</label>
-                      <span className="gs-field-desc">How new users can join</span>
-                    </div>
-                    <div className="gs-field-control-col">
-                      <div className="gs-select-wrap">
-                        <Select className="gs-select" options={MEMBERSHIP_OPTIONS} value={values.membershipMode || ''} onChange={val => handleChange('membershipMode', val)} placeholder="Select membership mode" />
-                        <Icon name="chevron-down" size={14} />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="gs-field-row" id="section-default-role">
-                    <div className="gs-field-label-col">
-                      <label className="gs-field-label">New User Default Role</label>
-                      <span className="gs-field-desc">Role assigned on registration</span>
-                    </div>
-                    <div className="gs-field-control-col">
-                      <div className="gs-select-wrap">
-                        <Select className="gs-select" options={roles.map(r => ({ value: r.id, label: r.name }))} value={values.defaultRole || ''} onChange={val => handleChange('defaultRole', val)} placeholder="Select default role" />
-                        <Icon name="chevron-down" size={14} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ===== Localization Panel ===== */}
-            <div className="gs-panel">
-              <div className="gs-panel__accent" />
-              <div className="gs-panel__inner">
-                <div className="gs-panel__header"><Icon name="globe" size={16} /> Localization</div>
-                <div className="gs-fields">
-                  <div className="gs-field-row" id="section-language">
-                    <div className="gs-field-label-col">
-                      <label className="gs-field-label">Language</label>
-                      <span className="gs-field-desc">Default UI language</span>
-                    </div>
-                    <div className="gs-field-control-col">
-                      <div className="gs-select-wrap">
-                        <Select className="gs-select" options={languages.map(l => ({ value: l.code, label: `${l.nativeName} (${l.name})` }))} value={values.language || ''} onChange={val => handleChange('language', val)} placeholder="Select language" />
-                        <Icon name="chevron-down" size={14} />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="gs-field-row" id="section-timezone">
-                    <div className="gs-field-label-col">
-                      <label className="gs-field-label">Timezone</label>
-                      <span className="gs-field-desc">Default timezone</span>
-                    </div>
-                    <div className="gs-field-control-col">
-                      <div className="gs-select-wrap">
-                        <Select className="gs-select" options={tzOptions} value={values.timezone || ''} onChange={val => handleChange('timezone', val)} placeholder="Select timezone" />
-                        <Icon name="chevron-down" size={14} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ===== Date & Time Panel ===== */}
-            <div className="gs-panel">
-              <div className="gs-panel__accent" />
-              <div className="gs-panel__inner">
-                <div className="gs-panel__header"><Icon name="calendar" size={16} /> Date &amp; Time</div>
-                <div className="gs-fields">
-                  <div className="gs-field-row" id="section-date-format">
-                    <div className="gs-field-label-col">
-                      <label className="gs-field-label">Date Format</label>
-                      <span className="gs-field-desc">How dates are displayed</span>
-                    </div>
-                    <div className="gs-field-control-col" style={{ flexDirection:'column', alignItems:'flex-start' }}>
-                      <div className="gs-select-wrap" style={{ width:'100%' }}>
-                        <Select className="gs-select" options={DATE_FORMATS} value={values.dateFormat || ''} onChange={val => handleChange('dateFormat', val)} placeholder="Select date format" />
-                        <Icon name="chevron-down" size={14} />
-                      </div>
-                      <div className="gs-date-preview">
-                        <span className="gs-date-preview__label">Preview:</span>
-                        <span className="gs-date-preview__value">{formatDatePreview(values.dateFormat || 'DD-MM-YYYY')}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="gs-field-row" id="section-time-format">
-                    <div className="gs-field-label-col">
-                      <label className="gs-field-label">Time Format</label>
-                      <span className="gs-field-desc">How times are displayed</span>
-                    </div>
-                    <div className="gs-field-control-col" style={{ flexDirection:'column', alignItems:'flex-start' }}>
-                      <div className="gs-select-wrap" style={{ width:'100%' }}>
-                        <Select className="gs-select" options={TIME_FORMATS} value={values.timeFormat || ''} onChange={val => handleChange('timeFormat', val)} placeholder="Select time format" />
-                        <Icon name="chevron-down" size={14} />
-                      </div>
-                      <div className="gs-date-preview">
-                        <span className="gs-date-preview__label">Preview:</span>
-                        <span className="gs-date-preview__value">{formatTimePreview(values.timeFormat || '24-hour')}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="gs-field-row" id="section-week-start">
-                    <div className="gs-field-label-col">
-                      <label className="gs-field-label">Week Starts On</label>
-                      <span className="gs-field-desc">First day of the week</span>
-                    </div>
-                    <div className="gs-field-control-col">
-                      <div className="gs-select-wrap">
-                        <Select className="gs-select" options={WEEK_STARTS_OPTIONS} value={values.weekStart || ''} onChange={val => handleChange('weekStart', val)} placeholder="Select first day of week" />
-                        <Icon name="chevron-down" size={14} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ===== Footer ===== */}
+        {/* ===== Bottom Bar ===== */}
+        <div className="settings-bottombar">
+          <div className="settings-bottombar-actions">
             <PermissionGate permission={PERMISSIONS.SETTINGS_UPDATE}>
-              <div className="gs-footer">
-                <button className="gs-save-btn" style={{ background:'transparent', color:'var(--text-soft)', border:'1px solid var(--border)' }} onClick={handleReset}>Reset All</button>
-                <button className="gs-save-btn" onClick={handleSave} disabled={saving}>
-                  {saving ? <Icon name="spinner" size={15} /> : <Icon name="save" size={15} />} Save Changes
-                </button>
-              </div>
+              <Button variant="secondary" onClick={handleReset}>Reset All</Button>
+              <Button onClick={handleSave} loading={saving} icon="save">Save Changes</Button>
             </PermissionGate>
           </div>
-        </PermissionGate>
-
-        {/* ===== Right Sidebar / TOC ===== */}
-        <aside className="gs-toc">
-          <div className="gs-toc__title">In This Section</div>
-          <div className="gs-toc__list">
-            {TOC_ITEMS.map(item => (
-              <div key={item.id} className="gs-toc__item"
-                onClick={() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' })}>
-                {item.label}
-              </div>
-            ))}
-          </div>
-          <div className="gs-toc__help">
-            <div className="gs-toc__help-title">Need Help?</div>
-            <div className="gs-toc__help-sub">Check our documentation or contact support.</div>
-            <button className="gs-toc__help-btn"><Icon name="external-link" size={13} /> View Docs</button>
-          </div>
-        </aside>
-      </div>
+        </div>
+      </PermissionGate>
 
       <ConfirmDialog
         open={confirmOpen}
