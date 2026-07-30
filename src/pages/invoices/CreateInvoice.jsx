@@ -23,7 +23,7 @@ import {
   validateInvoice, validateCustomer, validateProduct, validateBank,
   validateCustomHeaders, validateCreditLimit, validateFinancialYear,
 } from '../../business/invoice/validation.js';
-import { DEFAULT_DUE_DATE_OFFSET_DAYS, TAX_RATE_OPTIONS, PAYMENT_MODE_OPTIONS, INVOICE_ATTACHMENT_MAX_FILES } from '../../constants/index.js';
+import { DEFAULT_DUE_DATE_OFFSET_DAYS, TAX_RATE_OPTIONS, PAYMENT_MODE_OPTIONS, INVOICE_ATTACHMENT_MAX_FILES, DOC_TYPES } from '../../constants/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
 import { invalidateCache } from '../../services/ui-sync/index.js';
 import { fileService } from '../../services/file/index.js';
@@ -128,6 +128,7 @@ export default function CreateInvoice() {
   // --- Validation ---
   const [errors, setErrors] = useState({});
   const initialized = useRef(false);
+  const justSavedRef = useRef(false);
 
   // --- sameState: supplier state vs customer state for IGST/CGST+SGST ---
   const sameState = useMemo(() => {
@@ -154,10 +155,8 @@ export default function CreateInvoice() {
       }).catch(e => console.warn('Failed to load prefixes', e)),
       invoiceService.getDocumentSettings().then(d => {
         if (d?.default_due_days) setDueDateOffset(Number(d.default_due_days));
-      }).catch(e => console.warn('Failed to load document settings', e)),
-      invoiceService.getDocumentSettings().then(d => {
         if (d?.default_prefix) setPrefix(d.default_prefix || '');
-      }).catch(e => console.warn('Failed to load document settings for prefix', e)),
+      }).catch(e => console.warn('Failed to load document settings', e)),
       invoiceService.getCurrentCompany().then(company => {
         if (company?.state) setCompanyState(company.state);
         if (company?.name) {
@@ -252,12 +251,15 @@ export default function CreateInvoice() {
         const c = await invoiceService.createCustomer(form);
         setCustomers(p => [...p, c]);
         handleSelectCustomer(c);
+        notificationManager.success('Customer', 'Customer created.');
       } else if (selectedCustomer) {
         const c = await invoiceService.updateCustomer(selectedCustomer.id, form);
         setCustomers(p => p.map(x => x.id === c.id ? c : x));
         handleSelectCustomer(c);
+        notificationManager.success('Customer', 'Customer updated.');
       }
       closeCustomerModal();
+      closeAddCustomerPanel();
     } catch (e) { notificationManager.error('Customer', e.message); }
   };
 
@@ -375,12 +377,14 @@ export default function CreateInvoice() {
       setBanks(p => [...p, b]);
       setSelectedBank(b);
       setBankModal(false);
+      notificationManager.success('Bank', 'Bank added.');
     } catch (e) { notificationManager.error('Bank', e.message); }
   }, [bankForm]);
 
   // --- Unsaved changes ---
   const isFormDirty = useMemo(() => {
     if (!initialized.current) return false;
+    if (justSavedRef.current) return false;
     return items.length > 0 || !!selectedCustomer || notes.length > 0 || terms.length > 0
       || payments.length > 0 || additionalCharges.length > 0 || extraDiscountValue > 0
       || Object.keys(customHeaderValues).length > 0 || attachments.length > 0
@@ -482,6 +486,7 @@ export default function CreateInvoice() {
       }
 
       await invalidateCache('invoices');
+      justSavedRef.current = true;
       notificationManager.success('Invoice', `Invoice ${status === 'draft' ? 'draft saved' : 'saved'}.`);
 
       if (postAction === 'print') {
@@ -604,7 +609,7 @@ export default function CreateInvoice() {
             </div>
             <div className="ni-topbar-mid">
               <div className="ni-select-box" onClick={() => setPrefixOpen(!prefixOpen)} style={{position:'relative'}}>
-                {prefix || 'INV'} <Icon name="chevronDown" />
+                {prefix || 'Select Prefix'} <Icon name="chevronDown" />
                 {prefixOpen && (
                   <div style={{position:'absolute',top:'100%',left:0,background:'#fff',border:'1px solid var(--ni-border)',borderRadius:'8px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:100,minWidth:'120px',marginTop:'4px'}}>
                     {prefixOptions.map(p => (
@@ -620,21 +625,21 @@ export default function CreateInvoice() {
             </div>
           </div>
           <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+            <button className="ni-btn-primary" onClick={saveInvoice} disabled={!canSave || saving}
+              style={{borderRadius:'8px'}}>
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+            <button className="ni-btn-secondary" onClick={saveDraft} disabled={!canSave || saving}
+              style={{borderRadius:'8px'}}>
+              Save Draft
+            </button>
             <div style={{position:'relative'}}>
-              <button className="ni-btn-primary" onClick={saveInvoice} disabled={!canSave || saving}
-                style={{borderRadius:'8px 0 0 8px'}}>
-                {saving ? 'Saving...' : 'Save Invoice'}
-              </button>
               <button className="ni-btn-primary" onClick={() => setSaveMenuOpen(!saveMenuOpen)} disabled={!canSave || saving}
-                style={{borderRadius:'0 8px 8px 0',borderLeft:'1px solid rgba(255,255,255,0.3)',padding:'11px 10px'}}>
+                style={{borderRadius:'8px',padding:'11px 10px'}}>
                 <Icon name="chevronDown" />
               </button>
               {saveMenuOpen && (
                 <div style={{position:'absolute',top:'100%',right:0,background:'#fff',border:'1px solid var(--ni-border)',borderRadius:'8px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:100,minWidth:'170px',marginTop:'4px'}}>
-                  <div style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:500}}
-                    onClick={() => { setSaveMenuOpen(false); saveInvoice(); }}><Icon name="check" /> Save</div>
-                  <div style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:500}}
-                    onClick={() => { setSaveMenuOpen(false); saveDraft(); }}><Icon name="file" /> Save Draft</div>
                   <div style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:500}}
                     onClick={() => { setSaveMenuOpen(false); saveAndPrint(); }}><Icon name="print" /> Save & Print</div>
                   <div style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:500}}
@@ -1219,6 +1224,7 @@ export default function CreateInvoice() {
                 setSignatures(p => [...p, s]);
                 setSelectedSignature(s);
                 setSignatureModal(false);
+                notificationManager.success('Signature', 'Signature added.');
               } catch (e) { notificationManager.error('Signature', e.message); }
             }}>Add Signature</Button>
           </>

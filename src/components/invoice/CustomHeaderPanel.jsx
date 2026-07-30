@@ -436,22 +436,75 @@ export default function CustomHeaderPanel({ open, onClose }) {
               </div>
               <div className="ds-body">
                 <form className="inv-modal-form" onSubmit={(e) => { e.preventDefault(); saveEdit(); }}>
+                  <Field label="Display Name" required>
+                    <Input
+                      value={editForm.displayName}
+                      onChange={(e) => updateForm('displayName', e.target.value)}
+                      placeholder="e.g. Vehicle No"
+                      aria-invalid={!!editErrors.displayName}
+                    />
+                    {editErrors.displayName && <span className="inv-field-error">{editErrors.displayName}</span>}
+                  </Field>
                   <div className="inv-modal-row">
-                    <Field label="Display Name : input field" required>
-                      <div className="inv-modal-row" style={{ marginTop: 4 }}>
-                        <Select options={CUSTOM_HEADER_INPUT_TYPE_OPTIONS} value={editForm.inputType} onChange={(v) => updateForm('inputType', v)} placeholder="Select type" />
-                      </div>
-                      {editErrors.displayName && <span className="inv-field-error">{editErrors.displayName}</span>}
+                    <Field label="Internal Key" required>
+                      <Input
+                        value={editForm.internalKey}
+                        onChange={(e) => updateForm('internalKey', e.target.value)}
+                        placeholder="e.g. vehicle_no"
+                        aria-invalid={!!editErrors.internalKey}
+                      />
+                      {editErrors.internalKey && <span className="inv-field-error">{editErrors.internalKey}</span>}
+                    </Field>
+                    <Field label="Input Type" required>
+                      <Select options={CUSTOM_HEADER_INPUT_TYPE_OPTIONS} value={editForm.inputType} onChange={(v) => updateForm('inputType', v)} placeholder="Select type" />
+                    </Field>
+                  </div>
+                  <Field label="Description">
+                    <Input
+                      value={editForm.description}
+                      onChange={(e) => updateForm('description', e.target.value)}
+                      placeholder="Optional description"
+                    />
+                  </Field>
+                  <div className="inv-modal-row">
+                    <Field label="Display Order">
+                      <Input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={editForm.displayOrder}
+                        onChange={(e) => updateForm('displayOrder', e.target.value === '' ? '' : Number(e.target.value))}
+                        aria-invalid={!!editErrors.displayOrder}
+                      />
+                      {editErrors.displayOrder && <span className="inv-field-error">{editErrors.displayOrder}</span>}
+                    </Field>
+                    <Field label="Column Position">
+                      <Select options={[{ value: '1', label: 'Column 1' }, { value: '2', label: 'Column 2' }, { value: '3', label: 'Column 3' }, { value: '4', label: 'Column 4' }]} value={editForm.columnPosition} onChange={(v) => updateForm('columnPosition', v)} />
                     </Field>
                   </div>
                   {(editForm.inputType === 'dropdown' || editForm.inputType === 'multi_select' || editForm.inputType === 'radio') && (
-                    <div className="inv-modal-row">
-                      <Field label="Options" required>
-                        <textarea className="form-input" rows={3} value={editForm.options} onChange={(e) => updateForm('options', e.target.value)} placeholder="Comma-separated options" />
-                        {editErrors.options && <span className="inv-field-error">{editErrors.options}</span>}
-                      </Field>
-                    </div>
+                    <Field label="Options" required>
+                      <textarea className="form-input" rows={3} value={editForm.options} onChange={(e) => updateForm('options', e.target.value)} placeholder="Comma-separated options" />
+                      {editErrors.options && <span className="inv-field-error">{editErrors.options}</span>}
+                    </Field>
                   )}
+                  <div style={{ display: 'flex', gap: 20, marginTop: 12, flexWrap: 'wrap' }}>
+                    <label className="ps-toggle-label">
+                      <input type="checkbox" checked={editForm.active} onChange={(e) => updateForm('active', e.target.checked)} />
+                      <span className={`ps-toggle-slider${editForm.active ? ' on' : ''}`} />
+                      <span style={{ fontSize: 13, marginLeft: 4 }}>Active</span>
+                    </label>
+                    <label className="ps-toggle-label">
+                      <input type="checkbox" checked={editForm.required} onChange={(e) => updateForm('required', e.target.checked)} />
+                      <span className={`ps-toggle-slider${editForm.required ? ' on' : ''}`} />
+                      <span style={{ fontSize: 13, marginLeft: 4 }}>Required</span>
+                    </label>
+                    <label className="ps-toggle-label">
+                      <input type="checkbox" checked={editForm.printable} onChange={(e) => updateForm('printable', e.target.checked)} />
+                      <span className={`ps-toggle-slider${editForm.printable ? ' on' : ''}`} />
+                      <span style={{ fontSize: 13, marginLeft: 4 }}>Printable</span>
+                    </label>
+                  </div>
                 </form>
               </div>
               <div className="ds-footer">

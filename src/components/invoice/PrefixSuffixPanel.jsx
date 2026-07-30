@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import Icon from '../ui/Icon.jsx';
 import Button from '../ui/Button.jsx';
-import ResponsiveTabs from '../shared/ResponsiveTabs.jsx';
 import { Field, Input } from '../ui/Field.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import Pagination from '../ui/Pagination.jsx';
@@ -12,6 +11,7 @@ import { invoiceService } from '../../services/invoice/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
 
 const PAGE_SIZE = 10;
+const DOC_TYPE_TABS = ['Invoice', 'Credit Note', 'Debit Note'];
 
 function validateValue(val, existing, currentId) {
   if (!val.trim()) return 'Value is required.';
@@ -24,8 +24,7 @@ function validateValue(val, existing, currentId) {
 
 export default function PrefixSuffixPanel({ open, onClose }) {
   const [tab, setTab] = useState('prefixes');
-  const [docType, setDocType] = useState('Invoice');
-  const [docTypes, setDocTypes] = useState([]);
+  const [docType, setDocType] = useState(DOC_TYPE_TABS[0]);
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -48,19 +47,6 @@ export default function PrefixSuffixPanel({ open, onClose }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const isPrefix = tab === 'prefixes';
-
-  // Load document types
-  useEffect(() => {
-    if (!open) return;
-    invoiceService.listDocumentTypes()
-      .then((types) => {
-        if (types && types.length > 0) {
-          setDocTypes(types);
-          if (!types.includes(docType)) setDocType(types[0]);
-        }
-      })
-      .catch(() => {});
-  }, [open]);
 
   // Load items
   useEffect(() => {
@@ -441,13 +427,17 @@ export default function PrefixSuffixPanel({ open, onClose }) {
             </div>
 
 {/* Document Type Tabs */}
-<ResponsiveTabs
-  items={docTypes.map((t) => ({ id: t, label: t, value: t }))}
-  value={docType}
-  onChange={setDocType}
-  className="ps-doc-type-tabs"
-  tabClassName="ps-doc-type-tab"
-/>
+<div className="ps-doc-type-tabs">
+  {DOC_TYPE_TABS.map((dt) => (
+    <button
+      key={dt}
+      className={`ps-doc-type-tab${docType === dt ? ' active' : ''}`}
+      onClick={() => { setDocType(dt); setPage(1); }}
+    >
+      {dt}
+    </button>
+  ))}
+</div>
 
             {/* Toolbar */}
             <div className="ps-toolbar">

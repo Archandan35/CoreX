@@ -11,7 +11,7 @@ import DocumentNotesPanel from './DocumentNotesPanel.jsx';
 export const DEFAULT_DOCUMENT_SETTINGS = {
   invoiceTemplate: 'classic',
   customFieldsEnabled: false,
-  prefixSuffix: { prefix: 'INV', suffix: '' },
+  prefixSuffix: { prefix: '', suffix: '' },
   defaultNotesAndTerms: { notes: '', terms: '' },
 
   showImages: true,
@@ -65,6 +65,7 @@ export const DEFAULT_DOCUMENT_SETTINGS = {
 
   pdfAccentColor: '#3815f7e6',
   watermark: '',
+  socialLinks: '',
 
   labels: {
     invoice: 'Invoice',
@@ -490,7 +491,7 @@ export default function DocumentSettings({ open, onClose }) {
                       <div className="ds-field-group">
                         <div className="ds-field-label">Social Links</div>
                         <div className="ds-setting-desc">Website and social media URLs for PDF footer.</div>
-                        <input type="text" className="ds-input" placeholder="https://example.com" />
+                        <input type="text" className="ds-input" value={settings.socialLinks || ''} onChange={(e) => update('socialLinks', e.target.value)} placeholder="https://example.com" />
                       </div>
                     </div>
                   </div>
