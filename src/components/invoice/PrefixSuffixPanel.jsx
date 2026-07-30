@@ -37,7 +37,7 @@ export default function PrefixSuffixPanel({ open, onClose }) {
   // Edit modal state
   const [editOpen, setEditOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
-  const [editForm, setEditForm] = useState({ value: '', description: '', sequenceOrder: 1, isActive: true, isDefault: false });
+  const [editForm, setEditForm] = useState({ value: '', isActive: true, isDefault: false });
   const [editErrors, setEditErrors] = useState({});
   const [editSaving, setEditSaving] = useState(false);
 
@@ -80,7 +80,7 @@ export default function PrefixSuffixPanel({ open, onClose }) {
 
   const openAdd = useCallback(() => {
     setEditItem(null);
-    setEditForm({ value: '', description: '', sequenceOrder: 1, isActive: true, isDefault: false });
+    setEditForm({ value: '', isActive: true, isDefault: false });
     setEditErrors({});
     setEditOpen(true);
   }, []);
@@ -89,8 +89,6 @@ export default function PrefixSuffixPanel({ open, onClose }) {
     setEditItem(item);
     setEditForm({
       value: item.value || '',
-      description: item.description || '',
-      sequenceOrder: item.sequenceOrder ?? item.order ?? 1,
       isActive: item.isActive ?? item.active ?? true,
       isDefault: item.isDefault ?? item.default ?? false,
     });
@@ -116,8 +114,6 @@ export default function PrefixSuffixPanel({ open, onClose }) {
       const payload = {
         docType,
         value: editForm.value.trim(),
-        description: editForm.description.trim(),
-        sequenceOrder: Number(editForm.sequenceOrder),
         isActive: editForm.isActive,
         isDefault: editForm.isDefault,
       };
@@ -544,27 +540,6 @@ export default function PrefixSuffixPanel({ open, onClose }) {
                       aria-invalid={!!editErrors.value}
                     />
                     {editErrors.value && <span className="inv-field-error">{editErrors.value}</span>}
-                  </Field>
-
-                  <Field label="Description">
-                    <Input
-                      value={editForm.description}
-                      onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
-                      placeholder="Optional description"
-                    />
-                  </Field>
-
-                  <Field label="Sequence Order">
-                    <Input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={editForm.sequenceOrder}
-                      onChange={(e) => setEditForm((p) => ({ ...p, sequenceOrder: e.target.value === '' ? '' : Number(e.target.value) }))}
-                      placeholder="1"
-                      aria-invalid={!!editErrors.sequenceOrder}
-                    />
-                    {editErrors.sequenceOrder && <span className="inv-field-error">{editErrors.sequenceOrder}</span>}
                   </Field>
 
                   <div style={{ display: 'flex', gap: 32, marginTop: 12 }}>

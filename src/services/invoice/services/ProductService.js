@@ -13,7 +13,7 @@ export class ProductService {
 
   async createProduct(payload) {
     const supabase = await getSupabaseClient();
-    const { data, error } = await supabase.from('products').insert(payload).select().single();
+    const { data, error } = await supabase.from('products').insert({ ...payload, id: crypto.randomUUID() }).select().single();
     if (error) throw new Error(error.message);
     return data;
   }
@@ -65,7 +65,7 @@ export class ProductService {
     const supabase = await getSupabaseClient();
     const { error: delErr } = await supabase.from('product_price_list_items').delete().eq('product_id', productId);
     if (delErr) throw new Error(delErr.message);
-    const rows = (items || []).map(r => ({ ...r, product_id: productId }));
+    const rows = (items || []).map(r => ({ ...r, product_id: productId, id: crypto.randomUUID() }));
     if (rows.length) {
       const { error: insErr } = await supabase.from('product_price_list_items').insert(rows);
       if (insErr) throw new Error(insErr.message);

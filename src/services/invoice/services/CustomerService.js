@@ -11,7 +11,7 @@ export class CustomerService {
 
   async createCustomer(payload) {
     const supabase = await getSupabaseClient();
-    const { data, error } = await supabase.from('customers').insert(payload).select().single();
+    const { data, error } = await supabase.from('customers').insert({ ...payload, id: crypto.randomUUID() }).select().single();
     if (error) throw new Error(error.message);
     return data;
   }

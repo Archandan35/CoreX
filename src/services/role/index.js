@@ -16,7 +16,7 @@ export class RoleService {
 
   async createRole(payload) {
     const supabase = await getSupabaseClient();
-    const { data, error } = await supabase.from('roles').insert(payload).select().single();
+    const { data, error } = await supabase.from('roles').insert({ ...payload, id: crypto.randomUUID() }).select().single();
     if (error) throw new Error(error.message);
     return data;
   }

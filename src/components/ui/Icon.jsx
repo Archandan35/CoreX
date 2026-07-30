@@ -122,6 +122,7 @@ const PATHS = {
   barcode: 'M3 5v14M7 5v14M11 5v14M14 5v14M18 5v14M21 5v14',
   'chevron-right': 'M9 6l6 6-6 6',
   'external-link': 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3',
+  zap: 'M13 2 3 14h9l-1 8 10-12h-9z',
   'shield-check': 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4',
   'clipboard-list': 'M9 2h6a1 1 0 0 1 1 1v1H8V3a1 1 0 0 1 1-1zM8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2M9 12h6M9 16h6M9 8h.01',
   'credit-card': 'M2 5h20v14H2zM2 10h20',

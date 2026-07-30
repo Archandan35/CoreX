@@ -181,13 +181,13 @@ export class InvoiceService {
       // Replace items
       await supabase.from('invoice_items').delete().eq('invoice_id', invoice.id);
       if (items?.length) {
-        await supabase.from('invoice_items').insert(items.map((it, i) => ({ ...it, invoice_id: invoice.id, sort_order: it.sort_order ?? i })));
+        await supabase.from('invoice_items').insert(items.map((it, i) => ({ ...it, id: crypto.randomUUID(), invoice_id: invoice.id, sort_order: it.sort_order ?? i })));
       }
 
       // Replace payments
       await supabase.from('invoice_payments').delete().eq('invoice_id', invoice.id);
       if (payments?.length) {
-        await supabase.from('invoice_payments').insert(payments.map((p) => ({ ...p, invoice_id: invoice.id })));
+        await supabase.from('invoice_payments').insert(payments.map((p) => ({ ...p, id: crypto.randomUUID(), invoice_id: invoice.id })));
       }
 
       // Restore old stock, reserve new stock
@@ -228,10 +228,10 @@ export class InvoiceService {
       if (ie) throw new Error(ie.message);
 
       if (items?.length) {
-        await supabase.from('invoice_items').insert(items.map((it, i) => ({ ...it, invoice_id: inv.id, sort_order: it.sort_order ?? i })));
+        await supabase.from('invoice_items').insert(items.map((it, i) => ({ ...it, id: crypto.randomUUID(), invoice_id: inv.id, sort_order: it.sort_order ?? i })));
       }
       if (payments?.length) {
-        await supabase.from('invoice_payments').insert(payments.map((p) => ({ ...p, invoice_id: inv.id })));
+        await supabase.from('invoice_payments').insert(payments.map((p) => ({ ...p, id: crypto.randomUUID(), invoice_id: inv.id })));
       }
 
       // Stock reserve
@@ -320,7 +320,7 @@ export class InvoiceService {
 
     if (original.items?.length) {
       const newItems = original.items.map(item => ({
-        invoice_id: created.id, product_id: item.product_id, name: item.name,
+        id: crypto.randomUUID(), invoice_id: created.id, product_id: item.product_id, name: item.name,
         description: item.description, show_description: item.show_description,
         quantity: item.quantity, unit_price: item.unit_price, tax_rate: item.tax_rate,
         discount_type: item.discount_type, discount_value: item.discount_value,

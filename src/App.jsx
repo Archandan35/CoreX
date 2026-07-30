@@ -16,6 +16,7 @@ import { SCHEMAS } from './schema/models/index.js';
 import { initDatabase, getDatabase } from './data/index.js';
 import { config } from './config/index.js';
 import Dashboard from './pages/Dashboard.jsx';
+import QuickSale from './pages/sales/QuickSale.jsx';
 import Invoices from './pages/invoices/Invoices.jsx';
 import UserList from './pages/users/UserList.jsx';
 import UserCreate from './pages/users/UserCreate.jsx';
@@ -384,8 +385,9 @@ function AppRoutes() {
       />
 
       <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-        <Route index element={<Dashboard />} />
-        <Route path="sales" element={<Navigate to="/sales/invoices" replace />} />
+          <Route index element={<Dashboard />} />
+          <Route path="quick-sale" element={<QuickSale />} />
+          <Route path="sales" element={<Navigate to="/sales/invoices" replace />} />
         <Route path="sales/invoices" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_READ}><Invoices variant="invoices" /></ProtectedRoute>} />
         <Route path="sales/credit-notes" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_READ}><Invoices variant="credit-notes" /></ProtectedRoute>} />
         <Route path="sales/e-invoices" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_READ}><Invoices variant="e-invoices" /></ProtectedRoute>} />

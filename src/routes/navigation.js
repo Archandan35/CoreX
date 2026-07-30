@@ -10,6 +10,12 @@ export const NAV_GROUPS = [
   },
   { type: 'heading', label: 'SALES' },
   {
+    label: '',
+    items: [
+      { to: '/quick-sale', label: 'Quick Sale', icon: 'zap' },
+    ],
+  },
+  {
     label: 'Sales',
     icon: 'shopping-bag',
     children: [
