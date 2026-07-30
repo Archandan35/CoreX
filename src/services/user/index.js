@@ -1,38 +1,37 @@
-import { api } from '../api.js';
-
-async function asJson(res) {
-  let data = null;
-  try { data = await res.json(); } catch { /* non-JSON body */ }
-  return { ok: res.ok, status: res.status, data };
-}
+import { getSupabaseClient } from '../../identity/auth/supabaseClient.js';
 
 export class UserService {
   async listUsers() {
-    const r = await asJson(await api('/api/users'));
-    return r.ok ? r.data.users || [] : [];
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('users').select('*');
+    return error ? [] : (data || []);
   }
 
   async getUser(id) {
-    const r = await asJson(await api(`/api/users/${id}`));
-    if (!r.ok) throw new Error(r.data?.error || 'User not found.');
-    return r.data.user;
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
+    if (error || !data) throw new Error('User not found.');
+    return data;
   }
 
   async createUser(payload) {
-    const r = await asJson(await api('/api/users', { method: 'POST', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to create user.');
-    return r.data.user;
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('users').insert(payload).select().single();
+    if (error) throw new Error(error.message);
+    return data;
   }
 
   async updateUser(id, payload) {
-    const r = await asJson(await api(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to update user.');
-    return r.data.user;
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('users').update(payload).eq('id', id).select().single();
+    if (error || !data) throw new Error('User not found.');
+    return data;
   }
 
   async deleteUser(id) {
-    const r = await asJson(await api(`/api/users/${id}`, { method: 'DELETE' }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to delete user.');
+    const supabase = await getSupabaseClient();
+    const { error } = await supabase.from('users').delete().eq('id', id);
+    if (error) throw new Error(error.message);
     return true;
   }
 }

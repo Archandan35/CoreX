@@ -1,38 +1,37 @@
-import { api } from '../api.js';
-
-async function asJson(res) {
-  let data = null;
-  try { data = await res.json(); } catch { /* non-JSON body */ }
-  return { ok: res.ok, status: res.status, data };
-}
+import { getSupabaseClient } from '../../identity/auth/supabaseClient.js';
 
 export class RoleService {
   async listRoles() {
-    const r = await asJson(await api('/api/roles'));
-    return r.ok ? r.data.roles || [] : [];
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('roles').select('*');
+    return error ? [] : (data || []);
   }
 
   async getRole(id) {
-    const r = await asJson(await api(`/api/roles/${id}`));
-    if (!r.ok) throw new Error(r.data?.error || 'Role not found.');
-    return r.data.role;
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('roles').select('*').eq('id', id).single();
+    if (error || !data) throw new Error('Role not found.');
+    return data;
   }
 
   async createRole(payload) {
-    const r = await asJson(await api('/api/roles', { method: 'POST', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to create role.');
-    return r.data.role;
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('roles').insert(payload).select().single();
+    if (error) throw new Error(error.message);
+    return data;
   }
 
   async updateRole(id, payload) {
-    const r = await asJson(await api(`/api/roles/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to update role.');
-    return r.data.role;
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('roles').update(payload).eq('id', id).select().single();
+    if (error || !data) throw new Error('Role not found.');
+    return data;
   }
 
   async deleteRole(id) {
-    const r = await asJson(await api(`/api/roles/${id}`, { method: 'DELETE' }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to delete role.');
+    const supabase = await getSupabaseClient();
+    const { error } = await supabase.from('roles').delete().eq('id', id);
+    if (error) throw new Error(error.message);
     return true;
   }
 }

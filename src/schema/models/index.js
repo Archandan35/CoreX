@@ -9,8 +9,13 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  rec record;
 BEGIN
-  RETURN QUERY EXECUTE query_text;
+  FOR rec IN EXECUTE query_text LOOP
+    RETURN NEXT row_to_json(rec);
+  END LOOP;
+  RETURN;
 END;
 $$;
 

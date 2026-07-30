@@ -1,15 +1,16 @@
-import { api } from '../../api.js';
-import { asJson } from './utils.js';
+import { getSupabaseClient } from '../../../identity/auth/supabaseClient.js';
 
 export class CompanyService {
   async listCompanies() {
-    const r = await asJson(await api('/api/companies'));
-    return r.ok ? (r.data.companies || r.data || []) : [];
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('companies').select('*').order('created_at', { ascending: false });
+    return error ? [] : (data || []);
   }
 
   async getCurrentCompany() {
-    const r = await asJson(await api('/api/companies/current'));
-    return r.ok ? (r.data.company || r.data) : null;
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('companies').select('*').maybeSingle();
+    return error || !data ? null : data;
   }
 }
 

@@ -1,20 +1,24 @@
-import { api } from '../api.js';
-
-async function asJson(res) {
-  let data = null;
-  try { data = await res.json(); } catch { /* non-JSON body */ }
-  return { ok: res.ok, status: res.status, data };
-}
+import { getSupabaseClient } from '../../identity/auth/supabaseClient.js';
 
 export class SettingsApiService {
   async getAll() {
-    const r = await asJson(await api('/api/settings'));
-    return r.ok ? r.data || {} : {};
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('settings').select('*');
+    if (error || !data) return {};
+    const settings = {};
+    for (const row of data) settings[row.key] = row.value;
+    return { settings };
   }
 
   async update(updates) {
-    const r = await asJson(await api('/api/settings', { method: 'PUT', body: JSON.stringify(updates) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to update settings.');
+    const supabase = await getSupabaseClient();
+    for (const [key, value] of Object.entries(updates)) {
+      const { error } = await supabase.from('settings').upsert(
+        { key, value: typeof value === 'string' ? value : JSON.stringify(value) },
+        { onConflict: 'key' }
+      );
+      if (error) throw new Error(error.message);
+    }
     return true;
   }
 }

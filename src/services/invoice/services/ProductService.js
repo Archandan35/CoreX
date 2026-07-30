@@ -1,60 +1,75 @@
-import { api } from '../../api.js';
-import { asJson } from './utils.js';
+import { getSupabaseClient } from '../../../identity/auth/supabaseClient.js';
 
 export class ProductService {
   async listProducts() {
-    const r = await asJson(await api('/api/products'));
-    if (!r.ok) return { products: [], categories: [] };
-    return { products: r.data.products || [], categories: r.data.categories || [] };
+    const supabase = await getSupabaseClient();
+    const [pr, cr] = await Promise.all([
+      supabase.from('products').select('*, category:product_categories(id,name)').order('created_at', { ascending: false }),
+      supabase.from('product_categories').select('*').order('name', { ascending: true }),
+    ]);
+    if (pr.error) return { products: [], categories: [] };
+    return { products: pr.data || [], categories: cr.data || [] };
   }
 
   async createProduct(payload) {
-    const r = await asJson(await api('/api/products', { method: 'POST', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to create product.');
-    return r.data.product;
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('products').insert(payload).select().single();
+    if (error) throw new Error(error.message);
+    return data;
   }
 
   async updateProduct(id, payload) {
-    const r = await asJson(await api(`/api/products/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to update product.');
-    return r.data.product;
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('products').update(payload).eq('id', id).select().single();
+    if (error || !data) throw new Error('Product not found.');
+    return data;
   }
 
   async listProductCategories() {
-    const r = await asJson(await api('/api/product-categories'));
-    return r.ok ? (r.data.categories || []) : [];
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('product_categories').select('*').order('name', { ascending: true });
+    return error ? [] : (data || []);
   }
 
   async listBrands() {
-    const r = await asJson(await api('/api/product-brands'));
-    return r.ok ? (r.data.brands || []) : [];
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('product_brands').select('*').order('name', { ascending: true });
+    return error ? [] : (data || []);
   }
 
   async listUnits() {
-    const r = await asJson(await api('/api/product-units'));
-    return r.ok ? (r.data.units || []) : [];
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('product_units').select('*').order('name', { ascending: true });
+    return error ? [] : (data || []);
   }
 
   async listWarehouses() {
-    const r = await asJson(await api('/api/product-warehouses'));
-    return r.ok ? (r.data.warehouses || []) : [];
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('product_warehouses').select('*').order('name', { ascending: true });
+    return error ? [] : (data || []);
   }
 
   async listPriceLists() {
-    const r = await asJson(await api('/api/price-lists'));
-    return r.ok ? (r.data.priceLists || []) : [];
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('product_price_lists').select('*').order('name', { ascending: true });
+    return error ? [] : (data || []);
   }
 
   async getProductPriceLists(productId) {
-    const r = await asJson(await api(`/api/products/${productId}/price-lists`));
-    return r.ok ? (r.data.items || []) : [];
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('product_price_list_items').select('*, price_list:product_price_lists(name)').eq('product_id', productId);
+    return error ? [] : (data || []);
   }
 
   async saveProductPriceLists(productId, items) {
-    const r = await asJson(await api(`/api/products/${productId}/price-lists`, {
-      method: 'POST', body: JSON.stringify({ items }),
-    }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to save price lists.');
+    const supabase = await getSupabaseClient();
+    const { error: delErr } = await supabase.from('product_price_list_items').delete().eq('product_id', productId);
+    if (delErr) throw new Error(delErr.message);
+    const rows = (items || []).map(r => ({ ...r, product_id: productId }));
+    if (rows.length) {
+      const { error: insErr } = await supabase.from('product_price_list_items').insert(rows);
+      if (insErr) throw new Error(insErr.message);
+    }
     return true;
   }
 }

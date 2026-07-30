@@ -1,29 +1,38 @@
-import { api } from '../../api.js';
-import { asJson } from './utils.js';
+import { getSupabaseClient } from '../../../identity/auth/supabaseClient.js';
 
 export class CustomerService {
   async listCustomers(query) {
-    const q = query ? `?q=${encodeURIComponent(query)}` : '';
-    const r = await asJson(await api(`/api/customers${q}`));
-    return r.ok ? r.data.customers || [] : [];
+    const supabase = await getSupabaseClient();
+    let q = supabase.from('customers').select('*').order('created_at', { ascending: false });
+    if (query) q = q.or(`name.ilike.%${query}%,company.ilike.%${query}%,email.ilike.%${query}%`);
+    const { data, error } = await q;
+    return error ? [] : (data || []);
   }
 
   async createCustomer(payload) {
-    const r = await asJson(await api('/api/customers', { method: 'POST', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to create customer.');
-    return r.data.customer;
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('customers').insert(payload).select().single();
+    if (error) throw new Error(error.message);
+    return data;
   }
 
   async updateCustomer(id, payload) {
-    const r = await asJson(await api(`/api/customers/${id}`, { method: 'PUT', body: JSON.stringify(payload) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to update customer.');
-    return r.data.customer;
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from('customers').update(payload).eq('id', id).select().single();
+    if (error || !data) throw new Error('Customer not found.');
+    return data;
   }
 
   async getCustomerOutstanding(id) {
     if (!id) return { totalOutstanding: 0, overdueAmount: 0 };
-    const r = await asJson(await api(`/api/customers/${id}/outstanding`));
-    return r.ok ? r.data : { totalOutstanding: 0, overdueAmount: 0 };
+    try {
+      const supabase = await getSupabaseClient();
+      const { data, error } = await supabase.from('customers').select('outstanding_balance').eq('id', id).single();
+      if (error || !data) return { totalOutstanding: 0, overdueAmount: 0 };
+      return { totalOutstanding: data.outstanding_balance || 0, overdueAmount: 0 };
+    } catch {
+      return { totalOutstanding: 0, overdueAmount: 0 };
+    }
   }
 }
 
