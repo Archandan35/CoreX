@@ -66,14 +66,6 @@ export default function DatabaseProviderStep({
 
   return (
     <div className="setup-wizard-card sw2-card">
-      <div className="sw2-head">
-        <span className="sw2-step-no">2</span>
-        <div className="sw2-head-text">
-          <h1>Database Provider</h1>
-          <p>Choose the database system you want to use for your application.</p>
-        </div>
-      </div>
-
       <div className="sw2-body">
         <h2 className="sw2-section-label">Select Database Provider</h2>
 

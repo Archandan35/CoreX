@@ -1,34 +1,14 @@
-/**
- * WizardSidebar
- * -------------
- * The left navigation rail: an ordered list of steps, each rendered as a
- * numbered circle (or a check once completed) plus its title and short
- * description. A dashed vertical connector links adjacent circles.
- *
- * Visual states per circle:
- *  - completed: primary fill, white check
- *  - current  : primary fill, white number, row highlighted
- *  - pending  : white fill, gray border, gray number
- *
- * Steps beyond `maxAccessible + 1` are locked (faded, not clickable).
- *
- * Props:
- *  - steps:          [{ id, label, desc, icon }]
- *  - step:           current step index
- *  - completedSteps: Set<number> of completed step indices
- *  - maxAccessible:  highest unlocked step index
- *  - onGoTo:         (index) => void
- */
+/** Sidebar: numbered step list with completed/current/pending visual states. */
 import Icon from '../../components/ui/Icon.jsx';
 
-export default function WizardSidebar({ steps, step, completedSteps, maxAccessible, onGoTo }) {
+export default function WizardSidebar({ steps, step, completedSteps, onGoTo }) {
   return (
     <aside className="ss-sidebar" aria-label="Setup steps">
       <ol className="ss-step-list">
         {steps.map((s, i) => {
           const isCompleted = completedSteps.has(i);
           const isActive = i === step;
-          const isLocked = i > maxAccessible + 1;
+          const isLocked = i > step;
           return (
             <li
               key={s.id}

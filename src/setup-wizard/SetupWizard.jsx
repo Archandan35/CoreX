@@ -77,16 +77,12 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
     else notificationManager.success(message);
   };
 
-  const maxAccessible = Math.max(...completedSteps);
-
   const goNext = () => {
     setCompletedSteps((prev) => new Set([...prev, step]));
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
   const goPrev = () => setStep((s) => Math.max(s - 1, 0));
-  const goTo = (s) => {
-    if (s <= maxAccessible + 1) setStep(s);
-  };
+  const goTo = (s) => { if (s <= step) setStep(s); };
 
   const selectProvider = (providerId) => {
     setSelectedProvider(providerId);
@@ -480,7 +476,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
           steps={STEPS}
           step={step}
           completedSteps={completedSteps}
-          maxAccessible={maxAccessible}
           onGoTo={goTo}
         />
 
@@ -490,7 +485,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
 
             {/* Header for current step */}
             <div style={{ flexShrink: 0, marginBottom: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'stretch', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span className="ss-step-counter">{step + 1}</span>
                 <div>
                   <h2 className="ss-page-title" style={{ margin: 0 }}>{STEPS[step].label}</h2>
@@ -502,8 +497,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             {/* Welcome */}
             {step === 0 && (
               <div className="setup-wizard-card">
-                <h1>Welcome to CoreX Setup</h1>
-                <p>This wizard will help you initialize and configure your database.</p>
                 <div className="setup-wizard-features">
                   <div className="setup-feature">
                     <span className="setup-feature-icon"><Icon name="database" size={18} /></span>
@@ -540,8 +533,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             {/* Connection */}
             {step === 2 && (
               <div className="setup-wizard-card">
-                <h1>Connection Details</h1>
-                <p>Configure the connection for your selected provider.</p>
                 {provider && (
                   <div className="setup-provider-config-section">
                     <h2 className="setup-section-title">{provider.name} Configuration</h2>
@@ -604,8 +595,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
               <div className="setup-wizard-card">
                 {!validationSuccess ? (
                   <>
-                    <h1>Verify Connection</h1>
-                    <p>Your database connection will now be tested.</p>
                     {validating && (
                       <div className="sw-loading">
                         <div className="sw-loading-spinner" />
@@ -672,8 +661,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
                 )}
                 {analysis && (
                   <div className="sw-analysis-results">
-                    <h1>Schema Analysis</h1>
-                    <p>Analyzing database structure against required schema.</p>
                     <div className="sw-summary-cards">
                       <div className="sw-summary-card sw-card-present">
                         <span className="sw-val">{analysis.totalPresent}</span>
@@ -796,8 +783,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             {/* Installation Plan */}
             {step === 5 && plan && (
               <div className="setup-wizard-card sw-plan-page">
-                <h1>Installation Plan</h1>
-                <p>Review the objects that will be created, updated, or skipped.</p>
                 <div className="sw-plan-scroll">
                   <div className="sw-plan-grid">
                     <div className="sw-plan-card"><span className="sw-plan-val">{plan.existing.length}</span><span className="sw-plan-lbl">Existing</span></div>
@@ -843,9 +828,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             {/* Generate & Execute SQL */}
             {step === 6 && (
               <div className="setup-wizard-card">
-                <h1>Generate & Execute SQL</h1>
-                <p>Generate SQL from the canonical schema, preview it, and execute against the connected database.</p>
-
                 <div className="sw-gen-steps">
                   {genSteps.map((gs) => {
                     const statusIcon = gs.status === 'completed' ? 'check-circle' :
@@ -938,8 +920,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             {/* Verify Installation */}
             {step === 7 && (
               <div className="setup-wizard-card">
-                <h1>Verify Installation</h1>
-                <p>Re-validate the entire database schema against the canonical manifest.</p>
                 {conflictError && (
                   <div className="sw-error" style={{ marginBottom: 16 }}>
                     <Icon name="alert-circle" size={16} />
@@ -967,8 +947,6 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
             {/* Final Validation */}
             {step === 8 && (
               <div className="setup-wizard-card">
-                <h1>Final Validation</h1>
-                <p>Performing final validation of the complete database schema.</p>
                 {busy && (
                   <div className="sw-analyzing">
                     <div className="sw-analyzing-spinner" />
