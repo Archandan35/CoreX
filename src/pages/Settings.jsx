@@ -326,10 +326,6 @@ export default function Settings() {
             <input type="text" placeholder="Search anything..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
             <span className="settings-search-hint">Ctrl+K</span>
           </div>
-          <label className="settings-dev-toggle">
-            <input type="checkbox" checked={devMode} onChange={e => setDevMode(e.target.checked)} />
-            <span className="settings-dev-toggle-label">Dev Mode</span>
-          </label>
         </div>
       </div>
 
