@@ -25,7 +25,10 @@ export default function InvoiceSignature({
   };
 
   const submitSignature = async () => {
-    if (!sigName.trim()) return;
+    if (!sigName.trim()) {
+      notificationManager.warning('Signature', 'Please enter a signature name.');
+      return;
+    }
     try {
       await onAddSignature({ name: sigName, image: sigImage || null });
       setShowSignatureModal(false);

@@ -5,6 +5,7 @@ import Select from '../ui/Select.jsx';
 import { Field, Input } from '../ui/Field.jsx';
 import Icon from '../ui/Icon.jsx';
 import Modal from '../ui/Modal.jsx';
+import { notificationManager } from '../../managers/NotificationManager.js';
 import { PAYMENT_MODE_OPTIONS } from '../../constants/index.js';
 import { round2 } from '../../business/invoice/calculations.js';
 import { validateBank } from '../../business/invoice/validation.js';
@@ -53,7 +54,9 @@ export default function InvoiceBank({
       if (editingBank) await onEditBank(editingBank.id, bankForm);
       else await onAddBank(bankForm);
       setShowBankModal(false);
-    } catch {}
+    } catch (e) {
+      notificationManager.error('Bank', e?.message || 'Failed to save bank.');
+    }
   };
 
   return (

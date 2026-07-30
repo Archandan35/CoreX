@@ -45,8 +45,10 @@ export default function Login() {
     setBusy(true);
     try {
       const res = await login(identifier.trim(), password);
-      if (res.ok) navigate('/', { replace: true });
-      else notificationManager.error(res.error || 'Sign in failed.');
+      if (res.ok) {
+        notificationManager.success('Login', 'Signed in successfully.');
+        navigate('/', { replace: true });
+      } else notificationManager.error(res.error || 'Sign in failed.');
     } catch {
       notificationManager.error('Sign in failed.');
     } finally {

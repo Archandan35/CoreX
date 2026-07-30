@@ -3,6 +3,7 @@ import Icon from '../ui/Icon.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import { Field, Input } from '../ui/Field.jsx';
+import { notificationManager } from '../../managers/NotificationManager.js';
 import PermissionGate from '../ui/PermissionGate.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 
@@ -12,7 +13,10 @@ export default function CustomHeaders({ headers, settingsOpen, onCloseSettings, 
   const addHeader = (e) => {
     e.preventDefault();
     const label = newLabel.trim();
-    if (!label) return;
+    if (!label) {
+      notificationManager.warning('Custom Headers', 'Please enter a header label.');
+      return;
+    }
     onAddHeader(label);
     setNewLabel('');
   };

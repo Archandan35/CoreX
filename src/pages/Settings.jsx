@@ -244,8 +244,9 @@ export default function Settings() {
     const validation = validateSettings(values);
     if (!validation.valid) {
       setValidationErrors(validation.errors);
-      const firstError = Object.keys(validation.errors)[0];
-      notificationManager.error('Validation failed', validation.errors[firstError]?.[0]);
+      const errors = Object.entries(validation.errors);
+      const msgs = errors.map(([field, ms]) => `${field}: ${ms[0]}`);
+      notificationManager.error('Validation failed', msgs.join('; '));
       return;
     }
 

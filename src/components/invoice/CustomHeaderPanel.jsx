@@ -436,24 +436,15 @@ export default function CustomHeaderPanel({ open, onClose }) {
               </div>
               <div className="ds-body">
                 <form className="inv-modal-form" onSubmit={(e) => { e.preventDefault(); saveEdit(); }}>
-                  <Field label="Display Name" required>
-                    <Input
-                      value={editForm.displayName}
-                      onChange={(e) => updateForm('displayName', e.target.value)}
-                      placeholder="e.g. Vehicle No"
-                      aria-invalid={!!editErrors.displayName}
-                    />
-                    {editErrors.displayName && <span className="inv-field-error">{editErrors.displayName}</span>}
-                  </Field>
                   <div className="inv-modal-row">
-                    <Field label="Internal Key" required>
+                    <Field label="Display Name" required>
                       <Input
-                        value={editForm.internalKey}
-                        onChange={(e) => updateForm('internalKey', e.target.value)}
-                        placeholder="e.g. vehicle_no"
-                        aria-invalid={!!editErrors.internalKey}
+                        value={editForm.displayName}
+                        onChange={(e) => updateForm('displayName', e.target.value)}
+                        placeholder="e.g. Vehicle No"
+                        aria-invalid={!!editErrors.displayName}
                       />
-                      {editErrors.internalKey && <span className="inv-field-error">{editErrors.internalKey}</span>}
+                      {editErrors.displayName && <span className="inv-field-error">{editErrors.displayName}</span>}
                     </Field>
                     <Field label="Input Type" required>
                       <Select options={CUSTOM_HEADER_INPUT_TYPE_OPTIONS} value={editForm.inputType} onChange={(v) => updateForm('inputType', v)} placeholder="Select type" />

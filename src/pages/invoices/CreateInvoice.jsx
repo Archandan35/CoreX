@@ -291,6 +291,7 @@ export default function CreateInvoice() {
       const p = await invoiceService.createProduct(form);
       setProducts(prev => [...prev, p]);
       closeProductModal();
+      notificationManager.success('Product', `"${p.name}" created.`);
     } catch (e) { notificationManager.error('Product', e.message); }
   };
 

@@ -258,10 +258,12 @@ export default function EditInvoice() {
         const c = await invoiceService.createCustomer(form);
         setCustomers(p => [...p, c]);
         setSelectedCustomer(c);
+        notificationManager.success('Customer', 'Customer created.');
       } else if (selectedCustomer) {
         const c = await invoiceService.updateCustomer(selectedCustomer.id, form);
         setCustomers(p => p.map(x => x.id === c.id ? c : x));
         setSelectedCustomer(c);
+        notificationManager.success('Customer', 'Customer updated.');
       }
       closeCustomerModal();
     } catch (e) { notificationManager.error('Customer', e.message); }
@@ -305,6 +307,7 @@ export default function EditInvoice() {
       const p = await invoiceService.createProduct(form);
       setProducts(prev => [...prev, p]);
       closeProductModal();
+      notificationManager.success('Product', `"${p.name}" created.`);
     } catch (e) { notificationManager.error('Product', e.message); }
   };
 
