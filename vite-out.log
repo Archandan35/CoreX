@@ -262,3 +262,230 @@
 [2m10:18:14 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/Invoices.jsx[22m
 [2m10:18:14 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/Invoices.jsx[22m
 [2m10:23:53 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:31:45 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Topbar.jsx, /src/components/layout/Sidebar.jsx[22m
+[2m10:31:45 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Topbar.jsx, /src/components/layout/Sidebar.jsx[22m
+[2m10:32:21 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m10:33:11 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m10:34:26 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:34:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Topbar.jsx, /src/components/layout/Sidebar.jsx[22m
+[2m10:34:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m10:34:58 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:35:08 pm[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mindex.html[22m
+[2m10:35:48 pm[22m [36m[1m[vite][22m[39m [32mserver/api.js changed, restarting server...[39m
+[2m10:35:48 pm[22m [36m[1m[vite][22m[39m [32mserver/plugin.js changed, restarting server...[39m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32msrc/audit/AuditService.js changed, restarting server...[39m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mserver/plugin.js changed, restarting server...[39m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/CreateInvoice.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx, /src/components/invoice/InvoiceSummary.jsx, /src/components/invoice/InvoiceTable.jsx, /src/components/invoice/ProductsToolbar.jsx, /src/pages/Dashboard.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/sales/QuickSale.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Settings.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/layout/Topbar.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Settings.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddCustomerPanel.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/AdminSetupBanner.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Badge.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/modals/ChargesModal.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mserver/plugin.js changed, restarting server...[39m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx, /src/components/invoice/ProductModal.jsx, /src/components/invoice/CustomerModal.jsx, /src/components/invoice/AddCustomerPanel.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Settings.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/ColumnVisibilityManager.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/CustomHeaderPanel.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/CustomerModal.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/DocumentSettings.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/DynamicCustomHeaders.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InvoiceDetails.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InvoiceFooter.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InvoiceHeader.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InvoiceNotes.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InvoiceSummary.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InvoiceTable.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InvoiceTypeSelector.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/PrefixSuffixPanel.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/ProductModal.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/ProductsToolbar.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/DatabaseHealthBanner.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/FullscreenContext.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/MainLayout.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/ToolbarContext.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Topbar.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Button.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Card.jsx[22m
+[2m10:35:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Checkbox.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/ConfirmDialog.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Dropdown.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/EmptyState.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/ErrorState.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Field.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/FileUpload.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Filter.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Icon.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mserver/plugin.js changed, restarting server...[39m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32msrc/config/index.js changed, restarting server...[39m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/components/invoice/ProductModal.jsx, /src/components/invoice/CustomerModal.jsx, /src/components/invoice/AddCustomerPanel.jsx, /src/components/invoice/InvoiceSummary.jsx, /src/components/invoice/InvoiceTable.jsx, /src/components/invoice/ProductsToolbar.jsx, /src/pages/sales/QuickSale.jsx, /src/components/invoice/ColumnVisibilityManager.jsx, /src/components/ui/ThemeToggle.jsx, /src/components/layout/Topbar.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32msrc/data/index.js changed, restarting server...[39m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32msrc/data/providers/SupabaseProvider.js changed, restarting server...[39m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/identity/auth/AuthContext.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/identity/authorization/PermissionContext.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/pages/Dashboard.jsx, /src/pages/roles/RoleList.jsx, /src/pages/Settings.jsx, /src/pages/users/UserShow.jsx, /src/pages/roles/RoleShow.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/users/UserList.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/Invoices.jsx, /src/components/layout/Topbar.jsx, /src/components/layout/Sidebar.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceDetails.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/main.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/roles/RoleList.jsx, /src/pages/roles/RoleCreate.jsx, /src/pages/roles/RoleEdit.jsx, /src/pages/Settings.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/users/UserCreate.jsx, /src/pages/users/UserList.jsx, /src/pages/users/UserEdit.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/CreateInvoice.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Modal.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Pagination.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/PasswordInput.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/PasswordStrength.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/PermissionGate.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Search.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Select.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Skeleton.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Table.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Textarea.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/ThemeToggle.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/Toast.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/roles/RoleCreate.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/sales/QuickSale.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/users/UserCreate.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Topbar.jsx, /src/components/layout/Sidebar.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/setup-wizard/SetupWizard.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32msrc/config/index.js changed, restarting server...[39m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32msrc/config/serverSecrets.js changed, restarting server...[39m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/components/invoice/ProductModal.jsx, /src/components/invoice/CustomerModal.jsx, /src/components/invoice/AddCustomerPanel.jsx, /src/components/invoice/InvoiceSummary.jsx, /src/components/invoice/InvoiceTable.jsx, /src/components/invoice/ProductsToolbar.jsx, /src/pages/sales/QuickSale.jsx, /src/components/invoice/ColumnVisibilityManager.jsx, /src/components/ui/ThemeToggle.jsx, /src/components/layout/Topbar.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32msrc/data/sqlParams.js changed, restarting server...[39m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32msrc/data/index.js changed, restarting server...[39m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32msrc/data/providers/index.js changed, restarting server...[39m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32msrc/data/providers/SupabaseProvider.js changed, restarting server...[39m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/EditInvoice.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InvoiceDetails.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/roles/RoleList.jsx, /src/pages/users/UserList.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/roles/RoleCreate.jsx, /src/pages/roles/RoleEdit.jsx, /src/pages/Settings.jsx, /src/pages/users/UserCreate.jsx, /src/pages/users/UserEdit.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/roles/RoleEdit.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/users/UserEdit.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32msrc/identity/auth/supabaseClient.js changed, restarting server...[39m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/identity/auth/AuthContext.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/identity/auth/AuthContext.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx[22m
+[2m10:35:50 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/identity/authorization/PermissionContext.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/pages/Dashboard.jsx, /src/pages/roles/RoleList.jsx, /src/pages/Settings.jsx, /src/pages/users/UserShow.jsx, /src/pages/roles/RoleShow.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/users/UserList.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/Invoices.jsx, /src/components/layout/Topbar.jsx, /src/components/layout/Sidebar.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceDetails.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ui/PasswordStrength.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/main.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/roles/RoleList.jsx, /src/pages/roles/RoleCreate.jsx, /src/pages/roles/RoleEdit.jsx, /src/pages/Settings.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/users/UserCreate.jsx, /src/pages/users/UserList.jsx, /src/pages/users/UserEdit.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Login.jsx, /src/components/ui/Toast.jsx, /src/pages/roles/RoleList.jsx, /src/pages/roles/RoleCreate.jsx, /src/pages/roles/RoleEdit.jsx, /src/pages/users/UserList.jsx, /src/pages/Settings.jsx, /src/pages/users/UserCreate.jsx, /src/pages/users/UserEdit.jsx, /src/pages/users/UserShow.jsx, /src/pages/roles/RoleShow.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/setup-wizard/SetupWizard.jsx, /src/pages/Register.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/sales/QuickSale.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Settings.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/layout/Topbar.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx, /src/components/ui/ThemeToggle.jsx, /src/components/layout/Topbar.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/identity/auth/AuthContext.jsx, /src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Login.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Register.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Settings.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/CreateInvoice.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/EditInvoice.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/InvoiceShow.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/Invoices.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/roles/RoleEdit.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/roles/RoleList.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/roles/RoleShow.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/roles/RoleList.jsx, /src/pages/roles/RoleCreate.jsx, /src/pages/roles/RoleEdit.jsx, /src/pages/Settings.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/users/UserCreate.jsx, /src/pages/users/UserList.jsx, /src/pages/users/UserEdit.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/CreateInvoice.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/sales/QuickSale.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/roles/RoleList.jsx, /src/pages/roles/RoleCreate.jsx, /src/pages/roles/RoleEdit.jsx, /src/pages/roles/RoleShow.jsx, /src/pages/users/UserCreate.jsx, /src/pages/users/UserEdit.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/Settings.jsx, /src/components/layout/Topbar.jsx, /src/pages/sales/QuickSale.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/CreateInvoice.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx, /src/components/ui/ThemeToggle.jsx, /src/components/layout/Topbar.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/roles/RoleList.jsx, /src/pages/roles/RoleCreate.jsx, /src/pages/roles/RoleEdit.jsx, /src/pages/Settings.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/users/UserCreate.jsx, /src/pages/users/UserList.jsx, /src/pages/users/UserEdit.jsx, /src/pages/invoices/Invoices.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/users/UserShow.jsx, /src/pages/users/UserCreate.jsx, /src/pages/users/UserList.jsx, /src/pages/users/UserEdit.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/setup-wizard/SetupWizard.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/sales/QuickSale.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/users/UserCreate.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/users/UserEdit.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/users/UserList.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/users/UserShow.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Topbar.jsx, /src/components/layout/Sidebar.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/setup-wizard/SetupWizard.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/identity/auth/AuthContext.jsx, /src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/roles/RoleList.jsx, /src/pages/roles/RoleCreate.jsx, /src/pages/roles/RoleEdit.jsx, /src/pages/Settings.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/users/UserCreate.jsx, /src/pages/users/UserList.jsx, /src/pages/users/UserEdit.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/CreateInvoice.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/CreateInvoice.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/sales/QuickSale.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/sales/QuickSale.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/sales/QuickSale.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/sales/QuickSale.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/roles/RoleList.jsx, /src/pages/roles/RoleCreate.jsx, /src/pages/roles/RoleEdit.jsx, /src/pages/roles/RoleShow.jsx, /src/pages/users/UserCreate.jsx, /src/pages/users/UserEdit.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/invoices/EditInvoice.jsx, /src/pages/invoices/Invoices.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/Settings.jsx, /src/components/layout/Topbar.jsx, /src/pages/sales/QuickSale.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/CreateInvoice.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx, /src/components/ui/ThemeToggle.jsx, /src/components/layout/Topbar.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/roles/RoleList.jsx, /src/pages/roles/RoleCreate.jsx, /src/pages/roles/RoleEdit.jsx, /src/pages/Settings.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/users/UserCreate.jsx, /src/pages/users/UserList.jsx, /src/pages/users/UserEdit.jsx, /src/pages/invoices/Invoices.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboard.jsx, /src/pages/users/UserShow.jsx, /src/pages/users/UserCreate.jsx, /src/pages/users/UserList.jsx, /src/pages/users/UserEdit.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/setup-wizard/SetupWizard.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/components/WizardFooter.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/SetupWizard.jsx, /src/setup-wizard/steps/DatabaseProviderStep.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/SetupWizard.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/SetupWizard.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/SetupWizard.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/SetupWizard.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/steps/DatabaseProviderStep.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/state/AppContext.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/setup-wizard/SetupWizard.jsx, /src/setup-wizard/steps/DatabaseProviderStep.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/components/WizardFooter.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/components/WizardHeader.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/components/WizardProgressRing.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/components/WizardRightColumn.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/components/WizardShell.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/components/WizardSidebar.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/SetupWizard.jsx[22m
+[2m10:35:51 pm[22m [36m[1m[vite][22m[39m [32mvite.config.js changed, restarting server...[39m
+[2m10:35:52 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:35:53 pm[22m [36m[1m[vite][22m[39m server restarted.
+[2m10:36:57 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.jsx[22m
+[2m10:37:51 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.jsx[22m
+[2m10:39:45 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.jsx[22m
+[2m10:41:58 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.jsx[22m
+[2m10:42:08 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.jsx[22m
+[2m10:42:20 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.jsx[22m
+[2m10:43:05 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:43:16 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Topbar.jsx[22m
+[2m10:43:36 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:45:30 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:46:22 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:46:31 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:46:48 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:46:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:46:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:47:01 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:47:01 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:47:13 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:47:35 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Sidebar.jsx[22m
+[2m10:47:46 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:47:59 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:48:08 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:48:08 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:48:19 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:48:19 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:48:31 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:48:31 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:48:56 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:49:21 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m

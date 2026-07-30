@@ -1,9 +1,11 @@
-import { useState, Fragment } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { NavLink } from 'react-router-dom';
 import { NAV_GROUPS } from '../../routes/navigation.js';
 import { usePermission } from '../../identity/authorization/PermissionContext.jsx';
 import { useApp } from '../../state/AppContext.jsx';
 import Icon from '../ui/Icon.jsx';
+import { settingsApiService } from '../../services/settings/SettingsApiService.js';
+import { settingsManager } from '../../managers/SettingsManager.js';
 
 function SidebarItem({ item, collapsed }) {
   const { hasPermission } = usePermission();
@@ -105,17 +107,34 @@ function buildSections() {
 
 export default function Sidebar({ collapsed, mobileOpen, onToggle }) {
   const { hasPermission } = usePermission();
+  const [logoUrl, setLogoUrl] = useState(null);
+
+  useEffect(() => {
+    settingsApiService.getAll().then((res) => {
+      const s = res?.settings;
+      if (s?.logo) setLogoUrl(s.logo);
+    }).catch(() => {});
+
+    const unsub = settingsManager.onChange('logo', (url) => {
+      if (url) setLogoUrl(url);
+    });
+
+    return () => {
+      unsub();
+    };
+  }, []);
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`} aria-label="Main navigation">
-      <div className="sidebar__brand">
-        <button className="sidebar__toggle" onClick={onToggle} aria-label="Toggle sidebar">
-          <Icon name={collapsed ? 'chevron' : 'chevronLeft'} size={18} />
-        </button>
-        <div className="sidebar__logo">
-          <Icon name="home" size={22} />
+        <div className="sidebar__brand">
+          {logoUrl ? (
+            <img src={logoUrl} alt="Logo" className="sidebar__logo--transparent" />
+          ) : (
+            <div className="sidebar__logo--transparent">
+              <Icon name="home" size={22} />
+            </div>
+          )}
         </div>
-      </div>
 
       <nav className="sidebar__nav" aria-label="Sidebar menu">
         {buildSections().map((section, i) => {

@@ -79,7 +79,8 @@ export default function Topbar({ onToggle }) {
         </button>
       )}
 
-      {logoUrl ? (
+      {/* Show logo only in fullscreen mode on quick sale page */}
+      {isFullscreen && pathname === '/quick-sale' && logoUrl ? (
         <img src={logoUrl} alt="Logo" className="topbar__logo" />
       ) : (
         <div className="topbar__title">{isFullscreen ? 'POS' : current.label}</div>
