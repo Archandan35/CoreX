@@ -1,7 +1,7 @@
 import { validationEngine } from './ValidationEngine.js';
 
 validationEngine.defineSchema('settings', {
-  siteTitle: ['required', { rule: 'minLength', min: 1 }, { rule: 'maxLength', max: 100 }],
+  siteTitle: [{ rule: 'maxLength', max: 100 }],
   tagline: [{ rule: 'maxLength', max: 200 }],
   siteUrl: ['url'],
   appUrl: ['url'],
