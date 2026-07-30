@@ -14174,7 +14174,7 @@ button.qs-cancel:hover,
 /* Final fix for transparent logo in sidebar */
 .sidebar__logo--transparent {
   background: transparent !important;
-  width: 100% !important;
+  width: 75% !important;
   height: 38px !important;
   border-radius: 11px !important;
   flex-shrink: 0 !important;
