@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
-  Users, Search, Package, ShoppingCart, CreditCard, Zap, Menu, Sun, Moon,
+  Users, Search, Package, ShoppingCart, CreditCard, Zap, Sun, Moon,
   Bell, ChevronDown, Calculator, Barcode, Monitor, Grid3X3, X, Plus, Minus,
   Trash2, Receipt, Pause, Percent, TrendingUp, TrendingDown,
   UserPlus, UserCheck, Box, FileText, ChevronUp, Tag, Banknote,
@@ -209,15 +209,24 @@ export default function QuickSale() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'F2') { e.preventDefault(); customerInputRef.current?.focus(); }
-      if (e.key === 'F3') { e.preventDefault(); setShowCalculator(true); }
-      if (e.key === 'F4') { e.preventDefault(); alert('Cart held successfully!'); }
-      if (e.key === 'F5') { e.preventDefault(); alert('Processing payment...'); }
-      if (e.key === 'F6') { e.preventDefault(); productInputRef.current?.focus(); }
-      if (e.key === 'F7') { e.preventDefault(); alert('Draft saved!'); }
+      if (showCalculator) {
+        const key = e.key;
+        if (key >= '0' && key <= '9') { e.preventDefault(); handleCalculatorInput(key); return; }
+        if (['+', '-', '*', '/', '%'].includes(key)) { e.preventDefault(); handleCalculatorInput(key); return; }
+        if (key === '.') { e.preventDefault(); handleCalculatorInput('.'); return; }
+        if (key === 'Enter') { e.preventDefault(); handleCalculatorInput('='); return; }
+        if (key === 'Backspace') { e.preventDefault(); handleCalculatorInput('⌫'); return; }
+        if (key === 'Escape') { e.preventDefault(); setShowCalculator(false); return; }
+        return;
+      }
+      if (e.key === 'F1') { e.preventDefault(); customerInputRef.current?.focus(); }
+      if (e.key === 'F2') { e.preventDefault(); setShowCalculator(true); }
+      if (e.key === 'F3') { e.preventDefault(); alert('Cart held successfully!'); }
+      if (e.key === 'F4') { e.preventDefault(); alert('Processing payment...'); }
+      if (e.key === 'F5') { e.preventDefault(); productInputRef.current?.focus(); }
+      if (e.key === 'F6') { e.preventDefault(); if (cartItems.length > 0 && window.confirm('Cancel current sale?')) setCartItems([]); }
       if (e.key === 'Escape') {
-        if (showCalculator) setShowCalculator(false);
-        else if (showCustomerResults) setShowCustomerResults(false);
+        if (showCustomerResults) setShowCustomerResults(false);
         else if (showProductResults) setShowProductResults(false);
         else if (cartItems.length > 0) {
           if (window.confirm('Cancel current sale?')) setCartItems([]);
@@ -226,25 +235,11 @@ export default function QuickSale() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showCalculator, showCustomerResults, showProductResults, cartItems]);
+  }, [showCalculator, showCustomerResults, showProductResults, cartItems, handleCalculatorInput]);
 
   return (
     <div className="qs-app">
       <header className="qs-topbar">
-        <div className="qs-brand">
-          <div className="qs-brand-logo">
-            <Users size={20} />
-          </div>
-          <div className="qs-brand-text">
-            <h1>CoreX POS</h1>
-            <span>Garment Store</span>
-          </div>
-        </div>
-
-        <button className="qs-menu-icon" aria-label="Menu">
-          <Menu size={22} />
-        </button>
-
         <nav className="qs-tabs">
           <button className="qs-tab active">Quick Sale</button>
           <button className="qs-tab">Orders</button>
@@ -473,19 +468,19 @@ export default function QuickSale() {
             <div className="qs-recent-title">Recent Items</div>
             <div className="qs-recent-grid">
               {RECENT_ITEMS.map(item => (
-                <button key={item.id} className="qs-recent-card" onClick={() => addRecentItem(item)}>
+                <button key={item.id} className="qs-stat-card qs-recent-stat-card" onClick={() => addRecentItem(item)}>
                   <div className={THUMB_CLASSES[item.thumb]}>
                     {THUMB_ICONS[item.thumb]}
                   </div>
-                  <div>
-                    <div className="qs-recent-name">{item.name}</div>
-                    <div className="qs-recent-code">{item.code}</div>
+                  <div className="qs-recent-item-text">
+                    <div className="qs-stat-value-sm">{item.name}</div>
+                    <div className="qs-stat-label">{item.code}</div>
                   </div>
                 </button>
               ))}
-              <button className="qs-recent-card qs-view-all">
-                <Grid3X3 size={17} />
-                View All
+              <button className="qs-stat-card qs-view-all-stat">
+                <Grid3X3 size={22} style={{color:'var(--inv-indigo, #5B4FE9)'}} />
+                <div className="qs-stat-value-sm" style={{color:'var(--inv-indigo, #5B4FE9)'}}>View All</div>
               </button>
             </div>
           </section>
@@ -578,14 +573,14 @@ export default function QuickSale() {
 
           <div className="qs-payment-methods">
             {[
-              { label: 'Cash', icon: <Banknote size={14} />, cls: 'green' },
-              { label: 'UPI', icon: <Zap size={14} />, cls: 'pink' },
-              { label: 'Card', icon: <CreditCard size={14} />, cls: 'blue' },
-              { label: 'Split', icon: <SplitSquareHorizontal size={14} />, cls: 'violet' },
+              { label: 'Cash', icon: <Banknote size={16} />, cls: 'cash' },
+              { label: 'UPI', icon: <Zap size={16} />, cls: 'upi' },
+              { label: 'Card', icon: <CreditCard size={16} />, cls: 'card' },
+              { label: 'Split', icon: <SplitSquareHorizontal size={16} />, cls: 'split' },
             ].map((pm, i) => (
-              <button key={i} className="qs-payment-method" onClick={() => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert(`Payment via ${pm.label}`); }}>
-                <div className={`qs-payment-icon ${pm.cls}`}>{pm.icon}</div>
-                {pm.label}
+              <button key={i} className={`qs-pm-card ${pm.cls}`} onClick={() => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert(`Payment via ${pm.label}`); }}>
+                <div className={`qs-pm-icon ${pm.cls}`}>{pm.icon}</div>
+                <span className="qs-pm-label">{pm.label}</span>
               </button>
             ))}
           </div>
@@ -594,17 +589,17 @@ export default function QuickSale() {
 
       <footer className="qs-bottom-toolbar">
         {[
-          { label: 'Customer', icon: <Users size={18} />, cls: 'purple', shortcut: 'F2', action: () => customerInputRef.current?.focus() },
-          { label: 'Discount', icon: <Tag size={18} />, cls: 'orange', shortcut: 'F3', action: () => setShowCalculator(true) },
-          { label: 'Hold Cart', icon: <ShoppingCart size={18} />, cls: 'pink', shortcut: 'F4', action: () => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert('Cart held!'); } },
-          { label: 'Payment', icon: <CreditCard size={18} />, cls: 'green', shortcut: 'F5', action: () => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert(`Payment of ₹${grandTotal.toFixed(2)}`); } },
-          { label: 'Barcode', icon: <Barcode size={18} />, cls: 'purple', shortcut: 'F6', action: () => productInputRef.current?.focus() },
-          { label: 'Save Draft', icon: <Save size={18} />, cls: 'blue', shortcut: 'F7', action: () => alert('Draft saved!') },
-          { label: 'Cancel Sale', icon: <X size={18} />, cls: 'red', shortcut: 'ESC', action: () => { if (cartItems.length > 0 && window.confirm('Cancel current sale?')) setCartItems([]); } },
+          { label: 'Customer', icon: <Users size={16} />, cls: 'customer', shortcut: 'F1', action: () => customerInputRef.current?.focus() },
+          { label: 'Discount', icon: <Tag size={16} />, cls: 'discount', shortcut: 'F2', action: () => setShowCalculator(true) },
+          { label: 'Hold Cart', icon: <ShoppingCart size={16} />, cls: 'hold', shortcut: 'F3', action: () => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert('Cart held!'); } },
+          { label: 'Payment', icon: <CreditCard size={16} />, cls: 'payment', shortcut: 'F4', action: () => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert(`Payment of ₹${grandTotal.toFixed(2)}`); } },
+          { label: 'Barcode', icon: <Barcode size={16} />, cls: 'barcode', shortcut: 'F5', action: () => productInputRef.current?.focus() },
+          { label: 'Cancel', icon: <X size={16} />, cls: 'cancel', shortcut: 'F6', action: () => { if (cartItems.length > 0 && window.confirm('Cancel current sale?')) setCartItems([]); } },
         ].map((btn, i) => (
-          <button key={i} className={`qs-toolbar-btn ${btn.cls}`} onClick={btn.action}>
-            {btn.icon}
-            {btn.label} <span className="qs-toolbar-shortcut">{btn.shortcut}</span>
+          <button key={i} className={`qs-action-card ${btn.cls}`} onClick={btn.action}>
+            <div className={`qs-action-icon ${btn.cls}`}>{btn.icon}</div>
+            <span className="qs-action-label">{btn.label}</span>
+            <span className="qs-action-shortcut">{btn.shortcut}</span>
           </button>
         ))}
       </footer>
