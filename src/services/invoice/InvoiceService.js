@@ -1,8 +1,10 @@
 import { api } from '../api.js';
 import { getSupabaseClient } from '../../identity/auth/supabaseClient.js';
+import { jsPDF } from 'jspdf';
 import { aiService } from '../ai/AiService.js';
 import { auditService } from '../../audit/AuditService.js';
 import { asJson } from './services/utils.js';
+import { downloadInvoicePdf, downloadInvoicePdfBlob, generateSimpleDocPdf, generateInvoicePdf } from './pdfGenerator.js';
 
 import { customerService } from './services/CustomerService.js';
 import { productService } from './services/ProductService.js';
@@ -416,9 +418,21 @@ export class InvoiceService {
   }
 
   async bulkDownloadPdfs(ids) {
-    const r = await asJson(await api('/api/invoices/bulk-download-pdf', { method: 'POST', body: JSON.stringify({ ids }) }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to bulk download PDFs.');
-    return r.data;
+    const supabase = await getSupabaseClient();
+    const { data: companyData } = await supabase.from('companies').select('*').maybeSingle();
+    for (const id of ids) {
+      const invoice = await this.getInvoice(id);
+      const pdf = generateInvoicePdf({ ...invoice, company: companyData });
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Invoice_${invoice.invoice_number || id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      await new Promise(r => setTimeout(r, 300));
+    }
+    return { ok: true };
   }
 
   async generateShippingLabel(id) {
@@ -428,15 +442,33 @@ export class InvoiceService {
   }
 
   async generateDeliveryChallan(id) {
-    const r = await asJson(await api(`/api/invoices/${id}/delivery-challan`, { method: 'POST' }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to generate delivery challan.');
-    return r.data;
+    const invoice = await this.getInvoice(id);
+    const supabase = await getSupabaseClient();
+    const { data: companyData } = await supabase.from('companies').select('*').maybeSingle();
+    const doc = generateSimpleDocPdf('Delivery Challan', 'Delivery Challan', { ...invoice, company: companyData });
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Delivery_Challan_${invoice.invoice_number || id}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return { url };
   }
 
   async createPackingList(id) {
-    const r = await asJson(await api(`/api/invoices/${id}/packing-list`, { method: 'POST' }));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to create packing list.');
-    return r.data;
+    const invoice = await this.getInvoice(id);
+    const supabase = await getSupabaseClient();
+    const { data: companyData } = await supabase.from('companies').select('*').maybeSingle();
+    const doc = generateSimpleDocPdf('Packing List', 'Packing List', { ...invoice, company: companyData });
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Packing_List_${invoice.invoice_number || id}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return { url };
   }
 
   async createEwayBill(id) {
@@ -468,17 +500,62 @@ export class InvoiceService {
     return [header, ...csv].join('\n');
   }
 
-  async exportInvoicesPdf(filters) {
-    const q = filters ? `?${new URLSearchParams(filters)}` : '';
-    const r = await asJson(await api(`/api/invoices/export/pdf${q}`));
-    if (!r.ok) throw new Error(r.data?.error || 'PDF export failed.');
-    return r.data;
+  async exportInvoicesPdf(filters = {}) {
+    const supabase = await getSupabaseClient();
+    let q = supabase.from('invoices').select('*, customer:customers(id,name,company)').order('created_at', { ascending: false });
+    if (filters.status) q = q.eq('status', filters.status);
+    if (filters.customer_id) q = q.eq('customer_id', filters.customer_id);
+    if (filters.start_date) q = q.gte('invoice_date', filters.start_date);
+    if (filters.end_date) q = q.lte('invoice_date', filters.end_date);
+    const { data } = await q;
+    const rows = data || [];
+    const { data: companyData } = await supabase.from('companies').select('*').maybeSingle();
+
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageW = doc.internal.pageSize.getWidth();
+    const margin = 15;
+    let y = margin;
+
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Invoices Export', pageW / 2, y, { align: 'center' });
+    y += 10;
+
+    for (const inv of rows) {
+      if (y > 250) { doc.addPage(); y = margin; }
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${inv.invoice_number} - ${inv.customer?.name || ''}`, margin, y);
+      y += 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`Date: ${inv.invoice_date || ''}  Status: ${inv.status || ''}  Total: ₹${Number(inv.grand_total || 0).toFixed(2)}`, margin, y);
+      y += 8;
+    }
+
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Invoices_Export.pdf';
+    a.click();
+    URL.revokeObjectURL(url);
+    return { url };
   }
 
   async downloadPdf(id) {
-    const r = await asJson(await api(`/api/invoices/${id}/pdf`));
-    if (!r.ok) throw new Error(r.data?.error || 'Failed to download PDF.');
-    return r.data;
+    const invoice = await this.getInvoice(id);
+    const supabase = await getSupabaseClient();
+    const { data: companyData } = await supabase.from('companies').select('*').maybeSingle();
+    const pdf = generateInvoicePdf({ ...invoice, company: companyData });
+    const blob = pdf.output('blob');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Invoice_${invoice.invoice_number || id}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return { url };
   }
 
   async sendInvoice(id, method) {
