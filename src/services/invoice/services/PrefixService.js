@@ -1,21 +1,30 @@
 import { getSupabaseClient } from '../../../identity/auth/supabaseClient.js';
 
-const SETTINGS_KEY = '_prefix_settings';
+const TABLE = 'document_prefixes';
 
-async function loadItems() {
-  const supabase = await getSupabaseClient();
-  const { data, error } = await supabase.from('settings').select('value').eq('key', SETTINGS_KEY).maybeSingle();
-  if (error || !data) return [];
-  try { return JSON.parse(data.value); } catch { return []; }
+function toRow(payload) {
+  return {
+    value: payload.value,
+    description: payload.description ?? null,
+    doc_type: payload.docType,
+    is_active: payload.isActive ?? true,
+    is_default: payload.isDefault ?? false,
+    sequence_order: payload.sequenceOrder ?? 1,
+  };
 }
 
-async function saveItems(items) {
-  const supabase = await getSupabaseClient();
-  const { error } = await supabase.from('settings').upsert(
-    { key: SETTINGS_KEY, value: JSON.stringify(items) },
-    { onConflict: 'key' }
-  );
-  if (error) throw new Error(error.message);
+function toApi(row) {
+  return {
+    id: row.id,
+    value: row.value,
+    description: row.description,
+    docType: row.doc_type,
+    isActive: row.is_active,
+    isDefault: row.is_default,
+    sequenceOrder: row.sequence_order,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 function filterPage(items, params) {
@@ -43,50 +52,51 @@ function filterPage(items, params) {
 
 export class PrefixService {
   async listPrefixes(params = {}) {
-    const items = await loadItems();
-    return filterPage(items, params);
+    const supabase = await getSupabaseClient();
+    let q = supabase.from(TABLE).select('*');
+    if (params.docType) q = q.eq('doc_type', params.docType);
+    const { data, error } = await q.order('sequence_order', { ascending: true });
+    if (error) return { items: [], total: 0 };
+    return filterPage((data || []).map(toApi), params);
   }
 
   async createPrefix(payload) {
-    const items = await loadItems();
-    const prefix = {
-      ...payload,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    if (prefix.isDefault) items.forEach(p => { p.isDefault = false; });
-    items.push(prefix);
-    await saveItems(items);
-    return prefix;
+    const supabase = await getSupabaseClient();
+    const row = { ...toRow(payload), id: crypto.randomUUID() };
+    if (row.is_default) {
+      await supabase.from(TABLE).update({ is_default: false }).eq('doc_type', row.doc_type).neq('id', row.id);
+    }
+    const { data, error } = await supabase.from(TABLE).insert(row).select().single();
+    if (error) throw new Error(error.message);
+    return toApi(data);
   }
 
   async updatePrefix(id, payload) {
-    const items = await loadItems();
-    const idx = items.findIndex(p => p.id === id);
-    if (idx === -1) throw new Error('Prefix not found.');
-    if (payload.isDefault) items.forEach(p => { p.isDefault = false; });
-    items[idx] = { ...items[idx], ...payload, id };
-    await saveItems(items);
-    return items[idx];
+    const supabase = await getSupabaseClient();
+    const updates = toRow(payload);
+    if (updates.is_default) {
+      await supabase.from(TABLE).update({ is_default: false }).eq('doc_type', updates.doc_type).neq('id', id);
+    }
+    const { data, error } = await supabase.from(TABLE).update(updates).eq('id', id).select().single();
+    if (error || !data) throw new Error('Prefix not found.');
+    return toApi(data);
   }
 
   async deletePrefix(id) {
-    const items = await loadItems();
-    const idx = items.findIndex(p => p.id === id);
-    if (idx === -1) throw new Error('Prefix not found.');
-    items.splice(idx, 1);
-    await saveItems(items);
+    const supabase = await getSupabaseClient();
+    const { error } = await supabase.from(TABLE).delete().eq('id', id);
+    if (error) throw new Error(error.message);
     return true;
   }
 
   async setDefaultPrefix(id) {
-    const items = await loadItems();
-    const idx = items.findIndex(p => p.id === id);
-    if (idx === -1) throw new Error('Prefix not found.');
-    items.forEach(p => { p.isDefault = false; });
-    items[idx].isDefault = true;
-    await saveItems(items);
-    return items[idx];
+    const supabase = await getSupabaseClient();
+    const { data: current } = await supabase.from(TABLE).select('*').eq('id', id).single();
+    if (!current) throw new Error('Prefix not found.');
+    await supabase.from(TABLE).update({ is_default: false }).eq('doc_type', current.doc_type);
+    const { data, error } = await supabase.from(TABLE).update({ is_default: true }).eq('id', id).select().single();
+    if (error || !data) throw new Error('Prefix not found.');
+    return toApi(data);
   }
 }
 

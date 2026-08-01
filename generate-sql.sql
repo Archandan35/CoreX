@@ -123,6 +123,52 @@ CREATE TABLE IF NOT EXISTS product_categories (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS product_brands (
+  id UUID PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL UNIQUE,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS product_units (
+  id UUID PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL UNIQUE,
+  is_primary BOOLEAN NOT NULL DEFAULT false,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS product_warehouses (
+  id UUID PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  location TEXT,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS product_tax_rates (
+  id UUID PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL UNIQUE,
+  rate NUMERIC NOT NULL DEFAULT 0,
+  is_default BOOLEAN NOT NULL DEFAULT false,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS product_item_groups (
+  id UUID PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL UNIQUE,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS product_manufacturers (
+  id UUID PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL UNIQUE,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 CREATE TABLE IF NOT EXISTS products (
   id UUID PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
@@ -131,10 +177,27 @@ CREATE TABLE IF NOT EXISTS products (
   category_id UUID,
   description TEXT,
   unit_price NUMERIC NOT NULL DEFAULT 0,
+  mrp NUMERIC NOT NULL DEFAULT 0,
+  purchase_price NUMERIC NOT NULL DEFAULT 0,
   tax_rate NUMERIC NOT NULL DEFAULT 0,
   unit TEXT,
   hsn_code TEXT,
+  item_code TEXT,
+  item_group TEXT,
+  brand TEXT,
+  manufacturer TEXT,
+  tax_type TEXT NOT NULL DEFAULT 'exclusive',
   is_service BOOLEAN NOT NULL DEFAULT false,
+  is_featured BOOLEAN NOT NULL DEFAULT false,
+  show_online BOOLEAN NOT NULL DEFAULT false,
+  not_for_sale BOOLEAN NOT NULL DEFAULT false,
+  allow_negative BOOLEAN NOT NULL DEFAULT false,
+  track_serial BOOLEAN NOT NULL DEFAULT false,
+  track_batch BOOLEAN NOT NULL DEFAULT false,
+  track_expiry BOOLEAN NOT NULL DEFAULT false,
+  max_discount NUMERIC NOT NULL DEFAULT 0,
+  cess NUMERIC NOT NULL DEFAULT 0,
+  reorder_qty NUMERIC NOT NULL DEFAULT 0,
   stock_quantity NUMERIC NOT NULL DEFAULT 0,
   stock_alert NUMERIC NOT NULL DEFAULT 0,
   created_by UUID,
@@ -253,6 +316,143 @@ CREATE TABLE IF NOT EXISTS accounting_entries (
   description TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS document_prefixes (
+  id UUID PRIMARY KEY NOT NULL,
+  value TEXT NOT NULL,
+  description TEXT,
+  doc_type TEXT NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  is_default BOOLEAN NOT NULL DEFAULT false,
+  sequence_order INTEGER NOT NULL DEFAULT 1,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS document_suffixes (
+  id UUID PRIMARY KEY NOT NULL,
+  value TEXT NOT NULL,
+  description TEXT,
+  doc_type TEXT NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  is_default BOOLEAN NOT NULL DEFAULT false,
+  sequence_order INTEGER NOT NULL DEFAULT 1,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS custom_headers (
+  id UUID PRIMARY KEY NOT NULL,
+  display_name TEXT NOT NULL,
+  internal_key TEXT NOT NULL,
+  input_type TEXT NOT NULL DEFAULT 'text',
+  options TEXT,
+  active BOOLEAN NOT NULL DEFAULT true,
+  visible BOOLEAN NOT NULL DEFAULT true,
+  is_default BOOLEAN NOT NULL DEFAULT false,
+  display_order INTEGER NOT NULL DEFAULT 1,
+  column_position INTEGER NOT NULL DEFAULT 1,
+  doc_types TEXT[],
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS document_notes (
+  id UUID PRIMARY KEY NOT NULL,
+  doc_type TEXT,
+  title TEXT,
+  content TEXT,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS document_terms (
+  id UUID PRIMARY KEY NOT NULL,
+  doc_type TEXT,
+  title TEXT,
+  content TEXT,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS invoice_table_columns (
+  id UUID PRIMARY KEY NOT NULL,
+  key TEXT NOT NULL,
+  label TEXT NOT NULL,
+  always BOOLEAN NOT NULL DEFAULT false,
+  default_visible BOOLEAN NOT NULL DEFAULT false,
+  width INTEGER,
+  permission TEXT,
+  display_order INTEGER NOT NULL DEFAULT 1,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (key)
+);
+CREATE TABLE IF NOT EXISTS document_settings (
+  id UUID PRIMARY KEY NOT NULL,
+  invoice_template TEXT NOT NULL DEFAULT 'classic',
+  custom_fields_enabled BOOLEAN NOT NULL DEFAULT false,
+  prefix_suffix JSONB,
+  default_notes_and_terms JSONB,
+  show_images BOOLEAN NOT NULL DEFAULT true,
+  show_net_balance BOOLEAN NOT NULL DEFAULT true,
+  show_previous_dues BOOLEAN NOT NULL DEFAULT false,
+  show_due_date BOOLEAN NOT NULL DEFAULT true,
+  show_dispatch_address BOOLEAN NOT NULL DEFAULT true,
+  show_payments BOOLEAN NOT NULL DEFAULT true,
+  show_round_off BOOLEAN NOT NULL DEFAULT true,
+  show_receiver_signature BOOLEAN NOT NULL DEFAULT false,
+  hide_quantity BOOLEAN NOT NULL DEFAULT false,
+  show_quantity_3_decimals BOOLEAN NOT NULL DEFAULT false,
+  show_quantity_conversion BOOLEAN NOT NULL DEFAULT false,
+  hide_discount BOOLEAN NOT NULL DEFAULT false,
+  show_discount_column BOOLEAN NOT NULL DEFAULT false,
+  price_decimals TEXT NOT NULL DEFAULT '2',
+  hide_hsn_sac BOOLEAN NOT NULL DEFAULT false,
+  show_company_details BOOLEAN NOT NULL DEFAULT true,
+  show_brand_name BOOLEAN NOT NULL DEFAULT false,
+  show_hsn_sac_summary BOOLEAN NOT NULL DEFAULT false,
+  hsn_sac_summary_on TEXT NOT NULL DEFAULT '+10...',
+  pdf_footer TEXT,
+  thermal_footer TEXT,
+  header_image TEXT,
+  footer_image TEXT,
+  banner_image_top TEXT,
+  banner_image_bottom TEXT,
+  pdf_language TEXT NOT NULL DEFAULT 'English (Default)',
+  pdf_font_style TEXT NOT NULL DEFAULT 'Stylish',
+  pdf_font_size TEXT NOT NULL DEFAULT 'normal',
+  pdf_orientation TEXT NOT NULL DEFAULT 'Portrait',
+  repeat_header BOOLEAN NOT NULL DEFAULT false,
+  enable_item_headers BOOLEAN NOT NULL DEFAULT false,
+  show_full_page BOOLEAN NOT NULL DEFAULT false,
+  show_striped_rows BOOLEAN NOT NULL DEFAULT false,
+  pdf_margin_top TEXT NOT NULL DEFAULT '0',
+  pdf_margin_bottom TEXT NOT NULL DEFAULT '0',
+  pdf_margin_left TEXT NOT NULL DEFAULT '24',
+  pdf_margin_right TEXT NOT NULL DEFAULT '24',
+  show_conversion_factor BOOLEAN NOT NULL DEFAULT false,
+  show_inr BOOLEAN NOT NULL DEFAULT false,
+  pdf_accent_color TEXT NOT NULL DEFAULT '#3815f7e6',
+  watermark TEXT,
+  social_links TEXT,
+  labels JSONB,
+  email_template JSONB,
+  whatsapp_template JSONB,
+  default_due_days INTEGER,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS document_type_master (
+  id UUID PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  label TEXT,
+  description TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (name)
+);
 
 
 
@@ -269,10 +469,17 @@ CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers (phone);
 CREATE INDEX IF NOT EXISTS idx_customers_gstin ON customers (gstin);
 CREATE INDEX IF NOT EXISTS idx_customers_created_by ON customers (created_by);
 CREATE INDEX IF NOT EXISTS idx_product_categories_name ON product_categories (name);
+CREATE INDEX IF NOT EXISTS idx_product_brands_name ON product_brands (name);
+CREATE INDEX IF NOT EXISTS idx_product_units_name ON product_units (name);
+CREATE INDEX IF NOT EXISTS idx_product_warehouses_name ON product_warehouses (name);
+CREATE INDEX IF NOT EXISTS idx_product_tax_rates_name ON product_tax_rates (name);
+CREATE INDEX IF NOT EXISTS idx_product_item_groups_name ON product_item_groups (name);
+CREATE INDEX IF NOT EXISTS idx_product_manufacturers_name ON product_manufacturers (name);
 CREATE INDEX IF NOT EXISTS idx_products_name ON products (name);
 CREATE INDEX IF NOT EXISTS idx_products_sku ON products (sku);
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON products (barcode);
 CREATE INDEX IF NOT EXISTS idx_products_hsn_code ON products (hsn_code);
+CREATE INDEX IF NOT EXISTS idx_products_item_code ON products (item_code);
 CREATE INDEX IF NOT EXISTS idx_products_created_by ON products (created_by);
 CREATE INDEX IF NOT EXISTS idx_banks_bank_name ON banks (bank_name);
 CREATE INDEX IF NOT EXISTS idx_banks_account_name ON banks (account_name);
@@ -294,6 +501,14 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_table_name ON audit_logs (table_name);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_record_id ON audit_logs (record_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs (created_at);
 CREATE INDEX IF NOT EXISTS idx_accounting_entries_invoice ON accounting_entries (invoice_id);
+CREATE INDEX IF NOT EXISTS idx_document_prefixes_doc_type ON document_prefixes (doc_type);
+CREATE INDEX IF NOT EXISTS idx_document_suffixes_doc_type ON document_suffixes (doc_type);
+CREATE INDEX IF NOT EXISTS idx_custom_headers_active ON custom_headers (active);
+CREATE INDEX IF NOT EXISTS idx_custom_headers_display_order ON custom_headers (display_order);
+CREATE INDEX IF NOT EXISTS idx_document_notes_doc_type ON document_notes (doc_type);
+CREATE INDEX IF NOT EXISTS idx_document_terms_doc_type ON document_terms (doc_type);
+CREATE INDEX IF NOT EXISTS idx_invoice_table_columns_display_order ON invoice_table_columns (display_order);
+CREATE INDEX IF NOT EXISTS idx_document_type_master_name ON document_type_master (name);
 
 
 -- ===== Row Level Security =====
@@ -390,6 +605,114 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Owner delete" ON product_categories FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE product_brands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_brands FORCE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON product_brands FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON product_brands FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON product_brands FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON product_brands FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE product_units ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_units FORCE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON product_units FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON product_units FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON product_units FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON product_units FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE product_warehouses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_warehouses FORCE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON product_warehouses FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON product_warehouses FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON product_warehouses FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON product_warehouses FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE product_tax_rates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_tax_rates FORCE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON product_tax_rates FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON product_tax_rates FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON product_tax_rates FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON product_tax_rates FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE product_item_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_item_groups FORCE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON product_item_groups FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON product_item_groups FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON product_item_groups FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON product_item_groups FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE product_manufacturers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_manufacturers FORCE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON product_manufacturers FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON product_manufacturers FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON product_manufacturers FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON product_manufacturers FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products FORCE ROW LEVEL SECURITY;
@@ -499,8 +822,132 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "Owner delete" ON invoice_payments FOR DELETE USING (public.is_admin_user() OR invoice_id IN (SELECT id FROM public.invoices WHERE created_by = auth.uid()));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE document_prefixes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document_prefixes FORCE ROW LEVEL SECURITY;
 
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON document_prefixes FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON document_prefixes FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON document_prefixes FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON document_prefixes FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE document_suffixes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document_suffixes FORCE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON document_suffixes FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON document_suffixes FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON document_suffixes FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON document_suffixes FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE custom_headers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE custom_headers FORCE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON custom_headers FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON custom_headers FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON custom_headers FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON custom_headers FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE document_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document_notes FORCE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON document_notes FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON document_notes FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON document_notes FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON document_notes FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE document_terms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document_terms FORCE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON document_terms FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON document_terms FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON document_terms FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON document_terms FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE invoice_table_columns ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoice_table_columns FORCE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON invoice_table_columns FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON invoice_table_columns FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON invoice_table_columns FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON invoice_table_columns FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE document_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document_settings FORCE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON document_settings FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON document_settings FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON document_settings FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON document_settings FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- ===== User Profile Trigger =====
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -539,6 +986,23 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_user();
+
+
+-- ===== Seed Data =====
+
+INSERT INTO document_type_master (id, name) VALUES
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000001', 'Invoice'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000002', 'Purchase'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000003', 'Sales Return'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000004', 'Purchase Return'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000005', 'Purchase Order'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000006', 'Delivery Challan'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000007', 'Sales Order'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000008', 'Quotation'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000009', 'Pro Forma Invoice'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000010', 'Subscription'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000011', 'Sales Debit Note')
+ON CONFLICT DO NOTHING;
 
 
 -- ===== Schema Version =====

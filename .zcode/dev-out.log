@@ -1,0 +1,126 @@
+
+> corex@1.0.0 dev
+> vite
+
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m2906[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m10:27:27 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:27:38 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:27:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:29:58 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:32:31 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:33:35 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:35:17 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:37:44 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:41:17 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m10:41:29 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m10:41:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Topbar.jsx, /src/components/layout/Sidebar.jsx[22m
+[2m10:42:18 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:42:34 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:42:48 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:44:33 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Topbar.jsx[22m
+[2m10:47:29 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/sales/Quick.jsx[22m
+[2m10:47:29 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m10:47:30 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Topbar.jsx, /src/components/layout/Sidebar.jsx[22m
+[2m10:47:30 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m10:47:31 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Topbar.jsx[22m
+[2m11:10:36 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/setup-wizard/SetupWizard.jsx[22m
+[2m11:12:29 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/InvoiceShow.jsx, /src/pages/Dashboard.jsx, /src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/sales/QuickSale.jsx[22m
+[2m11:12:29 pm[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/invoice/DocumentSettings.jsx[22m Could not Fast Refresh ("DEFAULT_DOCUMENT_SETTINGS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m11:12:29 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx[22m
+[2m11:12:52 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/InvoiceShow.jsx, /src/pages/Dashboard.jsx, /src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m11:12:54 pm[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/invoice/DocumentSettings.jsx[22m Could not Fast Refresh ("DEFAULT_DOCUMENT_SETTINGS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m11:12:54 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx[22m
+[2m11:14:06 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/pages/invoices/InvoiceShow.jsx, /src/pages/users/UserList.jsx, /src/pages/roles/RoleShow.jsx, /src/pages/Settings.jsx, /src/pages/Dashboard.jsx, /src/pages/roles/RoleList.jsx, /src/pages/users/UserShow.jsx, /src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/components/layout/Topbar.jsx, /src/components/layout/Sidebar.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/InvoiceDetails.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx[22m
+[2m11:14:08 pm[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/invoice/DocumentSettings.jsx[22m Could not Fast Refresh ("DEFAULT_DOCUMENT_SETTINGS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m11:14:08 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx[22m
+[2m11:15:31 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m11:15:43 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m11:15:55 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Topbar.jsx, /src/components/layout/Sidebar.jsx[22m
+[2m11:16:23 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m11:17:19 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:32:56 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:33:06 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:33:17 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:33:27 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:37:39 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:40:28 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:40:47 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:41:07 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:41:17 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:43:32 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:44:19 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:47:02 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:50:55 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/inventory/Inventory.jsx[22m
+[2m12:51:18 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:51:53 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m12:52:11 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m1:00:37 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/inventory/Inventory.jsx[22m
+[2m1:00:48 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/inventory/Inventory.jsx[22m
+[2m1:01:01 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/inventory/Inventory.jsx[22m
+[2m1:01:14 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/inventory/Inventory.jsx[22m
+[2m1:01:27 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/inventory/Inventory.jsx[22m
+[2m1:01:57 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m1:02:09 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/inventory/Inventory.jsx[22m
+[2m1:03:27 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/css/index.css[22m
+[2m1:28:02 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/setup-wizard/SetupWizard.jsx[22m
+[2m1:28:23 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/setup-wizard/SetupWizard.jsx[22m
+[2m1:30:35 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/InvoiceShow.jsx, /src/pages/Dashboard.jsx, /src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/inventory/Inventory.jsx, /src/pages/sales/QuickSale.jsx[22m
+[2m1:30:35 am[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/invoice/DocumentSettings.jsx[22m Could not Fast Refresh ("DEFAULT_DOCUMENT_SETTINGS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m1:30:35 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx[22m
+[2m1:30:50 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/InvoiceShow.jsx, /src/pages/Dashboard.jsx, /src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/inventory/Inventory.jsx[22m
+[2m1:30:52 am[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/invoice/DocumentSettings.jsx[22m Could not Fast Refresh ("DEFAULT_DOCUMENT_SETTINGS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m1:30:52 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx[22m
+[2m1:32:40 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/inventory/Inventory.jsx[22m
+[2m1:32:51 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/inventory/Inventory.jsx[22m
+[2m1:33:04 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/inventory/Inventory.jsx[22m
+[2m1:33:16 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/inventory/Inventory.jsx[22m
+[2m1:33:31 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/inventory/Inventory.jsx[22m
+[2m1:33:57 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx[22m
+[2m1:34:10 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx[22m
+[2m1:34:23 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx[22m
+[2m1:34:55 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/AddProductPanel.jsx[22m
+[2m2:10:00 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/setup-wizard/SetupWizard.jsx[22m
+[2m2:10:02 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/setup-wizard/SetupWizard.jsx[22m
+[2m2:10:41 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/setup-wizard/SetupWizard.jsx[22m
+[2m2:10:59 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/setup-wizard/SetupWizard.jsx[22m
+[2m2:17:34 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/setup-wizard/SetupWizard.jsx[22m
+[2m2:31:53 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/setup-wizard/SetupWizard.jsx, /src/setup-wizard/steps/DatabaseProviderStep.jsx[22m
+[2m2:32:07 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m2:32:25 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m2:32:53 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m2:33:06 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:33:19 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:33:36 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:33:48 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:34:00 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:34:13 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:34:26 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:34:37 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:36:10 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m2:38:13 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/SetupWizard.jsx, /src/setup-wizard/steps/DatabaseProviderStep.jsx, /src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:38:53 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/setup-wizard/SetupWizard.jsx, /src/setup-wizard/steps/DatabaseProviderStep.jsx, /src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:40:09 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/InvoiceShow.jsx, /src/pages/Dashboard.jsx, /src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/inventory/Inventory.jsx, /src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:40:10 am[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/invoice/DocumentSettings.jsx[22m Could not Fast Refresh ("DEFAULT_DOCUMENT_SETTINGS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m2:40:10 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx[22m
+[2m2:40:30 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/InvoiceShow.jsx, /src/pages/Dashboard.jsx, /src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/inventory/Inventory.jsx, /src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:40:33 am[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/invoice/DocumentSettings.jsx[22m Could not Fast Refresh ("DEFAULT_DOCUMENT_SETTINGS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m2:40:33 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx[22m
+[2m2:40:48 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/InvoiceShow.jsx, /src/pages/Dashboard.jsx, /src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/inventory/Inventory.jsx, /src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:40:50 am[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/invoice/DocumentSettings.jsx[22m Could not Fast Refresh ("DEFAULT_DOCUMENT_SETTINGS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m2:40:50 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx[22m
+[2m2:41:07 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/InvoiceShow.jsx, /src/pages/Dashboard.jsx, /src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/inventory/Inventory.jsx, /src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:41:09 am[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/invoice/DocumentSettings.jsx[22m Could not Fast Refresh ("DEFAULT_DOCUMENT_SETTINGS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m2:41:09 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx[22m
+[2m2:42:12 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/InvoiceShow.jsx, /src/pages/Dashboard.jsx, /src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx, /src/components/invoice/AddProductPanel.jsx, /src/components/invoice/DocumentSettings.jsx, /src/components/invoice/DynamicCustomHeaders.jsx, /src/components/invoice/CustomHeaderPanel.jsx, /src/components/invoice/InvoiceFooter.jsx, /src/components/invoice/InvoiceTypeSelector.jsx, /src/components/invoice/InvoiceHeader.jsx, /src/components/invoice/PrefixSuffixPanel.jsx, /src/components/invoice/DocumentNotesPanel.jsx, /src/pages/inventory/Inventory.jsx, /src/components/invoice/InventoryMastersPanel.jsx[22m
+[2m2:42:13 am[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/components/invoice/DocumentSettings.jsx[22m Could not Fast Refresh ("DEFAULT_DOCUMENT_SETTINGS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m2:42:13 am[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/invoices/Invoices.jsx, /src/pages/invoices/CreateInvoice.jsx, /src/pages/invoices/EditInvoice.jsx[22m
+[2m2:44:32 am[22m [36m[1m[vite][22m[39m [32mserver/api.js changed, restarting server...[39m
+[2m2:44:35 am[22m [36m[1m[vite][22m[39m server restarted.
+[2m3:23:31 am[22m [36m[1m[vite][22m[39m [32mserver/api.js changed, restarting server...[39m
+[2m3:23:32 am[22m [36m[1m[vite][22m[39m server restarted.
+[2m3:23:54 am[22m [36m[1m[vite][22m[39m [32mserver/api.js changed, restarting server...[39m
+[2m3:23:54 am[22m [36m[1m[vite][22m[39m server restarted.

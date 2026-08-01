@@ -26,3 +26,31 @@ export function isMissingColumnError(error) {
   const message = (error.message || '').toLowerCase();
   return message.includes('column') && message.includes('does not exist');
 }
+
+// Human-friendly explanation for a schema/schema-cache error, used so features
+// stop surfacing raw PostgREST noise like "Could not find the table
+// 'public.product_units' in the schema cache" and instead tell the user what to
+// do. Returns '' when the error is not schema-related (callers fall back to the
+// original message).
+export function describeSchemaError(error) {
+  if (!error) return '';
+  if (isMissingColumnError(error)) {
+    return (
+      'A required database column is missing. Run the Setup Wizard (or reload the app to ' +
+      'auto-repair) so the latest schema is applied, then try again.'
+    );
+  }
+  if (isMissingTableError(error)) {
+    const raw = String(error.message || '');
+    const tableMatch =
+      raw.match(/table\s+['"]?([a-zA-Z_][a-zA-Z0-9_.]*)['"]?/i) ||
+      raw.match(/relation\s+['"]?([a-zA-Z_][a-zA-Z0-9_.]*)['"]?/i) ||
+      raw.match(/['"]([a-zA-Z_][a-zA-Z0-9_.]*)['"]/);
+    const object = tableMatch && tableMatch[1] ? ` '${tableMatch[1]}'` : '';
+    return (
+      `A required database table${object} is missing or the schema cache is out of date. ` +
+      'Run the Setup Wizard (or reload the app to auto-repair) so the latest schema is applied, then try again.'
+    );
+  }
+  return '';
+}

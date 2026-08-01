@@ -640,7 +640,7 @@ async function handleInvoiceMemory(db, path, method, parsed, send, currentUser) 
       // Apply filters
       if (parsed.active === 'true') items = items.filter(h => h.active !== false);
       if (parsed.visible === 'true') items = items.filter(h => h.visible !== false);
-      if (parsed.docType) items = items.filter(h => !h.docTypes || h.docTypes.includes(parsed.docType));
+      if (parsed.docType) items = items.filter(h => !h.docTypes || !h.docTypes.length || h.docTypes.includes(parsed.docType));
       const sortField = parsed.sortField || 'displayOrder';
       const sortDir = parsed.sortDir || 'asc';
       items = [...items].sort((a, b) => {
@@ -681,7 +681,7 @@ async function handleInvoiceMemory(db, path, method, parsed, send, currentUser) 
         return send(200, { header: items[idx] });
       }
       if (method === 'DELETE') {
-        if (!cp('settings:update')) return true;
+        if (!cp('settings:delete')) return true;
         const items = await loadHeaders();
         const idx = items.findIndex(h => h.id === id);
         if (idx === -1) return send(404, { error: 'Custom header not found.' });
@@ -1426,28 +1426,39 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
     return send(201, { invoice: created });
   }
 
-  // ===== Prefix / Suffix Settings (Supabase) =====
-  async function loadSupabasePrefixes() {
-    const { data, error } = await adminClient.from('settings').select('value').eq('key', '_prefix_settings').maybeSingle();
-    if (error || !data) return [];
-    try { return JSON.parse(data.value); } catch { return []; }
-  }
-  async function saveSupabasePrefixes(items) {
-    await adminClient.from('settings').upsert(
-      { key: '_prefix_settings', value: JSON.stringify(items) },
-      { onConflict: 'key' }
-    );
-  }
+  // ===== Prefix Settings (Supabase) =====
+  const prefixToRow = (p) => ({
+    value: p.value,
+    description: p.description ?? null,
+    doc_type: p.docType,
+    is_active: p.isActive ?? true,
+    is_default: p.isDefault ?? false,
+    sequence_order: p.sequenceOrder ?? 1,
+  });
+  const prefixToApi = (r) => ({
+    id: r.id,
+    value: r.value,
+    description: r.description,
+    docType: r.doc_type,
+    isActive: r.is_active,
+    isDefault: r.is_default,
+    sequenceOrder: r.sequence_order,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  });
 
   if (path === '/api/prefix-settings' && method === 'GET') {
     if (!cp('settings:read')) return;
-    let items = await loadSupabasePrefixes();
+    let q = adminClient.from('document_prefixes').select('*');
+    if (parsed.docType) q = q.eq('doc_type', parsed.docType);
+    const { data, error } = await q.order('sequence_order', { ascending: true });
+    if (error) return send(500, { error: error.message });
+    let items = (data || []).map(prefixToApi);
     if (parsed.active === 'true') items = items.filter(p => p.isActive !== false);
     if (parsed.default === 'true') items = items.filter(p => p.isDefault === true);
-    if (parsed.docType) items = items.filter(p => p.docType === parsed.docType);
     if (parsed.q) {
-      const q = parsed.q.toLowerCase();
-      items = items.filter(p => (p.value || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
+      const search = parsed.q.toLowerCase();
+      items = items.filter(p => (p.value || '').toLowerCase().includes(search) || (p.description || '').toLowerCase().includes(search));
     }
     const sortField = parsed.sortField || 'sequenceOrder';
     const sortDir = parsed.sortDir || 'asc';
@@ -1466,16 +1477,13 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
 
   if (path === '/api/prefix-settings' && method === 'POST') {
     if (!cp('settings:update')) return;
-    const items = await loadSupabasePrefixes();
-    const prefix = {
-      ...parsed,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    if (prefix.isDefault) items.forEach(p => { p.isDefault = false; });
-    items.push(prefix);
-    await saveSupabasePrefixes(items);
-    return send(201, { prefix });
+    const row = { ...prefixToRow(parsed), id: crypto.randomUUID(), created_by: uid };
+    if (row.is_default) {
+      await adminClient.from('document_prefixes').update({ is_default: false }).eq('doc_type', row.doc_type).neq('id', row.id);
+    }
+    const { data, error } = await adminClient.from('document_prefixes').insert(row).select().single();
+    if (error) return send(500, { error: error.message });
+    return send(201, { prefix: prefixToApi(data) });
   }
 
   const psMatch2 = path.match(/^\/api\/prefix-settings\/([^/]+)$/);
@@ -1483,21 +1491,18 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
     const id = psMatch2[1];
     if (method === 'PUT') {
       if (!cp('settings:update')) return;
-      const items = await loadSupabasePrefixes();
-      const idx = items.findIndex(p => p.id === id);
-      if (idx === -1) return send(404, { error: 'Prefix not found.' });
-      if (parsed.isDefault) items.forEach(p => { p.isDefault = false; });
-      items[idx] = { ...items[idx], ...parsed, id };
-      await saveSupabasePrefixes(items);
-      return send(200, { prefix: items[idx] });
+      const updates = prefixToRow(parsed);
+      if (updates.is_default) {
+        await adminClient.from('document_prefixes').update({ is_default: false }).eq('doc_type', updates.doc_type).neq('id', id);
+      }
+      const { data, error } = await adminClient.from('document_prefixes').update(updates).eq('id', id).select().single();
+      if (error || !data) return send(404, { error: 'Prefix not found.' });
+      return send(200, { prefix: prefixToApi(data) });
     }
     if (method === 'DELETE') {
       if (!cp('settings:delete')) return;
-      const items = await loadSupabasePrefixes();
-      const idx = items.findIndex(p => p.id === id);
-      if (idx === -1) return send(404, { error: 'Prefix not found.' });
-      items.splice(idx, 1);
-      await saveSupabasePrefixes(items);
+      const { error } = await adminClient.from('document_prefixes').delete().eq('id', id);
+      if (error) return send(500, { error: error.message });
       return send(200, { ok: true });
     }
   }
@@ -1507,38 +1512,48 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
     if (method === 'POST') {
       if (!cp('settings:update')) return;
       const id = psDefaultMatch2[1];
-      const items = await loadSupabasePrefixes();
-      const idx = items.findIndex(p => p.id === id);
-      if (idx === -1) return send(404, { error: 'Prefix not found.' });
-      items.forEach(p => { p.isDefault = false; });
-      items[idx].isDefault = true;
-      await saveSupabasePrefixes(items);
-      return send(200, { prefix: items[idx] });
+      const { data: current } = await adminClient.from('document_prefixes').select('*').eq('id', id).single();
+      if (!current) return send(404, { error: 'Prefix not found.' });
+      await adminClient.from('document_prefixes').update({ is_default: false }).eq('doc_type', current.doc_type);
+      const { data, error } = await adminClient.from('document_prefixes').update({ is_default: true }).eq('id', id).select().single();
+      if (error || !data) return send(404, { error: 'Prefix not found.' });
+      return send(200, { prefix: prefixToApi(data) });
     }
   }
 
   // ===== Suffix Settings (Supabase) =====
-  async function loadSupabaseSuffixes() {
-    const { data, error } = await adminClient.from('settings').select('value').eq('key', '_suffix_settings').maybeSingle();
-    if (error || !data) return [];
-    try { return JSON.parse(data.value); } catch { return []; }
-  }
-  async function saveSupabaseSuffixes(items) {
-    await adminClient.from('settings').upsert(
-      { key: '_suffix_settings', value: JSON.stringify(items) },
-      { onConflict: 'key' }
-    );
-  }
+  const suffixToRow = (p) => ({
+    value: p.value,
+    description: p.description ?? null,
+    doc_type: p.docType,
+    is_active: p.isActive ?? true,
+    is_default: p.isDefault ?? false,
+    sequence_order: p.sequenceOrder ?? 1,
+  });
+  const suffixToApi = (r) => ({
+    id: r.id,
+    value: r.value,
+    description: r.description,
+    docType: r.doc_type,
+    isActive: r.is_active,
+    isDefault: r.is_default,
+    sequenceOrder: r.sequence_order,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  });
 
   if (path === '/api/suffix-settings' && method === 'GET') {
     if (!cp('settings:read')) return;
-    let items = await loadSupabaseSuffixes();
+    let q = adminClient.from('document_suffixes').select('*');
+    if (parsed.docType) q = q.eq('doc_type', parsed.docType);
+    const { data, error } = await q.order('sequence_order', { ascending: true });
+    if (error) return send(500, { error: error.message });
+    let items = (data || []).map(suffixToApi);
     if (parsed.active === 'true') items = items.filter(p => p.isActive !== false);
     if (parsed.default === 'true') items = items.filter(p => p.isDefault === true);
-    if (parsed.docType) items = items.filter(p => p.docType === parsed.docType);
     if (parsed.q) {
-      const q = parsed.q.toLowerCase();
-      items = items.filter(p => (p.value || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
+      const search = parsed.q.toLowerCase();
+      items = items.filter(p => (p.value || '').toLowerCase().includes(search) || (p.description || '').toLowerCase().includes(search));
     }
     const sortField = parsed.sortField || 'sequenceOrder';
     const sortDir = parsed.sortDir || 'asc';
@@ -1557,12 +1572,13 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
 
   if (path === '/api/suffix-settings' && method === 'POST') {
     if (!cp('settings:update')) return;
-    const items = await loadSupabaseSuffixes();
-    const suffix = { ...parsed, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
-    if (suffix.isDefault) items.forEach(p => { p.isDefault = false; });
-    items.push(suffix);
-    await saveSupabaseSuffixes(items);
-    return send(201, { suffix });
+    const row = { ...suffixToRow(parsed), id: crypto.randomUUID(), created_by: uid };
+    if (row.is_default) {
+      await adminClient.from('document_suffixes').update({ is_default: false }).eq('doc_type', row.doc_type).neq('id', row.id);
+    }
+    const { data, error } = await adminClient.from('document_suffixes').insert(row).select().single();
+    if (error) return send(500, { error: error.message });
+    return send(201, { suffix: suffixToApi(data) });
   }
 
   const ssMatch2 = path.match(/^\/api\/suffix-settings\/([^/]+)$/);
@@ -1570,21 +1586,18 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
     const id = ssMatch2[1];
     if (method === 'PUT') {
       if (!cp('settings:update')) return;
-      const items = await loadSupabaseSuffixes();
-      const idx = items.findIndex(p => p.id === id);
-      if (idx === -1) return send(404, { error: 'Suffix not found.' });
-      if (parsed.isDefault) items.forEach(p => { p.isDefault = false; });
-      items[idx] = { ...items[idx], ...parsed, id };
-      await saveSupabaseSuffixes(items);
-      return send(200, { suffix: items[idx] });
+      const updates = suffixToRow(parsed);
+      if (updates.is_default) {
+        await adminClient.from('document_suffixes').update({ is_default: false }).eq('doc_type', updates.doc_type).neq('id', id);
+      }
+      const { data, error } = await adminClient.from('document_suffixes').update(updates).eq('id', id).select().single();
+      if (error || !data) return send(404, { error: 'Suffix not found.' });
+      return send(200, { suffix: suffixToApi(data) });
     }
     if (method === 'DELETE') {
       if (!cp('settings:delete')) return;
-      const items = await loadSupabaseSuffixes();
-      const idx = items.findIndex(p => p.id === id);
-      if (idx === -1) return send(404, { error: 'Suffix not found.' });
-      items.splice(idx, 1);
-      await saveSupabaseSuffixes(items);
+      const { error } = await adminClient.from('document_suffixes').delete().eq('id', id);
+      if (error) return send(500, { error: error.message });
       return send(200, { ok: true });
     }
   }
@@ -1594,36 +1607,41 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
     if (method === 'POST') {
       if (!cp('settings:update')) return;
       const id = ssDefaultMatch2[1];
-      const items = await loadSupabaseSuffixes();
-      const idx = items.findIndex(p => p.id === id);
-      if (idx === -1) return send(404, { error: 'Suffix not found.' });
-      items.forEach(p => { p.isDefault = false; });
-      items[idx].isDefault = true;
-      await saveSupabaseSuffixes(items);
-      return send(200, { suffix: items[idx] });
+      const { data: current } = await adminClient.from('document_suffixes').select('*').eq('id', id).single();
+      if (!current) return send(404, { error: 'Suffix not found.' });
+      await adminClient.from('document_suffixes').update({ is_default: false }).eq('doc_type', current.doc_type);
+      const { data, error } = await adminClient.from('document_suffixes').update({ is_default: true }).eq('id', id).select().single();
+      if (error || !data) return send(404, { error: 'Suffix not found.' });
+      return send(200, { suffix: suffixToApi(data) });
     }
   }
 
   // ===== Document Notes (Supabase) =====
-  async function loadSupabaseNotes() {
-    const { data, error } = await adminClient.from('settings').select('value').eq('key', '_document_notes').maybeSingle();
-    if (error || !data) return [];
-    try { return JSON.parse(data.value); } catch { return []; }
-  }
-  async function saveSupabaseNotes(items) {
-    await adminClient.from('settings').upsert(
-      { key: '_document_notes', value: JSON.stringify(items) },
-      { onConflict: 'key' }
-    );
-  }
+  const noteToRow = (n) => ({
+    doc_type: n.docType ?? null,
+    title: n.title ?? null,
+    content: n.text !== undefined ? n.text : (n.content ?? null),
+  });
+  const noteToApi = (r) => ({
+    id: r.id,
+    docType: r.doc_type,
+    title: r.title,
+    content: r.content,
+    text: r.content,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  });
 
   if (path === '/api/document-notes' && method === 'GET') {
     if (!cp('settings:read')) return;
-    let items = await loadSupabaseNotes();
-    if (parsed.docType) items = items.filter(n => n.docType === parsed.docType);
+    let q = adminClient.from('document_notes').select('*');
+    if (parsed.docType) q = q.eq('doc_type', parsed.docType);
+    const { data, error } = await q.order('created_at', { ascending: false });
+    if (error) return send(500, { error: error.message });
+    let items = (data || []).map(noteToApi);
     if (parsed.q) {
-      const q = parsed.q.toLowerCase();
-      items = items.filter(n => (n.content || '').toLowerCase().includes(q) || (n.title || '').toLowerCase().includes(q));
+      const search = parsed.q.toLowerCase();
+      items = items.filter(n => (n.content || '').toLowerCase().includes(search) || (n.title || '').toLowerCase().includes(search));
     }
     const sortField = parsed.sortField || 'createdAt';
     const sortDir = parsed.sortDir || 'desc';
@@ -1642,11 +1660,9 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
 
   if (path === '/api/document-notes' && method === 'POST') {
     if (!cp('settings:update')) return;
-    const items = await loadSupabaseNotes();
-    const note = { ...parsed, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
-    items.push(note);
-    await saveSupabaseNotes(items);
-    return send(201, { note });
+    const { data, error } = await adminClient.from('document_notes').insert({ ...noteToRow(parsed), id: crypto.randomUUID(), created_by: uid }).select().single();
+    if (error) return send(500, { error: error.message });
+    return send(201, { note: noteToApi(data) });
   }
 
   const noteMatch2 = path.match(/^\/api\/document-notes\/([^/]+)$/);
@@ -1654,44 +1670,44 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
     const id = noteMatch2[1];
     if (method === 'PUT') {
       if (!cp('settings:update')) return;
-      const items = await loadSupabaseNotes();
-      const idx = items.findIndex(n => n.id === id);
-      if (idx === -1) return send(404, { error: 'Note not found.' });
-      items[idx] = { ...items[idx], ...parsed, id };
-      await saveSupabaseNotes(items);
-      return send(200, { note: items[idx] });
+      const { data, error } = await adminClient.from('document_notes').update(noteToRow(parsed)).eq('id', id).select().single();
+      if (error || !data) return send(404, { error: 'Note not found.' });
+      return send(200, { note: noteToApi(data) });
     }
     if (method === 'DELETE') {
       if (!cp('settings:delete')) return;
-      const items = await loadSupabaseNotes();
-      const idx = items.findIndex(n => n.id === id);
-      if (idx === -1) return send(404, { error: 'Note not found.' });
-      items.splice(idx, 1);
-      await saveSupabaseNotes(items);
+      const { error } = await adminClient.from('document_notes').delete().eq('id', id);
+      if (error) return send(500, { error: error.message });
       return send(200, { ok: true });
     }
   }
 
   // ===== Document Terms (Supabase) =====
-  async function loadSupabaseTerms() {
-    const { data, error } = await adminClient.from('settings').select('value').eq('key', '_document_terms').maybeSingle();
-    if (error || !data) return [];
-    try { return JSON.parse(data.value); } catch { return []; }
-  }
-  async function saveSupabaseTerms(items) {
-    await adminClient.from('settings').upsert(
-      { key: '_document_terms', value: JSON.stringify(items) },
-      { onConflict: 'key' }
-    );
-  }
+  const termToRow = (t) => ({
+    doc_type: t.docType ?? null,
+    title: t.title ?? null,
+    content: t.text !== undefined ? t.text : (t.content ?? null),
+  });
+  const termToApi = (r) => ({
+    id: r.id,
+    docType: r.doc_type,
+    title: r.title,
+    content: r.content,
+    text: r.content,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  });
 
   if (path === '/api/document-terms' && method === 'GET') {
     if (!cp('settings:read')) return;
-    let items = await loadSupabaseTerms();
-    if (parsed.docType) items = items.filter(t => t.docType === parsed.docType);
+    let q = adminClient.from('document_terms').select('*');
+    if (parsed.docType) q = q.eq('doc_type', parsed.docType);
+    const { data, error } = await q.order('created_at', { ascending: false });
+    if (error) return send(500, { error: error.message });
+    let items = (data || []).map(termToApi);
     if (parsed.q) {
-      const q = parsed.q.toLowerCase();
-      items = items.filter(t => (t.content || '').toLowerCase().includes(q) || (t.title || '').toLowerCase().includes(q));
+      const search = parsed.q.toLowerCase();
+      items = items.filter(t => (t.content || '').toLowerCase().includes(search) || (t.title || '').toLowerCase().includes(search));
     }
     const sortField = parsed.sortField || 'createdAt';
     const sortDir = parsed.sortDir || 'desc';
@@ -1710,11 +1726,9 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
 
   if (path === '/api/document-terms' && method === 'POST') {
     if (!cp('settings:update')) return;
-    const items = await loadSupabaseTerms();
-    const term = { ...parsed, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
-    items.push(term);
-    await saveSupabaseTerms(items);
-    return send(201, { term });
+    const { data, error } = await adminClient.from('document_terms').insert({ ...termToRow(parsed), id: crypto.randomUUID(), created_by: uid }).select().single();
+    if (error) return send(500, { error: error.message });
+    return send(201, { term: termToApi(data) });
   }
 
   const termMatch2 = path.match(/^\/api\/document-terms\/([^/]+)$/);
@@ -1722,38 +1736,56 @@ async function handleSupabase(supabase, path, method, parsed, send, currentUser)
     const id = termMatch2[1];
     if (method === 'PUT') {
       if (!cp('settings:update')) return;
-      const items = await loadSupabaseTerms();
-      const idx = items.findIndex(t => t.id === id);
-      if (idx === -1) return send(404, { error: 'Term not found.' });
-      items[idx] = { ...items[idx], ...parsed, id };
-      await saveSupabaseTerms(items);
-      return send(200, { term: items[idx] });
+      const { data, error } = await adminClient.from('document_terms').update(termToRow(parsed)).eq('id', id).select().single();
+      if (error || !data) return send(404, { error: 'Term not found.' });
+      return send(200, { term: termToApi(data) });
     }
     if (method === 'DELETE') {
       if (!cp('settings:delete')) return;
-      const items = await loadSupabaseTerms();
-      const idx = items.findIndex(t => t.id === id);
-      if (idx === -1) return send(404, { error: 'Term not found.' });
-      items.splice(idx, 1);
-      await saveSupabaseTerms(items);
+      const { error } = await adminClient.from('document_terms').delete().eq('id', id);
+      if (error) return send(500, { error: error.message });
       return send(200, { ok: true });
     }
   }
 
   // ===== Product Columns (Supabase) =====
+  const columnToApi = (c) => ({
+    id: c.id,
+    key: c.key,
+    label: c.label,
+    always: c.always,
+    defaultVisible: c.default_visible,
+    width: c.width,
+    permission: c.permission,
+    displayOrder: c.display_order,
+  });
+
   if (path === '/api/product-columns' && method === 'GET') {
-    const { data, error } = await adminClient.from('settings').select('value').eq('key', '_product_columns').maybeSingle();
-    let columns = [];
-    if (!error && data) { try { columns = JSON.parse(data.value); } catch {} }
-    return send(200, { columns: Array.isArray(columns) ? columns : [] });
+    const { data, error } = await adminClient.from('invoice_table_columns').select('*').order('display_order', { ascending: true });
+    if (error) return send(500, { error: error.message });
+    return send(200, { columns: (data || []).map(columnToApi) });
   }
 
   if (path === '/api/product-columns' && method === 'PUT') {
     if (!cp('settings:update')) return;
-    await adminClient.from('settings').upsert(
-      { key: '_product_columns', value: JSON.stringify(parsed.columns || []) },
-      { onConflict: 'key' }
-    );
+    const columns = parsed.columns || [];
+    const { error: delErr } = await adminClient.from('invoice_table_columns').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (delErr) return send(500, { error: delErr.message });
+    if (columns.length) {
+      const rows = columns.map((c) => ({
+        id: c.id || crypto.randomUUID(),
+        key: c.key,
+        label: c.label,
+        always: c.always ?? false,
+        default_visible: c.defaultVisible ?? false,
+        width: c.width ?? null,
+        permission: c.permission ?? null,
+        display_order: c.displayOrder ?? 1,
+        created_by: uid,
+      }));
+      const { error: insErr } = await adminClient.from('invoice_table_columns').insert(rows);
+      if (insErr) return send(500, { error: insErr.message });
+    }
     return send(200, { ok: true });
   }
 

@@ -54,10 +54,37 @@ export class InvoiceService {
   get listProducts() { return productService.listProducts.bind(productService); }
   get createProduct() { return productService.createProduct.bind(productService); }
   get updateProduct() { return productService.updateProduct.bind(productService); }
+  get deleteProduct() { return productService.deleteProduct.bind(productService); }
   get listProductCategories() { return productService.listProductCategories.bind(productService); }
+  get createProductCategory() { return productService.createProductCategory.bind(productService); }
+  get updateProductCategory() { return productService.updateProductCategory.bind(productService); }
+  get deleteProductCategory() { return productService.deleteProductCategory.bind(productService); }
   get listBrands() { return productService.listBrands.bind(productService); }
+  get createBrand() { return productService.createBrand.bind(productService); }
+  get updateBrand() { return productService.updateBrand.bind(productService); }
+  get deleteBrand() { return productService.deleteBrand.bind(productService); }
   get listUnits() { return productService.listUnits.bind(productService); }
+  get createUnit() { return productService.createUnit.bind(productService); }
+  get updateUnit() { return productService.updateUnit.bind(productService); }
+  get deleteUnit() { return productService.deleteUnit.bind(productService); }
+  get setPrimaryUnit() { return productService.setPrimaryUnit.bind(productService); }
   get listWarehouses() { return productService.listWarehouses.bind(productService); }
+  get createWarehouse() { return productService.createWarehouse.bind(productService); }
+  get updateWarehouse() { return productService.updateWarehouse.bind(productService); }
+  get deleteWarehouse() { return productService.deleteWarehouse.bind(productService); }
+  get listTaxRates() { return productService.listTaxRates.bind(productService); }
+  get createTaxRate() { return productService.createTaxRate.bind(productService); }
+  get updateTaxRate() { return productService.updateTaxRate.bind(productService); }
+  get deleteTaxRate() { return productService.deleteTaxRate.bind(productService); }
+  get setDefaultTaxRate() { return productService.setDefaultTaxRate.bind(productService); }
+  get listItemGroups() { return productService.listItemGroups.bind(productService); }
+  get createItemGroup() { return productService.createItemGroup.bind(productService); }
+  get updateItemGroup() { return productService.updateItemGroup.bind(productService); }
+  get deleteItemGroup() { return productService.deleteItemGroup.bind(productService); }
+  get listManufacturers() { return productService.listManufacturers.bind(productService); }
+  get createManufacturer() { return productService.createManufacturer.bind(productService); }
+  get updateManufacturer() { return productService.updateManufacturer.bind(productService); }
+  get deleteManufacturer() { return productService.deleteManufacturer.bind(productService); }
   get listPriceLists() { return productService.listPriceLists.bind(productService); }
   get getProductPriceLists() { return productService.getProductPriceLists.bind(productService); }
   get saveProductPriceLists() { return productService.saveProductPriceLists.bind(productService); }

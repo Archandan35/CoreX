@@ -40,6 +40,9 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
   const [brands, setBrands] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [units, setUnits] = useState([]);
+  const [taxRates, setTaxRates] = useState([]);
+  const [itemGroups, setItemGroups] = useState([]);
+  const [manufacturers, setManufacturers] = useState([]);
   const [configPriceLists, setConfigPriceLists] = useState([]);
 
   useEffect(() => {
@@ -55,12 +58,18 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
       invoiceService.listWarehouses().catch(() => []),
       invoiceService.listUnits().catch(() => []),
       invoiceService.listPriceLists().catch(() => []),
-    ]).then(([cats, br, wh, un, pl]) => {
+      invoiceService.listTaxRates().catch(() => []),
+      invoiceService.listItemGroups().catch(() => []),
+      invoiceService.listManufacturers().catch(() => []),
+    ]).then(([cats, br, wh, un, pl, tr, ig, mf]) => {
       setCategories(cats);
       setBrands(br);
       setWarehouses(wh);
       setUnits(un);
       setConfigPriceLists(pl);
+      setTaxRates(tr);
+      setItemGroups(ig);
+      setManufacturers(mf);
     });
   }, [open]);
 
@@ -207,7 +216,11 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
                     <Input type="number" min="0" step="0.01" value={form.selling_price} onChange={setNumeric('selling_price')} placeholder="0.00" />
                   </Field>
                   <Field label="Tax %">
-                    <Select options={[{ value: '', label: 'None' }, ...TAX_RATE_OPTIONS.map(r => ({ value: String(r), label: `${r}%` }))]} value={String(form.tax_rate)} onChange={set('tax_rate')} />
+                    <Select
+                      options={[{ value: '', label: 'None' }, ...mergeTaxRates(taxRates)]}
+                      value={String(form.tax_rate)}
+                      onChange={set('tax_rate')}
+                    />
                   </Field>
                   <Field label="Tax Type">
                     <Select options={[{ value: 'exclusive', label: 'Exclusive' }, { value: 'inclusive', label: 'Inclusive' }]} value={form.tax_type} onChange={set('tax_type')} />
@@ -235,10 +248,14 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
                   <Field label="Brand">
                     <Select options={[{ value: '', label: 'None' }, ...brands.map(b => ({ value: b.id || b.name, label: b.name }))]} value={form.brand} onChange={set('brand')} />
                   </Field>
-                  <Field label="Manufacturer"><Input value={form.manufacturer} onChange={set('manufacturer')} placeholder="Manufacturer" /></Field>
+                  <Field label="Manufacturer">
+                    <Select options={[{ value: '', label: 'None' }, ...manufacturers.map(m => ({ value: m.id || m.name, label: m.name }))]} value={form.manufacturer} onChange={set('manufacturer')} />
+                  </Field>
                   <Field label="SKU"><Input value={form.sku} onChange={set('sku')} placeholder="SKU" /></Field>
                   <Field label="Item Code"><Input value={form.item_code} onChange={set('item_code')} placeholder="Item code" /></Field>
-                  <Field label="Item Group"><Input value={form.item_group} onChange={set('item_group')} placeholder="Item group" /></Field>
+                  <Field label="Item Group">
+                    <Select options={[{ value: '', label: 'None' }, ...itemGroups.map(g => ({ value: g.id || g.name, label: g.name }))]} value={form.item_group} onChange={set('item_group')} />
+                  </Field>
                 </div>
               </div>
 
@@ -402,4 +419,16 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
       </div>
     </div>
   );
+}
+
+function mergeTaxRates(taxRates) {
+  const fromMasters = (taxRates || []).map((r) => {
+    const rate = Number(r.rate) || 0;
+    return { value: String(rate), label: r.name ? `${r.name} (${rate}%)` : `${rate}%` };
+  });
+  const seen = new Set(fromMasters.map((o) => o.value));
+  const defaults = TAX_RATE_OPTIONS
+    .filter((r) => !seen.has(String(r)))
+    .map((r) => ({ value: String(r), label: `${r}%` }));
+  return [...defaults, ...fromMasters];
 }

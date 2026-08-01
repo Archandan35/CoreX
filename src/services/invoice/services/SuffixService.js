@@ -1,21 +1,30 @@
 import { getSupabaseClient } from '../../../identity/auth/supabaseClient.js';
 
-const SETTINGS_KEY = '_suffix_settings';
+const TABLE = 'document_suffixes';
 
-async function loadItems() {
-  const supabase = await getSupabaseClient();
-  const { data, error } = await supabase.from('settings').select('value').eq('key', SETTINGS_KEY).maybeSingle();
-  if (error || !data) return [];
-  try { return JSON.parse(data.value); } catch { return []; }
+function toRow(payload) {
+  return {
+    value: payload.value,
+    description: payload.description ?? null,
+    doc_type: payload.docType,
+    is_active: payload.isActive ?? true,
+    is_default: payload.isDefault ?? false,
+    sequence_order: payload.sequenceOrder ?? 1,
+  };
 }
 
-async function saveItems(items) {
-  const supabase = await getSupabaseClient();
-  const { error } = await supabase.from('settings').upsert(
-    { key: SETTINGS_KEY, value: JSON.stringify(items) },
-    { onConflict: 'key' }
-  );
-  if (error) throw new Error(error.message);
+function toApi(row) {
+  return {
+    id: row.id,
+    value: row.value,
+    description: row.description,
+    docType: row.doc_type,
+    isActive: row.is_active,
+    isDefault: row.is_default,
+    sequenceOrder: row.sequence_order,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 function filterPage(items, params) {
@@ -43,50 +52,51 @@ function filterPage(items, params) {
 
 export class SuffixService {
   async listSuffixes(params = {}) {
-    const items = await loadItems();
-    return filterPage(items, params);
+    const supabase = await getSupabaseClient();
+    let q = supabase.from(TABLE).select('*');
+    if (params.docType) q = q.eq('doc_type', params.docType);
+    const { data, error } = await q.order('sequence_order', { ascending: true });
+    if (error) return { items: [], total: 0 };
+    return filterPage((data || []).map(toApi), params);
   }
 
   async createSuffix(payload) {
-    const items = await loadItems();
-    const suffix = {
-      ...payload,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    if (suffix.isDefault) items.forEach(p => { p.isDefault = false; });
-    items.push(suffix);
-    await saveItems(items);
-    return suffix;
+    const supabase = await getSupabaseClient();
+    const row = { ...toRow(payload), id: crypto.randomUUID() };
+    if (row.is_default) {
+      await supabase.from(TABLE).update({ is_default: false }).eq('doc_type', row.doc_type).neq('id', row.id);
+    }
+    const { data, error } = await supabase.from(TABLE).insert(row).select().single();
+    if (error) throw new Error(error.message);
+    return toApi(data);
   }
 
   async updateSuffix(id, payload) {
-    const items = await loadItems();
-    const idx = items.findIndex(p => p.id === id);
-    if (idx === -1) throw new Error('Suffix not found.');
-    if (payload.isDefault) items.forEach(p => { p.isDefault = false; });
-    items[idx] = { ...items[idx], ...payload, id };
-    await saveItems(items);
-    return items[idx];
+    const supabase = await getSupabaseClient();
+    const updates = toRow(payload);
+    if (updates.is_default) {
+      await supabase.from(TABLE).update({ is_default: false }).eq('doc_type', updates.doc_type).neq('id', id);
+    }
+    const { data, error } = await supabase.from(TABLE).update(updates).eq('id', id).select().single();
+    if (error || !data) throw new Error('Suffix not found.');
+    return toApi(data);
   }
 
   async deleteSuffix(id) {
-    const items = await loadItems();
-    const idx = items.findIndex(p => p.id === id);
-    if (idx === -1) throw new Error('Suffix not found.');
-    items.splice(idx, 1);
-    await saveItems(items);
+    const supabase = await getSupabaseClient();
+    const { error } = await supabase.from(TABLE).delete().eq('id', id);
+    if (error) throw new Error(error.message);
     return true;
   }
 
   async setDefaultSuffix(id) {
-    const items = await loadItems();
-    const idx = items.findIndex(p => p.id === id);
-    if (idx === -1) throw new Error('Suffix not found.');
-    items.forEach(p => { p.isDefault = false; });
-    items[idx].isDefault = true;
-    await saveItems(items);
-    return items[idx];
+    const supabase = await getSupabaseClient();
+    const { data: current } = await supabase.from(TABLE).select('*').eq('id', id).single();
+    if (!current) throw new Error('Suffix not found.');
+    await supabase.from(TABLE).update({ is_default: false }).eq('doc_type', current.doc_type);
+    const { data, error } = await supabase.from(TABLE).update({ is_default: true }).eq('id', id).select().single();
+    if (error || !data) throw new Error('Suffix not found.');
+    return toApi(data);
   }
 }
 

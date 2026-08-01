@@ -34,24 +34,38 @@ Every database object must be individually verified. No "if X exists then assume
 
 Every object below must be present in ALL 4 files. Use this as the master checklist.
 
-### 2.1 Tables (14 total)
+### 2.1 Tables (28 total)
 
 | # | Table | SQL (CREATE TABLE) | SCHEMAS (`table:` field) | SqlGenerator (`_genTable` / `_genAllTables`) | Validator (`_validateEntity`) |
-|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|
 | 1 | `users` | ✓ | ✓ | ✓ | ✓ |
 | 2 | `roles` | ✓ | ✓ | ✓ | ✓ |
 | 3 | `settings` | ✓ | ✓ | ✓ | ✓ |
 | 4 | `customers` | ✓ | ✓ | ✓ | ✓ |
 | 5 | `product_categories` | ✓ | ✓ | ✓ | ✓ |
-| 6 | `products` | ✓ | ✓ | ✓ | ✓ |
-| 7 | `banks` | ✓ | ✓ | ✓ | ✓ |
-| 8 | `signatures` | ✓ | ✓ | ✓ | ✓ |
-| 9 | `invoices` | ✓ | ✓ | ✓ | ✓ |
-| 10 | `invoice_items` | ✓ | ✓ | ✓ | ✓ |
-| 11 | `invoice_payments` | ✓ | ✓ | ✓ | ✓ |
-| 12 | `audit_logs` | ✓ | ✓ | ✓ | ✓ |
-| 13 | `accounting_entries` | ✓ | ✓ | ✓ | ✓ |
-| 14 | `_schema_version` | ✓ | ✓ *(FIXED)* | ✓ (via `_genVersion`) | ✓ (via `_validateEntity` + `_checkVersion`) |
+| 6 | `product_brands` | ✓ | ✓ | ✓ | ✓ |
+| 7 | `product_units` | ✓ | ✓ | ✓ | ✓ |
+| 8 | `product_warehouses` | ✓ | ✓ | ✓ | ✓ |
+| 9 | `product_tax_rates` | ✓ | ✓ | ✓ | ✓ |
+| 10 | `product_item_groups` | ✓ | ✓ | ✓ | ✓ |
+| 11 | `product_manufacturers` | ✓ | ✓ | ✓ | ✓ |
+| 12 | `products` | ✓ | ✓ | ✓ | ✓ |
+| 13 | `banks` | ✓ | ✓ | ✓ | ✓ |
+| 14 | `signatures` | ✓ | ✓ | ✓ | ✓ |
+| 15 | `invoices` | ✓ | ✓ | ✓ | ✓ |
+| 16 | `invoice_items` | ✓ | ✓ | ✓ | ✓ |
+| 17 | `invoice_payments` | ✓ | ✓ | ✓ | ✓ |
+| 18 | `audit_logs` | ✓ | ✓ | ✓ | ✓ |
+| 19 | `accounting_entries` | ✓ | ✓ | ✓ | ✓ |
+| 20 | `document_prefixes` | ✓ | ✓ | ✓ | ✓ |
+| 21 | `document_suffixes` | ✓ | ✓ | ✓ | ✓ |
+| 22 | `custom_headers` | ✓ | ✓ | ✓ | ✓ |
+| 23 | `document_notes` | ✓ | ✓ | ✓ | ✓ |
+| 24 | `document_terms` | ✓ | ✓ | ✓ | ✓ |
+| 25 | `invoice_table_columns` | ✓ | ✓ | ✓ | ✓ |
+| 26 | `document_settings` | ✓ | ✓ | ✓ | ✓ |
+| 27 | `document_type_master` | ✓ | ✓ | ✓ | ✓ |
+| 28 | `_schema_version` | ✓ | ✓ *(FIXED)* | ✓ (via `_genVersion`) | ✓ (via `_validateEntity` + `_checkVersion`) |
 
 ### 2.2 Columns per Table
 
@@ -82,6 +96,14 @@ For each table above, EVERY column must have matching: name, type, nullable, def
 | invoice_payments | id | ✓ | ✓ | ✓ | ✓ |
 | audit_logs | id | ✓ | ✓ | ✓ | ✓ |
 | accounting_entries | id | ✓ | ✓ | ✓ | ✓ |
+| document_prefixes | id | ✓ | ✓ | ✓ | ✓ |
+| document_suffixes | id | ✓ | ✓ | ✓ | ✓ |
+| custom_headers | id | ✓ | ✓ | ✓ | ✓ |
+| document_notes | id | ✓ | ✓ | ✓ | ✓ |
+| document_terms | id | ✓ | ✓ | ✓ | ✓ |
+| invoice_table_columns | id | ✓ | ✓ | ✓ | ✓ |
+| document_settings | id | ✓ | ✓ | ✓ | ✓ |
+| document_type_master | id | ✓ | ✓ | ✓ | ✓ |
 | _schema_version | (version, applied_at)* | ✓ | ✓ | ✓ (via `_genVersion`) | ✓ |
 
 #### UNIQUE
@@ -92,6 +114,7 @@ For each table above, EVERY column must have matching: name, type, nullable, def
 | users | username | ✓ (inline UNIQUE) | ✓ | ✓ | ✓ |
 | roles | name | ✓ (inline UNIQUE) | ✓ | ✓ | ✓ |
 | invoices | invoice_number | ✓ (inline UNIQUE) | ✓ | ✓ | ✓ |
+| document_type_master | name | ✓ (inline UNIQUE) | ✓ | ✓ | ✓ |
 
 \* SQL has composite PK `(version, applied_at)`. SCHEMAS uses `primaryKey: 'version'` (simplified — `_checkConstraints` only verifies that ANY PK exists, not which columns).
 
@@ -105,7 +128,7 @@ For each table above, EVERY column must have matching: name, type, nullable, def
 
 - [ ] **Missing entirely** — No CHECK constraints in any of the 4 files
 
-### 2.4 Indexes (35 total)
+### 2.4 Indexes (51 total)
 
 Each index defined in `generate-sql.sql` must be:
 - Defined in SCHEMAS (via `searchableFields[]` or `indexes[]`)
@@ -150,6 +173,14 @@ Each index defined in `generate-sql.sql` must be:
 | 34 | `idx_audit_logs_record_id` | ✓ | `indexes` | ✓ | ✓ | *(FIXED — was composite, now single-column)* |
 | 35 | `idx_audit_logs_created_at` | ✓ | `indexes` | ✓ | ✓ | *(FIXED)* |
 | 36 | `idx_accounting_entries_invoice` | ✓ | `indexes` | ✓ | ✓ | *(FIXED)* |
+| 37 | `idx_document_prefixes_doc_type` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 38 | `idx_document_suffixes_doc_type` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 39 | `idx_custom_headers_active` | ✓ | `indexes` | ✓ | ✓ | |
+| 40 | `idx_custom_headers_display_order` | ✓ | `indexes` | ✓ | ✓ | |
+| 41 | `idx_document_notes_doc_type` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 42 | `idx_document_terms_doc_type` | ✓ | `searchableFields` | ✓ | ✓ | |
+| 43 | `idx_invoice_table_columns_display_order` | ✓ | `indexes` | ✓ | ✓ | |
+| 44 | `idx_document_type_master_name` | ✓ | `searchableFields` | ✓ | ✓ | |
 
 ### 2.5 Functions (4 total)
 
@@ -166,29 +197,44 @@ Each index defined in `generate-sql.sql` must be:
 |---|---|---|---|---|---|
 | 1 | `on_auth_user_created` (AFTER INSERT ON auth.users) | ✓ | ✓ (`requiredTriggers` metadata) | ✓ | ✓ (reads from `schema.requiredTriggers`) |
 
-### 2.7 RLS Policies (37 total)
+### 2.7 RLS Policies (89 total)
 
-- [ ] All 9 RLS-enabled tables have policies generated in SQL and SqlGenerator
+- [ ] All RLS-enabled tables have policies generated in SQL and SqlGenerator
 - [ ] SCHEMAS entities with RLS have `rls: true` or `rls: false` explicitly (no undefined)
 - [x] **`roles` and `settings` added `rls: false`** *(FIXED)*
+- [x] **`document_type_master` added `rls: false`** *(FIXED — shared seed table read by browser client)*
 - [x] **`_checkPolicies` now verifies each RLS-enabled table has at least one policy** *(FIXED)*
 
-**Expected policy count by table:**
+**Expected policy count by table (owner = `public.is_admin_user() OR created_by = auth.uid()`):**
 | Table | Policies | SQL | SqlGenerator |
 |---|---|---|---|
 | users | 5 (own select, admin select, auth insert, own update, admin update) | ✓ | ✓ |
 | customers | 4 (owner R/W/U/D) | ✓ | ✓ |
 | product_categories | 4 (owner R/W/U/D) | ✓ | ✓ |
 | products | 4 (owner R/W/U/D) | ✓ | ✓ |
+| product_brands | 4 (owner R/W/U/D) | ✓ | ✓ |
+| product_units | 4 (owner R/W/U/D) | ✓ | ✓ |
+| product_warehouses | 4 (owner R/W/U/D) | ✓ | ✓ |
+| product_tax_rates | 4 (owner R/W/U/D) | ✓ | ✓ |
+| product_item_groups | 4 (owner R/W/U/D) | ✓ | ✓ |
+| product_manufacturers | 4 (owner R/W/U/D) | ✓ | ✓ |
 | banks | 4 (owner R/W/U/D) | ✓ | ✓ |
 | signatures | 4 (owner R/W/U/D) | ✓ | ✓ |
 | invoices | 4 (owner R/W/U/D) | ✓ | ✓ |
 | invoice_items | 4 (owner subquery R/W/U/D) | ✓ | ✓ |
 | invoice_payments | 4 (owner subquery R/W/U/D) | ✓ | ✓ |
+| document_prefixes | 4 (owner R/W/U/D) | ✓ | ✓ |
+| document_suffixes | 4 (owner R/W/U/D) | ✓ | ✓ |
+| custom_headers | 4 (owner R/W/U/D) | ✓ | ✓ |
+| document_notes | 4 (owner R/W/U/D) | ✓ | ✓ |
+| document_terms | 4 (owner R/W/U/D) | ✓ | ✓ |
+| invoice_table_columns | 4 (owner R/W/U/D) | ✓ | ✓ |
+| document_settings | 4 (owner R/W/U/D) | ✓ | ✓ |
 | audit_logs | 0 (RLS disabled) | ✓ | ✓ |
 | accounting_entries | 0 (RLS disabled) | ✓ | ✓ |
 | roles | 0 (RLS disabled) | ✓ | ✓ |
 | settings | 0 (RLS disabled) | ✓ | ✓ |
+| document_type_master | 0 (RLS disabled) | ✓ | ✓ |
 
 ### 2.8 GRANT Permissions (3 total)
 
@@ -203,7 +249,7 @@ Each index defined in `generate-sql.sql` must be:
 | Aspect | SQL | SCHEMAS | SqlGenerator | Validator |
 |---|---|---|---|---|
 | `_schema_version` table | ✓ (L540-545) | ✓ *(FIXED)* | ✓ (`_genVersion`) | ✓ (`_checkVersion` + `_validateEntity`) |
-| Version number (5) | ✓ | `version = 5` | Uses schema.version | Uses schema.version |
+| Version number (5) | ✓ | `version = 5` (stays 5 despite new tables — schema content is repaired in place) | Uses schema.version | Uses schema.version |
 | Version INSERT description | `"Schema v5: user_role_refactor ..."` | N/A | `"Schema installation via Setup Wizard"` *(generic)* | N/A |
 
 ### 2.10 Extensions
@@ -214,7 +260,7 @@ Each index defined in `generate-sql.sql` must be:
 
 ### 2.11 Seed Data
 
-- [ ] `SCHEMAS.seedData` matches seed INSERTs in `generate-sql.sql` (currently both empty)
+- [ ] `SCHEMAS.seedData` matches seed INSERTs in `generate-sql.sql` — `document_type_master` has 11 rows (IDs `e15c7e40-9b2a-4f6a-9d1e-000000000001` … `...011`)
 - [ ] SqlGenerator generates seed INSERTs for any entry
 - [ ] Validator `_checkSeeds` counts rows against `minCount`
 
@@ -236,7 +282,7 @@ Each index defined in `generate-sql.sql` must be:
 
 ## 4. Both Health Check Functions ↔ Validator Parity
 
-- [ ] Same tables checked (`users`, `roles`, `settings`, `_schema_version`)
+- [ ] Same tables checked — the Supabase health check now diffs **ALL** SCHEMAS tables/columns via `getSchemaGap()` (not just the 4 core tables), plus trigger/function/policy probes
 - [ ] Same trigger check (`on_auth_user_created`)
 - [ ] Same function checks (`exec_sql`, `check_admin_exists`, `is_admin_user`, `handle_new_user`)
 - [ ] Same RLS policy check (policies exist in `public`)
@@ -244,6 +290,39 @@ Each index defined in `generate-sql.sql` must be:
 - [ ] No additional assumptions in either path
 
 ---
+
+## 6a. Auto-Repair (Self-Healing Schema)
+
+The app no longer lets a degraded database fail silently at runtime. Flow in `src/schema/repair.js` + `src/App.jsx` (`initApp`):
+
+1. **Detect** — startup health check diffs the live DB against SCHEMAS (`getSchemaGap`). A table/column added to SCHEMAS but missing in the DB flags the database `everInstalled && !compatible`.
+2. **Repair** — `autoRepairSchema()` runs `DatabaseValidator` → `SqlGenerator.generate({ missing })` → splits SQL → executes each idempotent statement via `exec_sql` → `NOTIFY pgrst, 'reload schema'` → re-validates.
+3. **Fallback** — if repair can't run (e.g. `exec_sql` itself missing) or fails, the `DatabaseHealthBanner` + Setup Wizard still work as before.
+
+**Consequences for adding a new feature:**
+- After adding the new table to all 4 source files (rule §1), reload the app — the missing table is created automatically on the next startup. No manual SQL Editor run, no PGRST205.
+- Repair is idempotent (`IF NOT EXISTS` / `EXCEPTION WHEN duplicate_object`), so it's safe on healthy DBs and safe to retry.
+- The old silent behavior ("just show empty list / raw schema-cache error") is replaced with a friendly message in `describeSchemaError` (`src/utils/dbErrors.js`).
+
+### 6a.1 How can the browser create database tables?
+
+The browser can't normally run DDL — but the app has one privileged helper that makes it possible:
+
+- `exec_sql(text)` is a **SECURITY DEFINER** function installed by the Setup Wizard (`buildExecSqlFunction` in `src/schema/models/index.js`). SECURITY DEFINER means it executes **as the database owner** (bypasses RLS and normal permissions) even though the browser calls it via `supabase.rpc('exec_sql', ...)`.
+- It was **`GRANT EXECUTE ... TO anon, authenticated, service_role`** so the app is allowed to call it over the REST API. This is the same door the Setup Wizard already used to install the whole schema — auto-repair reuses it, it is not a new backdoor.
+- Auto-repair only ever feeds it **idempotent DDL generated by the app itself** from SCHEMAS (`CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, `DO $$ ... EXCEPTION WHEN duplicate_object`), never free-form user input — so re-running is a no-op and a failed repair is safe to retry.
+- After the DDL runs, `NOTIFY pgrst, 'reload schema'` forces PostgREST to drop its stale schema cache, so the new table is addressable on the very next request (this is the step that stops a fresh PGRST205). Supabase additionally auto-notifies on DDL via its own event trigger.
+
+**Security caveat (pre-existing, not introduced by auto-repair):** because the grant is to `anon`, anyone with the public anon key can also call `exec_sql` and run SQL as the owner. That tradeoff is required for the Setup Wizard to install the schema from the browser. Mitigations that are safe to add later: revoke `anon` and rely on `authenticated` + server-side `service_role` for installation, or restrict `exec_sql` to a stricter allow-list.
+
+### 6a.2 When auto-repair runs
+
+- Runs **only** when `everInstalled === true` and the DB is incompatible (health check failed).
+- A **never-installed** (fresh) DB skips repair and goes straight to the Setup Wizard — no DDL runs automatically on an empty database.
+- A **fully compatible** DB skips repair entirely (no-op), so healthy startups pay only the cost of the 2 `getSchemaGap` queries in the existing thorough check.
+- On success it re-checks health and proceeds; on failure it falls back to the `DatabaseHealthBanner` + Setup Wizard exactly as before.
+
+
 
 ## 5. Cross-File Version Consistency
 
@@ -282,6 +361,10 @@ Each index defined in `generate-sql.sql` must be:
 | v2 | Added `_schema_version` table entry to SCHEMAS | `src/schema/models/index.js` |
 | v2 | `SqlGenerator._genAllTables/_genMissingTables/_genMissingColumns` skip `_schema_version` (handled by `_genVersion`) | `SqlGenerator.js` |
 | v3 | Added `handle_new_user` to Supabase health check in `getSupabaseSchemaHealth` (was only checking 3 of 4 required functions) | `App.jsx` |
+| v9 | Added 8 tables to all 4 schema sources: `document_prefixes`, `document_suffixes`, `custom_headers`, `document_notes`, `document_terms`, `invoice_table_columns`, `document_settings`, `document_type_master` — refactor of JSON-blob `settings` keys (`_prefix_settings`, `_suffix_settings`, `_custom_headers`, `_document_notes`, `_document_terms`, `_product_columns`, `documentSettings`) into relational tables | `src/schema/models/index.js`, `generate-sql.sql`, `src/schema/migrations/index.js` (v9), `server/api.js`, 5 services |
+| v9 | `document_type_master` set `rls: false` (shared seed table read by browser client); added 11-row `SCHEMAS.seedData` + seed INSERT (migration v9 + generate-sql.sql) | `src/schema/models/index.js`, `generate-sql.sql`, `src/schema/migrations/index.js` |
+| v9 | Rewrote Supabase handlers in `server/api.js` to use real tables (prefix/suffix/notes/terms/product-columns) with `*ToRow`/`*ToApi` mappers; `is_default` kept unique per `doc_type` | `server/api.js` |
+| v9 | Rewrote 5 browser services to query new tables preserving method names/`filterPage` shapes: `PrefixService`, `SuffixService`, `CustomHeaderService`, `DocumentNoteService`, `SettingsService` | `src/services/invoice/services/*.js` |
 
 ### Design decisions (not bugs)
 

@@ -18,6 +18,7 @@ import { config } from './config/index.js';
 import Dashboard from './pages/Dashboard.jsx';
 import QuickSale from './pages/sales/QuickSale.jsx';
 import Invoices from './pages/invoices/Invoices.jsx';
+import Inventory from './pages/inventory/Inventory.jsx';
 import UserList from './pages/users/UserList.jsx';
 import UserCreate from './pages/users/UserCreate.jsx';
 import UserEdit from './pages/users/UserEdit.jsx';
@@ -32,7 +33,7 @@ import EditInvoice from './pages/invoices/EditInvoice.jsx';
 import InvoiceShow from './pages/invoices/InvoiceShow.jsx';
 import { PERMISSIONS } from './identity/rbac/permissions.js';
 import { api } from './services/api.js';
-import { isMissingTableError } from './utils/dbErrors.js';
+import { getSchemaGap, autoRepairSchema } from './schema/repair.js';
 
 function ProtectedRoute({ children, permission }) {
   const { isAuthenticated } = useAuth();
@@ -128,10 +129,14 @@ function AppRoutes() {
     let missingCount = versionMatch ? 0 : 1;
 
     // Thorough check via exec_sql (if installed). This catches missing
-    // triggers, RLS policies, and functions that the table-level check
-    // above would miss.
+    // triggers, RLS policies, functions, AND any tables/columns that SCHEMAS
+    // requires but the live database is missing — the scenario that used to
+    // surface as "Could not find the table ... in the schema cache" (PGRST205)
+    // deep inside features. The table/column check reuses the canonical
+    // SCHEMAS manifest, so a NEW table added for a new feature is caught here
+    // on startup instead of failing at runtime.
     try {
-      const [triggerRows, policyRows, funcRows] = await Promise.all([
+      const [triggerRows, policyRows, funcRows, gap] = await Promise.all([
         database.query(
           `SELECT t.tgname::text FROM pg_catalog.pg_trigger t
            JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid
@@ -147,16 +152,21 @@ function AppRoutes() {
            WHERE pronamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'public')
              AND prokind = 'f' AND proname IN ('exec_sql','check_admin_exists','is_admin_user','handle_new_user')`
         ),
+        getSchemaGap(database),
       ]);
 
       const triggerExists = triggerRows && triggerRows.length > 0;
       const policiesExist = parseInt(policyRows?.[0]?.count || 0, 10) > 0;
       const functionsOk = parseInt(funcRows?.[0]?.count || 0, 10) >= 4;
+      const tablesOk = gap.missingTables.length === 0;
+      const columnsOk = gap.missingColumns.length === 0;
 
       if (!triggerExists) missingCount++;
       if (!policiesExist) missingCount++;
       if (!functionsOk) missingCount++;
-      compatible = versionMatch && triggerExists && policiesExist && functionsOk;
+      if (!tablesOk) missingCount += gap.missingTables.length;
+      if (!columnsOk) missingCount += gap.missingColumns.length;
+      compatible = versionMatch && triggerExists && policiesExist && functionsOk && tablesOk && columnsOk;
     } catch {
       // exec_sql not installed — fall back to lightweight probes
       let functionsOk = false;
@@ -230,9 +240,34 @@ function AppRoutes() {
       });
       setDb(database);
 
-      const health = database.isSupabase
+      let health = database.isSupabase
         ? await getSupabaseSchemaHealth(database)
         : await getRawDbSchemaHealth(database);
+
+      // Self-healing: a database that was installed before but has since lost
+      // objects (e.g. a NEW table added to SCHEMAS for a new feature but not
+      // yet created in the live DB) is repaired automatically instead of being
+      // left to fail with "Could not find the table ... in the schema cache"
+      // (PGRST205) inside features. Repair is idempotent and only runs for
+      // ever-installed databases — a never-installed DB still goes to the
+      // Setup Wizard.
+      if (!health.compatible && health.everInstalled) {
+        try {
+          const repair = await autoRepairSchema(database);
+          health = repair.compatible
+            ? (database.isSupabase
+              ? await getSupabaseSchemaHealth(database)
+              : await getRawDbSchemaHealth(database))
+            : {
+                compatible: false,
+                missingCount: (repair.report?.summary?.missing || 0) + (repair.report?.summary?.issues || 0),
+                everInstalled: true,
+              };
+        } catch {
+          // Repair failed (e.g. exec_sql helper itself is missing) — keep the
+          // original health so the persistent banner surfaces the problem.
+        }
+      }
       setDbHealth(health);
 
       if (health.compatible) {
@@ -388,6 +423,7 @@ function AppRoutes() {
           <Route index element={<Dashboard />} />
           <Route path="quick-sale" element={<QuickSale />} />
           <Route path="sales" element={<Navigate to="/sales/invoices" replace />} />
+        <Route path="inventory" element={<ProtectedRoute permission={PERMISSIONS.PRODUCT_READ}><Inventory /></ProtectedRoute>} />
         <Route path="sales/invoices" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_READ}><Invoices variant="invoices" /></ProtectedRoute>} />
         <Route path="sales/credit-notes" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_READ}><Invoices variant="credit-notes" /></ProtectedRoute>} />
         <Route path="sales/e-invoices" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_READ}><Invoices variant="e-invoices" /></ProtectedRoute>} />

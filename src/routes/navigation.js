@@ -25,6 +25,13 @@ export const NAV_GROUPS = [
       { to: '/sales/subscriptions', label: 'Subscriptions', icon: 'refresh-cw', permission: PERMISSIONS.INVOICE_READ },
     ],
   },
+  { type: 'heading', label: 'INVENTORY' },
+  {
+    label: '',
+    items: [
+      { to: '/inventory', label: 'Products', icon: 'package', end: true, permission: PERMISSIONS.PRODUCT_READ },
+    ],
+  },
   { type: 'heading', label: 'User Management' },
   {
     label: '',

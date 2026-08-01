@@ -25,28 +25,168 @@ export class ProductService {
     return data;
   }
 
-  async listProductCategories() {
+  async deleteProduct(id) {
     const supabase = await getSupabaseClient();
-    const { data, error } = await supabase.from('product_categories').select('*').order('name', { ascending: true });
-    return error ? [] : (data || []);
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+    return true;
+  }
+
+  async listProductCategories() {
+    return this._listRows('product_categories');
+  }
+
+  async createProductCategory(payload) {
+    return this._createRow('product_categories', payload);
+  }
+
+  async updateProductCategory(id, payload) {
+    return this._updateRow('product_categories', id, payload);
+  }
+
+  async deleteProductCategory(id) {
+    return this._deleteRow('product_categories', id);
   }
 
   async listBrands() {
-    const supabase = await getSupabaseClient();
-    const { data, error } = await supabase.from('product_brands').select('*').order('name', { ascending: true });
-    return error ? [] : (data || []);
+    return this._listRows('product_brands');
+  }
+
+  async createBrand(payload) {
+    return this._createRow('product_brands', payload);
+  }
+
+  async updateBrand(id, payload) {
+    return this._updateRow('product_brands', id, payload);
+  }
+
+  async deleteBrand(id) {
+    return this._deleteRow('product_brands', id);
   }
 
   async listUnits() {
+    return this._listRows('product_units');
+  }
+
+  async createUnit(payload) {
+    return this._createRow('product_units', payload);
+  }
+
+  async updateUnit(id, payload) {
+    return this._updateRow('product_units', id, payload);
+  }
+
+  async deleteUnit(id) {
+    return this._deleteRow('product_units', id);
+  }
+
+  async setPrimaryUnit(id) {
     const supabase = await getSupabaseClient();
-    const { data, error } = await supabase.from('product_units').select('*').order('name', { ascending: true });
-    return error ? [] : (data || []);
+    const { error: clearErr } = await supabase.from('product_units').update({ is_primary: false }).neq('id', id);
+    if (clearErr) throw new Error(clearErr.message);
+    const { data, error } = await supabase.from('product_units').update({ is_primary: true }).eq('id', id).select().single();
+    if (error || !data) throw new Error('Unit not found.');
+    return data;
   }
 
   async listWarehouses() {
+    return this._listRows('product_warehouses');
+  }
+
+  async createWarehouse(payload) {
+    return this._createRow('product_warehouses', payload);
+  }
+
+  async updateWarehouse(id, payload) {
+    return this._updateRow('product_warehouses', id, payload);
+  }
+
+  async deleteWarehouse(id) {
+    return this._deleteRow('product_warehouses', id);
+  }
+
+  async listTaxRates() {
+    return this._listRows('product_tax_rates');
+  }
+
+  async createTaxRate(payload) {
+    return this._createRow('product_tax_rates', payload);
+  }
+
+  async updateTaxRate(id, payload) {
+    return this._updateRow('product_tax_rates', id, payload);
+  }
+
+  async deleteTaxRate(id) {
+    return this._deleteRow('product_tax_rates', id);
+  }
+
+  async setDefaultTaxRate(id) {
     const supabase = await getSupabaseClient();
-    const { data, error } = await supabase.from('product_warehouses').select('*').order('name', { ascending: true });
+    const { error: clearErr } = await supabase.from('product_tax_rates').update({ is_default: false }).neq('id', id);
+    if (clearErr) throw new Error(clearErr.message);
+    const { data, error } = await supabase.from('product_tax_rates').update({ is_default: true }).eq('id', id).select().single();
+    if (error || !data) throw new Error('Tax rate not found.');
+    return data;
+  }
+
+  async listItemGroups() {
+    return this._listRows('product_item_groups');
+  }
+
+  async createItemGroup(payload) {
+    return this._createRow('product_item_groups', payload);
+  }
+
+  async updateItemGroup(id, payload) {
+    return this._updateRow('product_item_groups', id, payload);
+  }
+
+  async deleteItemGroup(id) {
+    return this._deleteRow('product_item_groups', id);
+  }
+
+  async listManufacturers() {
+    return this._listRows('product_manufacturers');
+  }
+
+  async createManufacturer(payload) {
+    return this._createRow('product_manufacturers', payload);
+  }
+
+  async updateManufacturer(id, payload) {
+    return this._updateRow('product_manufacturers', id, payload);
+  }
+
+  async deleteManufacturer(id) {
+    return this._deleteRow('product_manufacturers', id);
+  }
+
+  async _listRows(table) {
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from(table).select('*').order('name', { ascending: true });
     return error ? [] : (data || []);
+  }
+
+  async _createRow(table, payload) {
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from(table).insert({ ...payload, id: crypto.randomUUID() }).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async _updateRow(table, id, payload) {
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase.from(table).update(payload).eq('id', id).select().single();
+    if (error || !data) throw new Error('Record not found.');
+    return data;
+  }
+
+  async _deleteRow(table, id) {
+    const supabase = await getSupabaseClient();
+    const { error } = await supabase.from(table).delete().eq('id', id);
+    if (error) throw new Error(error.message);
+    return true;
   }
 
   async listPriceLists() {
