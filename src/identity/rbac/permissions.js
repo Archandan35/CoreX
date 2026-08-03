@@ -40,5 +40,9 @@ export const PERMISSIONS = Object.freeze({
   PRODUCT_READ: 'product:read',
   PRODUCT_UPDATE: 'product:update',
   PRODUCT_DELETE: 'product:delete',
+  VENDOR_CREATE: 'vendor:create',
+  VENDOR_READ: 'vendor:read',
+  VENDOR_UPDATE: 'vendor:update',
+  VENDOR_DELETE: 'vendor:delete',
   SETUP_WIZARD: 'setup:wizard',
 });

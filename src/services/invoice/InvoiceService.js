@@ -88,6 +88,10 @@ export class InvoiceService {
   get createSupplier() { return productService.createSupplier.bind(productService); }
   get updateSupplier() { return productService.updateSupplier.bind(productService); }
   get deleteSupplier() { return productService.deleteSupplier.bind(productService); }
+  get listSupplierCategories() { return productService.listSupplierCategories.bind(productService); }
+  get createSupplierCategory() { return productService.createSupplierCategory.bind(productService); }
+  get updateSupplierCategory() { return productService.updateSupplierCategory.bind(productService); }
+  get deleteSupplierCategory() { return productService.deleteSupplierCategory.bind(productService); }
   get listPriceLists() { return productService.listPriceLists.bind(productService); }
   get getProductPriceLists() { return productService.getProductPriceLists.bind(productService); }
   get saveProductPriceLists() { return productService.saveProductPriceLists.bind(productService); }

@@ -20,6 +20,7 @@ import QuickSale from './pages/sales/QuickSale.jsx';
 import Invoices from './pages/invoices/Invoices.jsx';
 import Inventory from './pages/inventory/Inventory.jsx';
 import Products from './pages/products/Products.jsx';
+import Vendors from './pages/vendors/Vendors.jsx';
 import UserList from './pages/users/UserList.jsx';
 import UserCreate from './pages/users/UserCreate.jsx';
 import UserEdit from './pages/users/UserEdit.jsx';
@@ -426,6 +427,7 @@ function AppRoutes() {
           <Route path="sales" element={<Navigate to="/sales/invoices" replace />} />
         <Route path="inventory" element={<ProtectedRoute permission={PERMISSIONS.PRODUCT_READ}><Inventory /></ProtectedRoute>} />
         <Route path="products" element={<ProtectedRoute permission={PERMISSIONS.PRODUCT_READ}><Products /></ProtectedRoute>} />
+        <Route path="vendors" element={<ProtectedRoute permission={PERMISSIONS.VENDOR_READ}><Vendors /></ProtectedRoute>} />
         <Route path="sales/invoices" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_READ}><Invoices variant="invoices" /></ProtectedRoute>} />
         <Route path="sales/credit-notes" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_READ}><Invoices variant="credit-notes" /></ProtectedRoute>} />
         <Route path="sales/e-invoices" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_READ}><Invoices variant="e-invoices" /></ProtectedRoute>} />

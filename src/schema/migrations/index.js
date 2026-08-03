@@ -572,6 +572,57 @@ export const MIGRATIONS = Object.freeze([
       `DROP TABLE IF EXISTS product_suppliers`,
     ],
   },
+  {
+    version: 11,
+    name: 'vendor_management',
+    up: [
+      `ALTER TABLE product_suppliers ADD COLUMN IF NOT EXISTS category_id UUID`,
+      `ALTER TABLE product_suppliers ADD COLUMN IF NOT EXISTS city TEXT`,
+      `ALTER TABLE product_suppliers ADD COLUMN IF NOT EXISTS payment_terms TEXT`,
+      `ALTER TABLE product_suppliers ADD COLUMN IF NOT EXISTS outstanding_amount NUMERIC DEFAULT 0`,
+      `ALTER TABLE product_suppliers ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'`,
+      `CREATE INDEX IF NOT EXISTS idx_product_suppliers_city ON product_suppliers (city)`,
+      `CREATE INDEX IF NOT EXISTS idx_product_suppliers_created_by ON product_suppliers (created_by)`,
+      `CREATE INDEX IF NOT EXISTS idx_product_suppliers_status ON product_suppliers (status)`,
+      `CREATE INDEX IF NOT EXISTS idx_product_suppliers_category_id ON product_suppliers (category_id)`,
+      `CREATE TABLE IF NOT EXISTS supplier_categories (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL UNIQUE,
+        created_by UUID,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_supplier_categories_name ON supplier_categories (name)`,
+      `ALTER TABLE supplier_categories ENABLE ROW LEVEL SECURITY`,
+      `ALTER TABLE supplier_categories FORCE ROW LEVEL SECURITY`,
+      `DO $$ BEGIN CREATE POLICY "Owner read" ON supplier_categories FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid()); EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+      `DO $$ BEGIN CREATE POLICY "Owner write" ON supplier_categories FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid()); EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+      `DO $$ BEGIN CREATE POLICY "Owner update" ON supplier_categories FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid()); EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+      `DO $$ BEGIN CREATE POLICY "Owner delete" ON supplier_categories FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid()); EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+      `INSERT INTO supplier_categories (id, name) VALUES
+        ('e15c7e40-9b2a-4f6a-9d1e-000000000101', 'Groceries'),
+        ('e15c7e40-9b2a-4f6a-9d1e-000000000102', 'Dairy Products'),
+        ('e15c7e40-9b2a-4f6a-9d1e-000000000103', 'Beverages'),
+        ('e15c7e40-9b2a-4f6a-9d1e-000000000104', 'General'),
+        ('e15c7e40-9b2a-4f6a-9d1e-000000000105', 'Snacks'),
+        ('e15c7e40-9b2a-4f6a-9d1e-000000000106', 'Home Care'),
+        ('e15c7e40-9b2a-4f6a-9d1e-000000000107', 'Personal Care')
+       ON CONFLICT DO NOTHING`,
+    ],
+    down: [
+      `DROP INDEX IF EXISTS idx_supplier_categories_name`,
+      `DROP TABLE IF EXISTS supplier_categories`,
+      `DROP INDEX IF EXISTS idx_product_suppliers_category_id`,
+      `DROP INDEX IF EXISTS idx_product_suppliers_status`,
+      `DROP INDEX IF EXISTS idx_product_suppliers_created_by`,
+      `DROP INDEX IF EXISTS idx_product_suppliers_city`,
+      `ALTER TABLE product_suppliers DROP COLUMN IF EXISTS status`,
+      `ALTER TABLE product_suppliers DROP COLUMN IF EXISTS outstanding_amount`,
+      `ALTER TABLE product_suppliers DROP COLUMN IF EXISTS payment_terms`,
+      `ALTER TABLE product_suppliers DROP COLUMN IF EXISTS city`,
+      `ALTER TABLE product_suppliers DROP COLUMN IF EXISTS category_id`,
+    ],
+  },
 ]);
 
 export class MigrationRunner {

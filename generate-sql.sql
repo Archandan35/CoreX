@@ -178,6 +178,18 @@ CREATE TABLE IF NOT EXISTS product_suppliers (
   phone TEXT,
   address TEXT,
   gstin TEXT,
+  category_id UUID,
+  city TEXT,
+  payment_terms TEXT,
+  outstanding_amount NUMERIC NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS supplier_categories (
+  id UUID PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL UNIQUE,
   created_by UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -540,6 +552,11 @@ CREATE INDEX IF NOT EXISTS idx_product_suppliers_company ON product_suppliers (c
 CREATE INDEX IF NOT EXISTS idx_product_suppliers_email ON product_suppliers (email);
 CREATE INDEX IF NOT EXISTS idx_product_suppliers_phone ON product_suppliers (phone);
 CREATE INDEX IF NOT EXISTS idx_product_suppliers_gstin ON product_suppliers (gstin);
+CREATE INDEX IF NOT EXISTS idx_product_suppliers_city ON product_suppliers (city);
+CREATE INDEX IF NOT EXISTS idx_product_suppliers_created_by ON product_suppliers (created_by);
+CREATE INDEX IF NOT EXISTS idx_product_suppliers_status ON product_suppliers (status);
+CREATE INDEX IF NOT EXISTS idx_product_suppliers_category_id ON product_suppliers (category_id);
+CREATE INDEX IF NOT EXISTS idx_supplier_categories_name ON supplier_categories (name);
 CREATE INDEX IF NOT EXISTS idx_products_name ON products (name);
 CREATE INDEX IF NOT EXISTS idx_products_sku ON products (sku);
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON products (barcode);
@@ -779,6 +796,24 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Owner delete" ON product_manufacturers FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE supplier_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supplier_categories FORCE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON supplier_categories FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON supplier_categories FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON supplier_categories FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON supplier_categories FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 ALTER TABLE product_suppliers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE product_suppliers FORCE ROW LEVEL SECURITY;
@@ -1086,6 +1121,16 @@ INSERT INTO document_type_master (id, name) VALUES
   ('e15c7e40-9b2a-4f6a-9d1e-000000000009', 'Pro Forma Invoice'),
   ('e15c7e40-9b2a-4f6a-9d1e-000000000010', 'Subscription'),
   ('e15c7e40-9b2a-4f6a-9d1e-000000000011', 'Sales Debit Note')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO supplier_categories (id, name) VALUES
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000101', 'Groceries'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000102', 'Dairy Products'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000103', 'Beverages'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000104', 'General'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000105', 'Snacks'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000106', 'Home Care'),
+  ('e15c7e40-9b2a-4f6a-9d1e-000000000107', 'Personal Care')
 ON CONFLICT DO NOTHING;
 
 

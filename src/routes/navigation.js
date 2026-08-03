@@ -33,6 +33,16 @@ export const NAV_GROUPS = [
       { to: '/inventory', label: 'Inventory', icon: 'layers', end: true, permission: PERMISSIONS.PRODUCT_READ },
     ],
   },
+  { type: 'heading', label: 'PURCHASES' },
+  {
+    label: '',
+    items: [
+      { to: '/vendors', label: 'Vendors', icon: 'users', end: true, permission: PERMISSIONS.VENDOR_READ },
+      { to: '/purchases/orders', label: 'Purchase Orders', icon: 'clipboard-list', end: true, permission: PERMISSIONS.VENDOR_READ },
+      { to: '/purchases/bills', label: 'Purchase Bills', icon: 'receipt', end: true, permission: PERMISSIONS.VENDOR_READ },
+      { to: '/purchases/payments', label: 'Payments', icon: 'credit-card', end: true, permission: PERMISSIONS.VENDOR_READ },
+    ],
+  },
   { type: 'heading', label: 'User Management' },
   {
     label: '',

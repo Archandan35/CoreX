@@ -217,15 +217,28 @@ export const SCHEMAS = {
     searchableFields: ['name'],
   },
 
+  supplier_categories: {
+    table: 'supplier_categories',
+    columns: ['id', 'name', 'created_by', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', name: 'TEXT', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    primaryKey: 'id',
+    nullable: ['created_by'],
+    defaults: { created_at: 'NOW()', updated_at: 'NOW()' },
+    unique: { name: 'name' },
+    rls: true,
+    searchableFields: ['name'],
+  },
+
   product_suppliers: {
     table: 'product_suppliers',
-    columns: ['id', 'name', 'company', 'contact_person', 'email', 'phone', 'address', 'gstin', 'created_by', 'created_at', 'updated_at'],
-    columnTypes: { id: 'UUID', name: 'TEXT', company: 'TEXT', contact_person: 'TEXT', email: 'TEXT', phone: 'TEXT', address: 'TEXT', gstin: 'TEXT', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    columns: ['id', 'name', 'company', 'contact_person', 'email', 'phone', 'address', 'gstin', 'category_id', 'city', 'payment_terms', 'outstanding_amount', 'status', 'created_by', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', name: 'TEXT', company: 'TEXT', contact_person: 'TEXT', email: 'TEXT', phone: 'TEXT', address: 'TEXT', gstin: 'TEXT', category_id: 'UUID', city: 'TEXT', payment_terms: 'TEXT', outstanding_amount: 'NUMERIC', status: 'TEXT', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
     primaryKey: 'id',
-    nullable: ['company', 'contact_person', 'email', 'phone', 'address', 'gstin', 'created_by'],
-    defaults: { created_at: 'NOW()', updated_at: 'NOW()' },
+    nullable: ['company', 'contact_person', 'email', 'phone', 'address', 'gstin', 'category_id', 'city', 'payment_terms', 'created_by'],
+    defaults: { outstanding_amount: '0', status: "'active'", created_at: 'NOW()', updated_at: 'NOW()' },
     rls: true,
-    searchableFields: ['name', 'company', 'email', 'phone', 'gstin'],
+    searchableFields: ['name', 'company', 'email', 'phone', 'gstin', 'city'],
+    indexes: ['created_by', 'status', 'category_id'],
   },
 
   products: {
@@ -503,6 +516,20 @@ SCHEMAS.seedData = [
       { id: 'e15c7e40-9b2a-4f6a-9d1e-000000000009', name: 'Pro Forma Invoice' },
       { id: 'e15c7e40-9b2a-4f6a-9d1e-000000000010', name: 'Subscription' },
       { id: 'e15c7e40-9b2a-4f6a-9d1e-000000000011', name: 'Sales Debit Note' },
+    ],
+  },
+  {
+    table: 'supplier_categories',
+    required: true,
+    minCount: 1,
+    data: [
+      { id: 'e15c7e40-9b2a-4f6a-9d1e-000000000101', name: 'Groceries' },
+      { id: 'e15c7e40-9b2a-4f6a-9d1e-000000000102', name: 'Dairy Products' },
+      { id: 'e15c7e40-9b2a-4f6a-9d1e-000000000103', name: 'Beverages' },
+      { id: 'e15c7e40-9b2a-4f6a-9d1e-000000000104', name: 'General' },
+      { id: 'e15c7e40-9b2a-4f6a-9d1e-000000000105', name: 'Snacks' },
+      { id: 'e15c7e40-9b2a-4f6a-9d1e-000000000106', name: 'Home Care' },
+      { id: 'e15c7e40-9b2a-4f6a-9d1e-000000000107', name: 'Personal Care' },
     ],
   },
 ];

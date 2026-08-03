@@ -178,6 +178,22 @@ export class ProductService {
     return this._deleteRow('product_suppliers', id);
   }
 
+  async listSupplierCategories() {
+    return this._listRows('supplier_categories');
+  }
+
+  async createSupplierCategory(payload) {
+    return this._createRow('supplier_categories', payload);
+  }
+
+  async updateSupplierCategory(id, payload) {
+    return this._updateRow('supplier_categories', id, payload);
+  }
+
+  async deleteSupplierCategory(id) {
+    return this._deleteRow('supplier_categories', id);
+  }
+
   async _listRows(table) {
     const supabase = await getSupabaseClient();
     const { data, error } = await supabase.from(table).select('*').order('name', { ascending: true });
