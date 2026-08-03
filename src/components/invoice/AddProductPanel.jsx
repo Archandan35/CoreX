@@ -137,22 +137,41 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
     if (!validate()) return;
     setBusy(true);
     try {
+      // Map the form onto the real `products` columns only. The form carries
+      // several UI-only fields (auto_barcode, hsn_sac, warehouse, batch,
+      // discount, discount_type, inventory_tracking, featured, custom_fields,
+      // etc.) that do NOT exist on the `products` table — sending them to
+      // createProduct would fail with "Could not find the '<field>' column of
+      // 'products' in the schema cache", so they are never forwarded.
       const payload = {
-        ...form,
+        name: form.name,
+        sku: form.sku || null,
+        barcode: form.barcode || null,
+        category_id: form.category_id || null,
+        description: form.description,
         unit_price: parseFloat(form.selling_price) || 0,
+        purchase_price: parseFloat(form.purchase_price) || 0,
         tax_rate: parseFloat(form.tax_rate) || 0,
+        tax_type: form.tax_type || 'exclusive',
+        unit: form.unit || null,
+        hsn_code: form.hsn_sac || null,
+        item_code: form.item_code || null,
+        item_group: form.item_group || null,
+        brand: form.brand || null,
+        manufacturer: form.manufacturer || null,
+        is_service: !!form.is_service,
+        is_featured: !!form.featured,
+        show_online: !!form.show_online,
+        not_for_sale: !!form.not_for_sale,
+        allow_negative: !!form.allow_negative,
+        track_serial: !!form.track_serial,
+        track_batch: !!form.track_batch,
+        track_expiry: !!form.track_expiry,
+        max_discount: parseFloat(form.max_discount) || 0,
+        cess: parseFloat(form.cess) || 0,
         stock_quantity: parseFloat(form.opening_qty) || 0,
         stock_alert: parseFloat(form.low_stock_alert) || 0,
-        purchase_price: parseFloat(form.purchase_price) || 0,
       };
-      delete payload.selling_price;
-      delete payload.opening_qty;
-      delete payload.opening_price;
-      delete payload.opening_value;
-      delete payload.low_stock_alert;
-      delete payload.reorder_qty;
-      delete payload.media;
-      delete payload.attachments;
       const product = await invoiceService.createProduct(payload);
       if (priceListRows.length) {
         await invoiceService.saveProductPriceLists(product.id, priceListRows.map(r => ({
