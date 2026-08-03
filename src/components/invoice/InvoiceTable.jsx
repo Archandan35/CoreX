@@ -1,13 +1,12 @@
 import { useMemo, memo } from 'react';
 import Icon from '../ui/Icon.jsx';
-import Badge from '../ui/Badge.jsx';
 import { computeLine, round2 } from '../../business/invoice/calculations.js';
 import { TAX_RATE_OPTIONS, DISCOUNT_TYPE, INVOICE_TABLE_COLUMNS } from '../../constants/index.js';
 
 const EMPTY_ICON = 'package';
 
 const COLUMN_RENDERERS = {
-  lineNo: ({ line, index }) => (
+  lineNo: ({ _line, index }) => (
     <td key="lineNo" style={{ textAlign: 'center', color: 'var(--inv-text-sub)', fontSize: 12, fontWeight: 500 }}>{index + 1}</td>
   ),
   productName: ({ line, index, onChange, stockWarning }) => (
@@ -31,7 +30,7 @@ const COLUMN_RENDERERS = {
       <input type="number" min="0" step="any" className="inv-table-input" value={line.freeQty ?? ''} onChange={(e) => { let val = e.target.value === '' ? '' : Number(e.target.value); onChange(index, { ...line, freeQty: val }); }} placeholder="0" />
     </td>
   ),
-  unit: ({ line, index, onChange, units, warehouses }) => {
+  unit: ({ line, index, onChange, units, _warehouses }) => {
     const unitList = units || [];
     if (unitList.length > 0) {
       return (
@@ -95,7 +94,7 @@ const COLUMN_RENDERERS = {
       <input className="inv-table-input" value={line.batch || ''} onChange={(e) => onChange(index, { ...line, batch: e.target.value })} placeholder="Batch" />
     </td>
   ),
-  warehouse: ({ line, index, onChange, units, warehouses }) => {
+  warehouse: ({ line, index, onChange, _units, warehouses }) => {
     const whList = warehouses || [];
     if (whList.length > 0) {
       return (

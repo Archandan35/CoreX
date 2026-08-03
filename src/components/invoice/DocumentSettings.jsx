@@ -676,7 +676,7 @@ export default function DocumentSettings({ open, onClose }) {
   );
 }
 
-function SectionWrapper({ id, sectionRefs, meta, scrollToSection, children }) {
+function SectionWrapper({ id, sectionRefs, meta, _scrollToSection, children }) {
   return (
     <div className="ds-section" id={`ds-${id}`} data-section-id={id}
       ref={(el) => { sectionRefs.current[id] = el; }}>

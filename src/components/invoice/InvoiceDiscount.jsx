@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Card from '../ui/Card.jsx';
 import Button from '../ui/Button.jsx';
 import Select from '../ui/Select.jsx';
-import { Field, Input } from '../ui/Field.jsx';
+import { Input } from '../ui/Field.jsx';
 import Icon from '../ui/Icon.jsx';
 import Modal from '../ui/Modal.jsx';
 import Toggle from '../ui/Toggle.jsx';
@@ -22,7 +22,7 @@ export default function InvoiceDiscount({
   subtotal,
   lineDiscountTotal,
   invoiceDiscount,
-  discountTotal,
+  _discountTotal,
 }) {
   const [showChargesModal, setShowChargesModal] = useState(false);
   const [showDiscountInput, setShowDiscountInput] = useState(false);

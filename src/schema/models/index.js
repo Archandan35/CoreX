@@ -217,16 +217,27 @@ export const SCHEMAS = {
     searchableFields: ['name'],
   },
 
+  product_suppliers: {
+    table: 'product_suppliers',
+    columns: ['id', 'name', 'company', 'contact_person', 'email', 'phone', 'address', 'gstin', 'created_by', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', name: 'TEXT', company: 'TEXT', contact_person: 'TEXT', email: 'TEXT', phone: 'TEXT', address: 'TEXT', gstin: 'TEXT', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    primaryKey: 'id',
+    nullable: ['company', 'contact_person', 'email', 'phone', 'address', 'gstin', 'created_by'],
+    defaults: { created_at: 'NOW()', updated_at: 'NOW()' },
+    rls: true,
+    searchableFields: ['name', 'company', 'email', 'phone', 'gstin'],
+  },
+
   products: {
     table: 'products',
-    columns: ['id', 'name', 'sku', 'barcode', 'category_id', 'description', 'unit_price', 'mrp', 'purchase_price', 'tax_rate', 'unit', 'hsn_code', 'item_code', 'item_group', 'brand', 'manufacturer', 'tax_type', 'is_service', 'is_featured', 'show_online', 'not_for_sale', 'allow_negative', 'track_serial', 'track_batch', 'track_expiry', 'max_discount', 'cess', 'reorder_qty', 'stock_quantity', 'stock_alert', 'created_by', 'created_at', 'updated_at'],
-    columnTypes: { id: 'UUID', name: 'TEXT', sku: 'TEXT', barcode: 'TEXT', category_id: 'UUID', description: 'TEXT', unit_price: 'NUMERIC', mrp: 'NUMERIC', purchase_price: 'NUMERIC', tax_rate: 'NUMERIC', unit: 'TEXT', hsn_code: 'TEXT', item_code: 'TEXT', item_group: 'TEXT', brand: 'TEXT', manufacturer: 'TEXT', tax_type: 'TEXT', is_service: 'BOOLEAN', is_featured: 'BOOLEAN', show_online: 'BOOLEAN', not_for_sale: 'BOOLEAN', allow_negative: 'BOOLEAN', track_serial: 'BOOLEAN', track_batch: 'BOOLEAN', track_expiry: 'BOOLEAN', max_discount: 'NUMERIC', cess: 'NUMERIC', reorder_qty: 'NUMERIC', stock_quantity: 'NUMERIC', stock_alert: 'NUMERIC', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
+    columns: ['id', 'name', 'sku', 'barcode', 'category_id', 'supplier_id', 'description', 'unit_price', 'mrp', 'purchase_price', 'tax_rate', 'unit', 'hsn_code', 'item_code', 'item_group', 'brand', 'manufacturer', 'tax_type', 'is_service', 'is_featured', 'show_online', 'not_for_sale', 'allow_negative', 'track_serial', 'track_batch', 'track_expiry', 'max_discount', 'cess', 'reorder_qty', 'stock_quantity', 'stock_alert', 'created_by', 'created_at', 'updated_at'],
+    columnTypes: { id: 'UUID', name: 'TEXT', sku: 'TEXT', barcode: 'TEXT', category_id: 'UUID', supplier_id: 'UUID', description: 'TEXT', unit_price: 'NUMERIC', mrp: 'NUMERIC', purchase_price: 'NUMERIC', tax_rate: 'NUMERIC', unit: 'TEXT', hsn_code: 'TEXT', item_code: 'TEXT', item_group: 'TEXT', brand: 'TEXT', manufacturer: 'TEXT', tax_type: 'TEXT', is_service: 'BOOLEAN', is_featured: 'BOOLEAN', show_online: 'BOOLEAN', not_for_sale: 'BOOLEAN', allow_negative: 'BOOLEAN', track_serial: 'BOOLEAN', track_batch: 'BOOLEAN', track_expiry: 'BOOLEAN', max_discount: 'NUMERIC', cess: 'NUMERIC', reorder_qty: 'NUMERIC', stock_quantity: 'NUMERIC', stock_alert: 'NUMERIC', created_by: 'UUID', created_at: 'TIMESTAMPTZ', updated_at: 'TIMESTAMPTZ' },
     primaryKey: 'id',
-    nullable: ['sku', 'barcode', 'category_id', 'description', 'unit', 'hsn_code', 'item_code', 'item_group', 'brand', 'manufacturer', 'created_by'],
+    nullable: ['sku', 'barcode', 'category_id', 'supplier_id', 'description', 'unit', 'hsn_code', 'item_code', 'item_group', 'brand', 'manufacturer', 'created_by'],
     defaults: { unit_price: '0', mrp: '0', purchase_price: '0', tax_rate: '0', tax_type: "'exclusive'", is_service: 'false', is_featured: 'false', show_online: 'false', not_for_sale: 'false', allow_negative: 'false', track_serial: 'false', track_batch: 'false', track_expiry: 'false', max_discount: '0', cess: '0', reorder_qty: '0', stock_quantity: '0', stock_alert: '0', created_at: 'NOW()', updated_at: 'NOW()' },
     rls: true,
     searchableFields: ['name', 'sku', 'barcode', 'hsn_code', 'item_code'],
-    indexes: ['created_by'],
+    indexes: ['created_by', 'supplier_id'],
   },
 
   banks: {

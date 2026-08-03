@@ -114,7 +114,6 @@ export async function supabaseLogin(identifier, password) {
     let email = '';
     const isEmail = EMAIL_PATTERN.test(trimmed);
     const isPhone = /^\d{10}$/.test(trimmed);
-    const isUsername = !isEmail && !isPhone;
 
     if (isEmail) {
       email = trimmed;
@@ -236,7 +235,7 @@ export async function supabaseLogout() {
 export async function supabaseResendEmail(email) {
   try {
     const client = await getSupabaseClient();
-    const { data, error } = await client.auth.resend({
+    const { error } = await client.auth.resend({
       type: 'signup',
       email: email,
       options: { emailRedirectTo: `${config.appUrl}/login` },

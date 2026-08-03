@@ -149,7 +149,7 @@ export default function CustomHeaderPanel({ open, onClose }) {
     } finally {
       setEditSaving(false);
     }
-  }, [editForm, editItem, page, search, sortField, sortDir, items]);
+  }, [editForm, editItem, page, search, sortField, sortDir, items, closeEdit]);
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;

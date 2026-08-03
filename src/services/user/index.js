@@ -16,7 +16,7 @@ export class UserService {
 
   async createUser(payload) {
     const supabase = await getSupabaseClient();
-    const { password, ...profile } = payload;
+    const { ...profile } = payload;
     const { data, error } = await supabase.from('users').insert({ ...profile, id: crypto.randomUUID() }).select().single();
     if (error) throw new Error(error.message);
     return data;

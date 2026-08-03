@@ -64,7 +64,7 @@ export default function useDocumentForm({ defaults = {}, rules = {}, onSave } = 
     touched: !!touched.current[field],
     onBlur: () => { markTouched(field); if (rules[field]) validate(field, data[field], rules[field]); },
     ...overrides,
-  }), [data, errors, rules, validate, setField, markTouched]);
+  }), [data, errors, rules, validate, setField, markTouched, touched]);
 
   return {
     data, setField, setFields, setData,

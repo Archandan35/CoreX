@@ -135,9 +135,31 @@ export class SqlGenerator {
     for (const entity of this._entities) {
       if (!entity.def.table) continue;
       if (entity.def.table === '_schema_version') continue; // handled by _genVersion()
-      blocks.push(this._genTable({ name: entity.def.table, _def: entity.def }));
+      const create = this._genTable({ name: entity.def.table, _def: entity.def });
+      const alters = this._genColumnAlters(entity.def.table, entity.def);
+      blocks.push([create, alters].filter(Boolean).join('\n\n'));
     }
     return blocks;
+  }
+
+  // Emit ADD COLUMN IF NOT EXISTS for every non-primary-key column after its
+  // CREATE TABLE. Because the full-schema script can be run against an already
+  // provisioned database (where CREATE TABLE IF NOT EXISTS is a no-op), these
+  // idempotent alters ensure columns added in newer schema versions are
+  // migrated in (mirroring src/schema/migrations) so later index creation on
+  // those columns never fails with SQLSTATE 42703. NOT NULL is intentionally
+  // omitted here so the alter never fails on a table that already has rows.
+  _genColumnAlters(tableName, def) {
+    if (!def || !Array.isArray(def.columns)) return null;
+    const stmts = [];
+    for (const col of def.columns) {
+      if (col === def.primaryKey) continue;
+      const type = def.columnTypes?.[col] || 'TEXT';
+      let sql = `ALTER TABLE ${tableName} ADD COLUMN IF NOT EXISTS ${col} ${type}`;
+      if (def.defaults?.[col]) sql += ` DEFAULT ${def.defaults[col]}`;
+      stmts.push(sql + ';');
+    }
+    return stmts.length ? stmts.join('\n') : null;
   }
 
   _genMissingTables(missing) {

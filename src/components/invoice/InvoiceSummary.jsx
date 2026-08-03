@@ -10,7 +10,7 @@ export default function InvoiceSummary({
   roundOff, onRoundOff, beforeRound, grandTotal,
   selectedBank, banks, onSelectBank, onAddNewBank,
   payments, onAddPayment, onRemovePayment, onUpdatePayment,
-  markFullyPaid, onMarkFullyPaid, balanceDue,
+  markFullyPaid, onMarkFullyPaid, _balanceDue,
   signatures, selectedSignature, onSelectSignature, onAddNewSignature,
   sigName,
 }) {

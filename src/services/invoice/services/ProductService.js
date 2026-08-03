@@ -4,7 +4,7 @@ export class ProductService {
   async listProducts() {
     const supabase = await getSupabaseClient();
     const [pr, cr] = await Promise.all([
-      supabase.from('products').select('*, category:product_categories(id,name)').order('created_at', { ascending: false }),
+      supabase.from('products').select('*, category:product_categories(id,name), supplier:product_suppliers(id,name)').order('created_at', { ascending: false }),
       supabase.from('product_categories').select('*').order('name', { ascending: true }),
     ]);
     if (pr.error) return { products: [], categories: [] };
@@ -160,6 +160,22 @@ export class ProductService {
 
   async deleteManufacturer(id) {
     return this._deleteRow('product_manufacturers', id);
+  }
+
+  async listSuppliers() {
+    return this._listRows('product_suppliers');
+  }
+
+  async createSupplier(payload) {
+    return this._createRow('product_suppliers', payload);
+  }
+
+  async updateSupplier(id, payload) {
+    return this._updateRow('product_suppliers', id, payload);
+  }
+
+  async deleteSupplier(id) {
+    return this._deleteRow('product_suppliers', id);
   }
 
   async _listRows(table) {

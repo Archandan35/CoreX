@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { invoiceService } from '../../services/invoice/index.js';
-import { Field, Input } from '../ui/Field.jsx';
-import Select from '../ui/Select.jsx';
+import { Input } from '../ui/Field.jsx';
 import Checkbox from '../ui/Checkbox.jsx';
 import Icon from '../ui/Icon.jsx';
 import Button from '../ui/Button.jsx';
@@ -23,7 +22,7 @@ const INPUT_TYPE_RENDERERS = {
       style={{ fontSize: 13, fontFamily: 'inherit', resize: 'vertical' }} />
   ),
   checkbox: ({ value, onChange, label }) => <Checkbox checked={!!value} onChange={(v) => onChange(v)} label={label} />,
-  toggle: ({ value, onChange, label }) => (
+  toggle: ({ value, onChange, _label }) => (
     <label className="ds-switch" style={{ marginTop: 4 }}>
       <input type="checkbox" checked={!!value} onChange={(e) => onChange(e.target.checked)} />
       <span className={`ds-slider${value ? ' on' : ''}`} />
@@ -53,6 +52,7 @@ export default function DynamicCustomHeaders({ values, onChange, docType, chipMo
       })
       .catch(() => setHeaders([]))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docType, refreshKey]);
 
   // Seed expanded set from existing values once when headers load (edit mode)

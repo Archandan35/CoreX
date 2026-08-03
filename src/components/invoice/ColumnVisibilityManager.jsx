@@ -12,7 +12,7 @@ const PERMISSION_MAP = {
 export default function ColumnVisibilityManager({
   visibleKeys,
   onToggle,
-  onSetKeys,
+  _onSetKeys,
   trigger,
   allColumns,
 }) {

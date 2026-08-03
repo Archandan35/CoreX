@@ -29,7 +29,8 @@ export const NAV_GROUPS = [
   {
     label: '',
     items: [
-      { to: '/inventory', label: 'Products', icon: 'package', end: true, permission: PERMISSIONS.PRODUCT_READ },
+      { to: '/products', label: 'Products', icon: 'package', end: true, permission: PERMISSIONS.PRODUCT_READ },
+      { to: '/inventory', label: 'Inventory', icon: 'layers', end: true, permission: PERMISSIONS.PRODUCT_READ },
     ],
   },
   { type: 'heading', label: 'User Management' },

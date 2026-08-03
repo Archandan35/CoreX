@@ -52,6 +52,7 @@ export default function UserCreate() {
         setForm((p) => ({ ...p, role: roleList[0].name }));
       }
     }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const set = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));

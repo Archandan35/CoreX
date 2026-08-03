@@ -1,11 +1,11 @@
 import Card from '../ui/Card.jsx';
 import Button from '../ui/Button.jsx';
-import Select from '../ui/Select.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import PermissionGate from '../ui/PermissionGate.jsx';
 import Icon from '../ui/Icon.jsx';
-import { TAX_RATE_OPTIONS, DISCOUNT_TYPE } from '../../constants/index.js';
+import { DISCOUNT_TYPE } from '../../constants/index.js';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
+import ProductModal from './ProductModal.jsx';
 
 // Editable product line-item table. Each row computes derived amounts live
 // (qty × price, discount, tax, total). Supports duplicate, remove, and
@@ -22,7 +22,7 @@ export default function ProductsTable({
   onSubmitProduct,
   categories,
   showDescription,
-  onToggleDescription,
+  _onToggleDescription,
 }) {
   const columns = ['#', 'Product Name', 'Quantity', 'Unit Price', 'Price with Tax', 'Discount', 'Tax Amount', 'Total'];
 
@@ -30,8 +30,6 @@ export default function ProductsTable({
     { value: DISCOUNT_TYPE.PERCENT, label: '%' },
     { value: DISCOUNT_TYPE.FIXED, label: 'Fixed' },
   ];
-
-  const taxOptions = TAX_RATE_OPTIONS.map((r) => ({ value: String(r), label: `${r}%` }));
 
   const setField = (idx, field, value) => {
     const item = { ...rows[idx] };

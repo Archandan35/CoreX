@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import Modal from '../../ui/Modal.jsx';
 import Button from '../../ui/Button.jsx';
-import { Field, Input } from '../../ui/Field.jsx';
 import Icon from '../../ui/Icon.jsx';
 import Dropdown, { DropdownItem } from '../../ui/Dropdown.jsx';
 import { PAYMENT_MODE_OPTIONS } from '../../../constants/index.js';

@@ -4,11 +4,11 @@ export class DatabaseProvider {
     this.type = null;
   }
 
-  async connect(config) {
+  async connect(_config) {
     throw new Error('connect() must be implemented by provider subclass.');
   }
 
-  async query(sql, params) {
+  async query(_sql, _params) {
     throw new Error('query() must be implemented by provider subclass.');
   }
 

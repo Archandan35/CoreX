@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { NavLink } from 'react-router-dom';
 import { NAV_GROUPS } from '../../routes/navigation.js';
 import { usePermission } from '../../identity/authorization/PermissionContext.jsx';
@@ -46,7 +46,7 @@ function SidebarItem({ item, collapsed }) {
   );
 }
 
-function SubmenuGroup({ item, collapsed, hasPermission }) {
+function SubmenuGroup({ item, _collapsed, hasPermission }) {
   const [open, setOpen] = useState(true);
   const subId = `sub-${item.label?.replace(/\s+/g, '-').toLowerCase()}`;
 
@@ -105,7 +105,7 @@ function buildSections() {
   return sections;
 }
 
-export default function Sidebar({ collapsed, mobileOpen, onToggle }) {
+export default function Sidebar({ collapsed, mobileOpen, _onToggle }) {
   const { hasPermission } = usePermission();
   const [logoUrl, setLogoUrl] = useState(null);
 

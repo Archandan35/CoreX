@@ -34,7 +34,6 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [priceLists, setPriceLists] = useState([]);
   const [priceListRows, setPriceListRows] = useState([]);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);

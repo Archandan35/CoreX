@@ -1,5 +1,4 @@
 const REQUIRED_FUNCTIONS = ['exec_sql', 'check_admin_exists', 'is_admin_user', 'handle_new_user'];
-const REQUIRED_AUTH_TRIGGER = 'on_auth_user_created';
 
 export class DatabaseValidator {
   constructor(db) {
@@ -38,7 +37,6 @@ export class DatabaseValidator {
     }
 
     const hasTables = this.results.tables.length > 0;
-    const someTableExists = this.results.tables.some((t) => t.exists);
 
     if (hasTables) {
       await this._checkSchemas();

@@ -167,8 +167,8 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
           const dbClient = {
             query: async (sql, params) => {
               const lower = sql.trim().toLowerCase();
-              const tbl = (n) => params && params.length > 0 ? params[0] : (sql.match(/table_name\s*=\s*['''](\w+)[''']/i)?.[1] || '');
-              const col = (n) => params && params.length > 1 ? params[1] : (sql.match(/column_name\s*=\s*['''](\w+)[''']/i)?.[1] || '');
+              const tbl = (_n) => params && params.length > 0 ? params[0] : (sql.match(/table_name\s*=\s*['''](\w+)[''']/i)?.[1] || '');
+              const col = (_n) => params && params.length > 1 ? params[1] : (sql.match(/column_name\s*=\s*['''](\w+)[''']/i)?.[1] || '');
               const tableName = params?.[0] || sql.match(/FROM\s+(\w+)/i)?.[1] || '';
               const columnName = params?.[1] || '';
 
@@ -437,6 +437,7 @@ export default function SetupWizard({ schema, onComplete, db, initialStep }) {
       setVerifyStatus({ ok: false, message: msg });
       notify('Verification failed', 'error');
     } finally { setExecuting(false); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dbInstance, sqlText, schema, storeReport]);
 
   const handleVerifyInstall = useCallback(async () => {

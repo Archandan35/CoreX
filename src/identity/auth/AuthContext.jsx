@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { setApiToken } from '../../services/api.js';
-import { config } from '../../config/index.js';
 
 const AuthContext = createContext(null);
 
@@ -13,7 +12,7 @@ async function getSupabaseAuth() {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;

@@ -13,7 +13,6 @@ import { settingsApiService } from '../services/settings/SettingsApiService.js';
 import { notificationManager } from '../managers/NotificationManager.js';
 import { settingsManager } from '../managers/SettingsManager.js';
 import { validateSettings } from '../business/validation/SettingsValidator.js';
-import useSaveHandler from '../hooks/useSaveHandler.js';
 import { invalidateCache } from '../services/ui-sync/index.js';
 
 const MEMBERSHIP_OPTIONS = [

@@ -77,11 +77,11 @@ class POSService {
     return result;
   }
 
-  calculateTaxRate(product, company) {
+  calculateTaxRate(product, _company) {
     return Number(product?.tax_rate) || 0;
   }
 
-  calculateProductPrice(product, settings) {
+  calculateProductPrice(product, _settings) {
     const priceWithTax = product?.price_with_tax;
     const price = product?.price || product?.sale_price || product?.mrp || 0;
     if (priceWithTax) return Number(price);

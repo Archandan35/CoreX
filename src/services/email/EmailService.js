@@ -17,12 +17,12 @@ export class EmailService {
 }
 
 export class SmtpEmailProvider {
-  async send({ to, subject, html }) {
+  async send({ to, subject, _html }) {
     console.log(`[Email] To: ${to}, Subject: ${subject}`);
     return { success: true, to, subject };
   }
 
-  async sendTemplate({ to, template, data }) {
+  async sendTemplate({ to, template, _data }) {
     console.log(`[Email] Template: ${template}, To: ${to}`);
     return { success: true, to, template };
   }

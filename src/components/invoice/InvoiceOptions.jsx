@@ -1,9 +1,8 @@
 import { useRef, useState, useCallback } from 'react';
 import Card from '../ui/Card.jsx';
-import Button from '../ui/Button.jsx';
 import Toggle from '../ui/Toggle.jsx';
 import Icon from '../ui/Icon.jsx';
-import { withinAttachmentLimit, validateAttachment } from '../../business/invoice/validation.js';
+import { validateAttachment } from '../../business/invoice/validation.js';
 import { INVOICE_ATTACHMENT_MAX_FILES, INVOICE_ATTACHMENT_MIME_TYPES } from '../../constants/index.js';
 
 export default function InvoiceOptions({

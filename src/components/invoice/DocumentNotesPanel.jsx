@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import Icon from '../ui/Icon.jsx';
-import { Field, Input } from '../ui/Field.jsx';
+import { Field } from '../ui/Field.jsx';
 import Select from '../ui/Select.jsx';
 import PermissionGate from '../ui/PermissionGate.jsx';
 import ConfirmDialog from '../ui/ConfirmDialog.jsx';
@@ -34,7 +34,7 @@ export default function DocumentNotesPanel({ open, onClose }) {
         }
       })
       .catch(() => {});
-  }, [open]);
+  }, [open, docType]);
 
   useEffect(() => {
     if (!open) return;
@@ -89,7 +89,7 @@ export default function DocumentNotesPanel({ open, onClose }) {
     } finally {
       setEditSaving(false);
     }
-  }, [editText, editItem, isNotes, docType]);
+  }, [editText, editItem, isNotes, docType, closeEdit]);
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;

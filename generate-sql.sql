@@ -169,12 +169,26 @@ CREATE TABLE IF NOT EXISTS product_manufacturers (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS product_suppliers (
+  id UUID PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL UNIQUE,
+  company TEXT,
+  contact_person TEXT,
+  email TEXT,
+  phone TEXT,
+  address TEXT,
+  gstin TEXT,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 CREATE TABLE IF NOT EXISTS products (
   id UUID PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
   sku TEXT,
   barcode TEXT,
   category_id UUID,
+  supplier_id UUID,
   description TEXT,
   unit_price NUMERIC NOT NULL DEFAULT 0,
   mrp NUMERIC NOT NULL DEFAULT 0,
@@ -456,6 +470,52 @@ CREATE TABLE IF NOT EXISTS document_type_master (
 
 
 
+-- ===== Idempotent Column Additions =====
+-- CREATE TABLE IF NOT EXISTS is a no-op when run against an already-provisioned
+-- database, so columns added after initial install (schema migrations v4-v8)
+-- would otherwise never be migrated in — causing later CREATE INDEX on those
+-- columns to fail with "column does not exist" (SQLSTATE 42703). These
+-- ADD COLUMN IF NOT EXISTS statements make this full-install script safe to
+-- re-run on an existing database (mirrors src/schema/migrations/index.js).
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS full_access BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role_label TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS outstanding_balance NUMERIC DEFAULT 0;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS total_purchases NUMERIC DEFAULT 0;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS credit_limit NUMERIC DEFAULT 0;
+
+ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_quantity NUMERIC DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_alert NUMERIC DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS mrp NUMERIC DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS brand TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS manufacturer TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS item_code TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS item_group TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS purchase_price NUMERIC DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS tax_type TEXT DEFAULT 'exclusive';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT false;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS show_online BOOLEAN DEFAULT false;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS not_for_sale BOOLEAN DEFAULT false;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS allow_negative BOOLEAN DEFAULT false;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS track_serial BOOLEAN DEFAULT false;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS track_batch BOOLEAN DEFAULT false;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS track_expiry BOOLEAN DEFAULT false;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS max_discount NUMERIC DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS cess NUMERIC DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS reorder_qty NUMERIC DEFAULT 0;
+
+ALTER TABLE product_brands ADD COLUMN IF NOT EXISTS created_by UUID;
+ALTER TABLE product_brands ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE product_units ADD COLUMN IF NOT EXISTS is_primary BOOLEAN DEFAULT false;
+ALTER TABLE product_units ADD COLUMN IF NOT EXISTS created_by UUID;
+ALTER TABLE product_units ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE product_warehouses ADD COLUMN IF NOT EXISTS created_by UUID;
+ALTER TABLE product_warehouses ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+
 -- ===== Indexes =====
 
 CREATE INDEX IF NOT EXISTS idx_users_name ON users (name);
@@ -475,12 +535,18 @@ CREATE INDEX IF NOT EXISTS idx_product_warehouses_name ON product_warehouses (na
 CREATE INDEX IF NOT EXISTS idx_product_tax_rates_name ON product_tax_rates (name);
 CREATE INDEX IF NOT EXISTS idx_product_item_groups_name ON product_item_groups (name);
 CREATE INDEX IF NOT EXISTS idx_product_manufacturers_name ON product_manufacturers (name);
+CREATE INDEX IF NOT EXISTS idx_product_suppliers_name ON product_suppliers (name);
+CREATE INDEX IF NOT EXISTS idx_product_suppliers_company ON product_suppliers (company);
+CREATE INDEX IF NOT EXISTS idx_product_suppliers_email ON product_suppliers (email);
+CREATE INDEX IF NOT EXISTS idx_product_suppliers_phone ON product_suppliers (phone);
+CREATE INDEX IF NOT EXISTS idx_product_suppliers_gstin ON product_suppliers (gstin);
 CREATE INDEX IF NOT EXISTS idx_products_name ON products (name);
 CREATE INDEX IF NOT EXISTS idx_products_sku ON products (sku);
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON products (barcode);
 CREATE INDEX IF NOT EXISTS idx_products_hsn_code ON products (hsn_code);
 CREATE INDEX IF NOT EXISTS idx_products_item_code ON products (item_code);
 CREATE INDEX IF NOT EXISTS idx_products_created_by ON products (created_by);
+CREATE INDEX IF NOT EXISTS idx_products_supplier_id ON products (supplier_id);
 CREATE INDEX IF NOT EXISTS idx_banks_bank_name ON banks (bank_name);
 CREATE INDEX IF NOT EXISTS idx_banks_account_name ON banks (account_name);
 CREATE INDEX IF NOT EXISTS idx_banks_account_number ON banks (account_number);
@@ -713,6 +779,24 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Owner delete" ON product_manufacturers FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE product_suppliers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_suppliers FORCE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner read" ON product_suppliers FOR SELECT USING (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner write" ON product_suppliers FOR INSERT WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner update" ON product_suppliers FOR UPDATE USING (public.is_admin_user() OR created_by = auth.uid()) WITH CHECK (public.is_admin_user() OR created_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Owner delete" ON product_suppliers FOR DELETE USING (public.is_admin_user() OR created_by = auth.uid());
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products FORCE ROW LEVEL SECURITY;

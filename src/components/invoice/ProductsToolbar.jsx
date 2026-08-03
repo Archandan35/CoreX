@@ -2,15 +2,13 @@ import { useState } from 'react';
 import Icon from '../ui/Icon.jsx';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
-import { Field, Input } from '../ui/Field.jsx';
+import { Input } from '../ui/Field.jsx';
 import Checkbox from '../ui/Checkbox.jsx';
 import Dropdown, { DropdownItem } from '../ui/Dropdown.jsx';
-import { round2 } from '../../business/invoice/calculations.js';
-import { DISCOUNT_TYPE } from '../../constants/index.js';
 
 export default function ProductsToolbar({
   category, onCategory, categories,
-  productQuery, onProductQuery, products, qty, onQty,
+  productQuery, onProductQuery, _products, qty, onQty,
   onAddProduct, showDescription, onToggleShowDescription,
   onDraftWithAI, aiBusy, disabledAdd, onAddNewProduct,
   columnManager,
@@ -78,10 +76,10 @@ export default function ProductsToolbar({
 }
 
 export function InvoiceDiscount({
-  items, extraDiscountType, extraDiscountValue,
-  onExtraDiscountType, onExtraDiscountValue,
+  items, _extraDiscountType, extraDiscountValue,
+  _onExtraDiscountType, onExtraDiscountValue,
   additionalCharges, onAddCharge, onRemoveCharge, onUpdateCharge,
-  subtotal, lineDiscountTotal, invoiceDiscount,
+  _subtotal, _lineDiscountTotal, _invoiceDiscount,
 }) {
   const [showChargesModal, setShowChargesModal] = useState(false);
   const totalQty = items.reduce((s, it) => s + (Number(it.quantity) || 0), 0);

@@ -141,7 +141,7 @@ export default function PrefixSuffixPanel({ open, onClose }) {
     } finally {
       setEditSaving(false);
     }
-  }, [editForm, editItem, isPrefix, docType, page, search, items]);
+  }, [editForm, editItem, isPrefix, docType, page, search, items, closeEdit]);
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;

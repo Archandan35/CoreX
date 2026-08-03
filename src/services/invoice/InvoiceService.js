@@ -2,9 +2,8 @@ import { api } from '../api.js';
 import { getSupabaseClient } from '../../identity/auth/supabaseClient.js';
 import { jsPDF } from 'jspdf';
 import { aiService } from '../ai/AiService.js';
-import { auditService } from '../../audit/AuditService.js';
 import { asJson } from './services/utils.js';
-import { downloadInvoicePdf, downloadInvoicePdfBlob, generateSimpleDocPdf, generateInvoicePdf } from './pdfGenerator.js';
+import { generateSimpleDocPdf, generateInvoicePdf } from './pdfGenerator.js';
 
 import { customerService } from './services/CustomerService.js';
 import { productService } from './services/ProductService.js';
@@ -85,6 +84,10 @@ export class InvoiceService {
   get createManufacturer() { return productService.createManufacturer.bind(productService); }
   get updateManufacturer() { return productService.updateManufacturer.bind(productService); }
   get deleteManufacturer() { return productService.deleteManufacturer.bind(productService); }
+  get listSuppliers() { return productService.listSuppliers.bind(productService); }
+  get createSupplier() { return productService.createSupplier.bind(productService); }
+  get updateSupplier() { return productService.updateSupplier.bind(productService); }
+  get deleteSupplier() { return productService.deleteSupplier.bind(productService); }
   get listPriceLists() { return productService.listPriceLists.bind(productService); }
   get getProductPriceLists() { return productService.getProductPriceLists.bind(productService); }
   get saveProductPriceLists() { return productService.saveProductPriceLists.bind(productService); }
@@ -536,7 +539,6 @@ export class InvoiceService {
     if (filters.end_date) q = q.lte('invoice_date', filters.end_date);
     const { data } = await q;
     const rows = data || [];
-    const { data: companyData } = await supabase.from('companies').select('*').maybeSingle();
 
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageW = doc.internal.pageSize.getWidth();

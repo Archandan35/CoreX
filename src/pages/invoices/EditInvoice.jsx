@@ -457,7 +457,7 @@ export default function EditInvoice() {
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
-  }, [buildPayload, customHeaderDefs, customHeaderValues, selectedCustomer, computed]);
+  }, [buildPayload, customHeaderDefs, customHeaderValues, selectedCustomer, computed, invoiceDate]);
 
   const performSave = useCallback(async (status, postAction) => {
     if (!validate(status !== 'draft')) {
@@ -479,7 +479,7 @@ export default function EditInvoice() {
 
     setSaving(true);
     try {
-      const result = await invoiceService.saveInvoice(buildPayload(status));
+      await invoiceService.saveInvoice(buildPayload(status));
       notificationManager.success('Invoice', `Invoice ${status === 'draft' ? 'draft saved' : 'updated'}.`);
 
       if (postAction === 'print') {

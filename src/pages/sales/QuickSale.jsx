@@ -66,7 +66,7 @@ export default function QuickSale() {
 
   const [currencySymbol, setCurrencySymbol] = useState('₹');
   const [defaultTaxRate, setDefaultTaxRate] = useState(0);
-  const [companyState, setCompanyState] = useState('');
+  const [setCompanyState] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -95,7 +95,7 @@ export default function QuickSale() {
       }
     };
     loadData();
-  }, []);
+  }, [setCompanyState]);
 
   const filteredCustomers = useMemo(() => {
     if (!debouncedCustomerSearch.trim()) return [];

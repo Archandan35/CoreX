@@ -78,7 +78,8 @@ export default function ResponsiveTabs({
   }, [measure]);
 
   // Re-measure when items content changes (e.g., loaded from API)
-  useEffect(() => { requestAnimationFrame(() => measure()); }, [measure, items.map((i) => i.id).join(',')]);
+  const itemIdsKey = items.map((i) => i.id).join(',');
+  useEffect(() => { requestAnimationFrame(() => measure()); }, [measure, itemIdsKey]);
 
   const handleOverflowKeyDown = useCallback((e) => {
     const o = overflowItems;

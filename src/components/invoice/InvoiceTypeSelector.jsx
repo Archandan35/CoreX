@@ -16,6 +16,7 @@ export default function InvoiceTypeSelector({ value, onChange }) {
         }
       })
       .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (types.length === 0) return null;

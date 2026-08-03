@@ -3,7 +3,7 @@ export class ImportEngine {
     this.validators = validators;
   }
 
-  async importJson(data, entity, options = {}) {
+  async importJson(data, entity) {
     const validator = this.validators[entity];
     const results = { imported: 0, errors: [], skipped: 0 };
 

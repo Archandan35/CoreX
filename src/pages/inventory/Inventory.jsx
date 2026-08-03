@@ -79,7 +79,6 @@ export default function Inventory() {
   const [saving, setSaving] = useState(false);
 
   const headerSearchRef = useRef(null);
-  const fileInputRef = useRef(null);
   const importRef = useRef(null);
 
   const [isDark, setIsDark] = useState(themeManager.isDark());
@@ -103,11 +102,6 @@ export default function Inventory() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
-
-  const brandOptions = useMemo(() => {
-    const set = new Set((products || []).map((p) => p.brand).filter(Boolean));
-    return [...set].map((b) => ({ value: b, label: b }));
-  }, [products]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -317,6 +311,7 @@ export default function Inventory() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     notificationManager.success('Export', `${rows.length} product(s) exported.`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- categoryName is a pure lookup helper
   }, [filtered, categories]);
 
   const handleImportFile = useCallback(async (file) => {
@@ -362,8 +357,6 @@ export default function Inventory() {
   }, [refresh]);
 
   const openImport = () => importRef.current?.click();
-
-  const adjustTargets = selectedIds.length > 0 ? selectedIds : (adjustOpen && pageRows.length ? [pageRows[0].id] : []);
 
   return (
     <div className="inventory-page">

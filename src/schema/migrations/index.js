@@ -536,6 +536,42 @@ export const MIGRATIONS = Object.freeze([
       `DROP TABLE IF EXISTS document_prefixes`,
     ],
   },
+  {
+    version: 10,
+    name: 'product_suppliers',
+    up: [
+      `CREATE TABLE IF NOT EXISTS product_suppliers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL UNIQUE,
+        company TEXT,
+        contact_person TEXT,
+        email TEXT,
+        phone TEXT,
+        address TEXT,
+        gstin TEXT,
+        created_by UUID,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_id UUID`,
+      `CREATE INDEX IF NOT EXISTS idx_product_suppliers_name ON product_suppliers (name)`,
+      `CREATE INDEX IF NOT EXISTS idx_product_suppliers_company ON product_suppliers (company)`,
+      `CREATE INDEX IF NOT EXISTS idx_product_suppliers_email ON product_suppliers (email)`,
+      `CREATE INDEX IF NOT EXISTS idx_product_suppliers_phone ON product_suppliers (phone)`,
+      `CREATE INDEX IF NOT EXISTS idx_product_suppliers_gstin ON product_suppliers (gstin)`,
+      `CREATE INDEX IF NOT EXISTS idx_products_supplier_id ON products (supplier_id)`,
+    ],
+    down: [
+      `DROP INDEX IF EXISTS idx_products_supplier_id`,
+      `DROP INDEX IF EXISTS idx_product_suppliers_gstin`,
+      `DROP INDEX IF EXISTS idx_product_suppliers_phone`,
+      `DROP INDEX IF EXISTS idx_product_suppliers_email`,
+      `DROP INDEX IF EXISTS idx_product_suppliers_company`,
+      `DROP INDEX IF EXISTS idx_product_suppliers_name`,
+      `ALTER TABLE products DROP COLUMN IF EXISTS supplier_id`,
+      `DROP TABLE IF EXISTS product_suppliers`,
+    ],
+  },
 ]);
 
 export class MigrationRunner {

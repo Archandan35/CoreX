@@ -19,7 +19,7 @@ import { invoiceService } from '../../services/invoice/index.js';
 import { computeInvoice } from '../../business/invoice/calculations.js';
 import {
   validateInvoice, validateCustomer, validateProduct, validateBank,
-  validateCustomHeaders, validateCreditLimit, validateFinancialYear,
+  validateCustomHeaders, validateCreditLimit, validateFinancialYear, validateAttachment,
 } from '../../business/invoice/validation.js';
 import { DEFAULT_DUE_DATE_OFFSET_DAYS, TAX_RATE_OPTIONS, PAYMENT_MODE_OPTIONS, INVOICE_ATTACHMENT_MAX_FILES, DOC_TYPES } from '../../constants/index.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
@@ -332,11 +332,7 @@ export default function CreateInvoice() {
   }, []);
 
   // --- Notes ---
-  const addNote = useCallback(() => setNotes(p => [...p, { id: generateKey(), text: '' }]), []);
-  const removeNote = useCallback((i) => setNotes(p => p.filter((_, j) => j !== i)), []);
   const updateNote = useCallback((i, n) => setNotes(p => { const next = [...p]; next[i] = n; return next; }), []);
-  const addTerm = useCallback(() => setTerms(p => [...p, { id: generateKey(), text: '' }]), []);
-  const removeTerm = useCallback((i) => setTerms(p => p.filter((_, j) => j !== i)), []);
   const updateTerm = useCallback((i, t) => setTerms(p => { const next = [...p]; next[i] = t; return next; }), []);
 
   // Sync selected note/term into local text buffer
@@ -402,20 +398,10 @@ export default function CreateInvoice() {
     } finally { setAiBusy(false); }
   }, [items, selectedCustomer]);
 
-  const aiSuggestNote = useCallback(async () => {
-    try {
-      const suggestion = await invoiceService.suggestNote(notes.map(n => n.text).join(' '), 'General invoice note');
-      if (suggestion) setNotes(p => [...p, { id: generateKey(), text: suggestion }]);
-    } catch (e) {
-      notificationManager.error('AI Suggest', e.message || 'Failed to suggest note.');
-    }
-  }, [notes]);
-
   // --- Payments ---
   const addPayment = useCallback(() => {
     setPayments(p => [...p, { id: generateKey(), notes: '', amount: 0, paymentDate: new Date().toISOString().split('T')[0], mode: '' }]);
   }, []);
-  const removePayment = useCallback((i) => setPayments(p => p.filter((_, j) => j !== i)), []);
   const updatePayment = useCallback((i, pmt) => setPayments(p => { const n = [...p]; n[i] = pmt; return n; }), []);
 
   // --- Banks ---
@@ -494,7 +480,7 @@ export default function CreateInvoice() {
     // Duplicate invoice number validation (async — checked separately)
     setErrors(errs);
     return Object.keys(errs).length === 0;
-  }, [buildPayload, customHeaderDefs, customHeaderValues, selectedCustomer, computed]);
+  }, [buildPayload, customHeaderDefs, customHeaderValues, selectedCustomer, computed, invoiceDate]);
 
   const performSave = useCallback(async (status, postAction) => {
     if (!validate(status !== 'draft')) {
@@ -1115,7 +1101,7 @@ export default function CreateInvoice() {
               <div className="ni-dd-box" onClick={() => setExtraDiscountType(t => t === 'percent' ? 'fixed' : 'percent')} style={{cursor:'pointer'}}>
                 <span className="ni-strike">Extra Discount</span> <Icon name="chevronDown" />
               </div>
-              <div className="ni-dd-box" style={{position:'relative',cursor:'pointer'}} onClick={(e) => {
+              <div className="ni-dd-box" style={{position:'relative',cursor:'pointer'}} onClick={(_e) => {
                 const v = prompt('Enter extra discount value:', String(extraDiscountValue));
                 if (v !== null) setExtraDiscountValue(Number(v) || 0);
               }}>

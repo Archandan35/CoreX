@@ -1,6 +1,6 @@
 import Modal from '../../ui/Modal.jsx';
 import Button from '../../ui/Button.jsx';
-import { Field, Input } from '../../ui/Field.jsx';
+import { Input } from '../../ui/Field.jsx';
 import Checkbox from '../../ui/Checkbox.jsx';
 import Icon from '../../ui/Icon.jsx';
 

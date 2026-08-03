@@ -8,7 +8,7 @@ import { PERMISSIONS } from '../../identity/rbac/permissions.js';
 export default function InvoiceDetails({
   customers, customerQuery, onCustomerQuery, selectedCustomer,
   onSelectCustomer, onEditCustomer, invoiceDate, dueDate,
-  onInvoiceDate, onDueDate, reference, onReference, dueDateOffset,
+  onInvoiceDate, onDueDate, reference, onReference, _dueDateOffset,
   onAutoDueDate, onOpenCreateCustomer, errors,
   customerOutstanding, creditLimitExceeded,
 }) {

@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import Icon from './Icon.jsx';
 
-export default function FileUpload({ accept = '.pdf,.jpg,.jpeg,.png,.webp', maxSize = 10 * 1024 * 1024, maxFiles = 5, files = [], onAdd, onRemove, onReplace }) {
+export default function FileUpload({ accept = '.pdf,.jpg,.jpeg,.png,.webp', maxSize = 10 * 1024 * 1024, maxFiles = 5, files = [], onAdd, onRemove, _onReplace }) {
   const inputRef = useRef();
   const [dragOver, setDragOver] = useState(false);
 

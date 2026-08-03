@@ -29,7 +29,7 @@ export const PROVIDERS = [
       { key: 'user', label: 'Username', placeholder: 'postgres', type: 'text', required: true },
       { key: 'password', label: 'Password', placeholder: 'Enter password', type: 'password', required: true },
     ],
-    async validate(config) {
+    async validate(_config) {
       return { ok: false, errors: { _summary: 'PostgreSQL validation not yet implemented.' } };
     },
   },
@@ -46,7 +46,7 @@ export const PROVIDERS = [
       { key: 'user', label: 'Username', placeholder: 'root', type: 'text', required: true },
       { key: 'password', label: 'Password', placeholder: 'Enter password', type: 'password', required: true },
     ],
-    async validate(config) {
+    async validate(_config) {
       return { ok: false, errors: { _summary: 'MySQL validation not yet implemented.' } };
     },
   },
@@ -63,7 +63,7 @@ export const PROVIDERS = [
       { key: 'user', label: 'Username', placeholder: 'root', type: 'text', required: true },
       { key: 'password', label: 'Password', placeholder: 'Enter password', type: 'password', required: true },
     ],
-    async validate(config) {
+    async validate(_config) {
       return { ok: false, errors: { _summary: 'MariaDB validation not yet implemented.' } };
     },
   },
@@ -80,7 +80,7 @@ export const PROVIDERS = [
       { key: 'user', label: 'Username', placeholder: 'sa', type: 'text', required: true },
       { key: 'password', label: 'Password', placeholder: 'Enter password', type: 'password', required: true },
     ],
-    async validate(config) {
+    async validate(_config) {
       return { ok: false, errors: { _summary: 'SQL Server validation not yet implemented.' } };
     },
   },
@@ -93,7 +93,7 @@ export const PROVIDERS = [
     fields: [
       { key: 'filepath', label: 'Database File Path', placeholder: '/path/to/database.db', type: 'text', required: true },
     ],
-    async validate(config) {
+    async validate(_config) {
       return { ok: false, errors: { _summary: 'SQLite validation not yet implemented.' } };
     },
   },
@@ -110,7 +110,7 @@ export const PROVIDERS = [
       { key: 'user', label: 'Username', placeholder: 'system', type: 'text', required: true },
       { key: 'password', label: 'Password', placeholder: 'Enter password', type: 'password', required: true },
     ],
-    async validate(config) {
+    async validate(_config) {
       return { ok: false, errors: { _summary: 'Oracle validation not yet implemented.' } };
     },
   },
@@ -123,7 +123,7 @@ export const PROVIDERS = [
     fields: [
       { key: 'uri', label: 'Connection URI', placeholder: 'mongodb://localhost:27017/mydb', type: 'text', required: true },
     ],
-    async validate(config) {
+    async validate(_config) {
       return { ok: false, errors: { _summary: 'MongoDB validation not yet implemented.' } };
     },
   },

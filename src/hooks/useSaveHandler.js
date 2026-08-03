@@ -25,9 +25,9 @@ export default function useSaveHandler(options = {}) {
   const [validationErrors, setValidationErrors] = useState({});
   const previousDataRef = useRef(null);
 
-  const msg = { ...DEFAULT_MESSAGES, ...messages };
-
   const save = useCallback(async (data, saveOptions = {}) => {
+    const msg = { ...DEFAULT_MESSAGES, ...messages };
+
     if (requirePermission && hasPermission === false) {
       notificationManager.error('Permission Denied', msg.permissionDenied);
       return { success: false, error: msg.permissionDenied };
@@ -46,12 +46,10 @@ export default function useSaveHandler(options = {}) {
 
     setSaving(true);
     const loadingId = notificationManager.loading(msg.saving, 'Please wait...');
-    let previousData = null;
 
     try {
       if (optimisticUpdate) {
         previousDataRef.current = data;
-        previousData = data;
       }
 
       const result = await onSave(data);
@@ -83,7 +81,7 @@ export default function useSaveHandler(options = {}) {
     } finally {
       setSaving(false);
     }
-  }, [validate, onSave, onSuccess, onError, msg, requirePermission, hasPermission, optimisticUpdate]);
+  }, [validate, onSave, onSuccess, onError, messages, requirePermission, hasPermission, optimisticUpdate]);
 
   const clearValidation = useCallback(() => {
     setValidationErrors({});

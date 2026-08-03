@@ -2,8 +2,8 @@ import { useMemo, useCallback } from 'react';
 import Dropdown, { DropdownItem } from './Dropdown.jsx';
 import Icon from './Icon.jsx';
 
-export default function LookupSelect({ items, value, onChange, placeholder = 'Select...', searchPlaceholder = 'Search...', displayFn, icon, renderItem, showSearch = true, emptyMessage = 'No results.' }) {
-  const display = displayFn || ((item) => item?.name || item?.label || String(item));
+export default function LookupSelect({ items, value, onChange, placeholder = 'Select...', displayFn, icon, renderItem, emptyMessage = 'No results.' }) {
+  const display = useMemo(() => displayFn || ((item) => item?.name || item?.label || String(item)), [displayFn]);
   const searchable = useMemo(() => {
     return (items || []).filter(Boolean);
   }, [items]);

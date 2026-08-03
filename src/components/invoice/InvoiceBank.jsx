@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Card from '../ui/Card.jsx';
 import Button from '../ui/Button.jsx';
 import Select from '../ui/Select.jsx';
@@ -16,14 +16,14 @@ export default function InvoiceBank({
   onSelectBank,
   onAddBank,
   onEditBank,
-  onDeleteBank,
+  _onDeleteBank,
   payments,
-  onAddPayment,
+  _onAddPayment,
   onRemovePayment,
   onUpdatePayment,
   markFullyPaid,
   onMarkFullyPaid,
-  grandTotal,
+  _grandTotal,
   balanceDue,
 }) {
   const [showBankModal, setShowBankModal] = useState(false);

@@ -7,6 +7,7 @@ import Search from '../../components/ui/Search.jsx';
 import Filter, { FilterItem } from '../../components/ui/Filter.jsx';
 import Pagination from '../../components/ui/Pagination.jsx';
 import Badge from '../../components/ui/Badge.jsx';
+import Modal from '../../components/ui/Modal.jsx';
 import Dropdown, { DropdownItem } from '../../components/ui/Dropdown.jsx';
 import PermissionGate from '../../components/ui/PermissionGate.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';

@@ -1,5 +1,3 @@
-import { PERMISSIONS } from '../rbac/permissions.js';
-
 export class Authority {
   constructor(user) {
     this.user = user;

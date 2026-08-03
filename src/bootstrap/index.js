@@ -1,10 +1,7 @@
-import { initDatabase, getDatabase } from '../data/index.js';
+import { initDatabase } from '../data/index.js';
 import { config } from '../config/index.js';
 import { healthService } from '../services/health/HealthService.js';
-import { featureFlagService } from '../services/feature-flags/FeatureFlagService.js';
 import { cacheService } from '../services/cache/CacheService.js';
-import { settingsManager } from '../managers/SettingsManager.js';
-import { themeManager } from '../managers/ThemeManager.js';
 import { setApiToken } from '../services/api.js';
 
 export async function bootstrap() {

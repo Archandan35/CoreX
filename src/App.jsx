@@ -13,12 +13,13 @@ import Register from './pages/Register.jsx';
 import SetupWizard from './setup-wizard/SetupWizard.jsx';
 import { DatabaseValidator } from './setup-wizard/DatabaseValidator.js';
 import { SCHEMAS } from './schema/models/index.js';
-import { initDatabase, getDatabase } from './data/index.js';
+import { initDatabase } from './data/index.js';
 import { config } from './config/index.js';
 import Dashboard from './pages/Dashboard.jsx';
 import QuickSale from './pages/sales/QuickSale.jsx';
 import Invoices from './pages/invoices/Invoices.jsx';
 import Inventory from './pages/inventory/Inventory.jsx';
+import Products from './pages/products/Products.jsx';
 import UserList from './pages/users/UserList.jsx';
 import UserCreate from './pages/users/UserCreate.jsx';
 import UserEdit from './pages/users/UserEdit.jsx';
@@ -32,7 +33,6 @@ import CreateInvoice from './pages/invoices/CreateInvoice.jsx';
 import EditInvoice from './pages/invoices/EditInvoice.jsx';
 import InvoiceShow from './pages/invoices/InvoiceShow.jsx';
 import { PERMISSIONS } from './identity/rbac/permissions.js';
-import { api } from './services/api.js';
 import { getSchemaGap, autoRepairSchema } from './schema/repair.js';
 
 function ProtectedRoute({ children, permission }) {
@@ -53,6 +53,7 @@ function AppRoutes() {
 
   useEffect(() => {
     initApp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Expose checkAdmin to the rest of the app via context so that after the
@@ -61,9 +62,9 @@ function AppRoutes() {
   // Registered once checkAdmin is defined below; re-registered if db changes.
   // (checkAdmin is recreated each render, but setRefreshAdminStatus is a stable
   // setter, so this just keeps the slot pointing at the freshest closure.)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (db) setRefreshAdminStatus(() => () => checkAdmin(db));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [db]);
 
   // A table is considered "missing" (schema incomplete) if PostgREST/Postgres
@@ -424,6 +425,7 @@ function AppRoutes() {
           <Route path="quick-sale" element={<QuickSale />} />
           <Route path="sales" element={<Navigate to="/sales/invoices" replace />} />
         <Route path="inventory" element={<ProtectedRoute permission={PERMISSIONS.PRODUCT_READ}><Inventory /></ProtectedRoute>} />
+        <Route path="products" element={<ProtectedRoute permission={PERMISSIONS.PRODUCT_READ}><Products /></ProtectedRoute>} />
         <Route path="sales/invoices" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_READ}><Invoices variant="invoices" /></ProtectedRoute>} />
         <Route path="sales/credit-notes" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_READ}><Invoices variant="credit-notes" /></ProtectedRoute>} />
         <Route path="sales/e-invoices" element={<ProtectedRoute permission={PERMISSIONS.INVOICE_READ}><Invoices variant="e-invoices" /></ProtectedRoute>} />
