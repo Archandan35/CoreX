@@ -16376,6 +16376,12 @@ table th, table td {
   color: var(--invp-text);
 }
 
+.invp-category {
+  font-size: 13px;
+  color: var(--invp-muted2);
+  white-space: nowrap;
+}
+
 .invp-name-sub {
   font-size: 12px;
   color: var(--invp-muted2);

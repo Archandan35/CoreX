@@ -542,6 +542,7 @@ export default function Inventory() {
                         <span>Product Name</span>
                       </div>
                     </th>
+                    <th>Category</th>
                     <th>Quantity</th>
                     <th>Status</th>
                     <th>Product Code</th>
@@ -556,16 +557,14 @@ export default function Inventory() {
                     const meta = STATUS_META[status];
                     return (
                       <tr key={p.id}>
-                        <td>
-                          <div className="invp-th-select">
-                            <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => handleSelectOne(p.id)} aria-label={`Select ${p.name}`} />
-                            <div>
+                          <td>
+                            <div className="invp-th-select">
+                              <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => handleSelectOne(p.id)} aria-label={`Select ${p.name}`} />
                               <div className="invp-name">{p.name}</div>
-                              <div className="invp-name-sub">{categoryName(p.category_id)}</div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="invp-stock">{fmtQty(p.stock_quantity)}</td>
+                          </td>
+                          <td className="invp-category">{categoryName(p.category_id)}</td>
+                          <td className="invp-stock">{fmtQty(p.stock_quantity)}</td>
                         <td><span className={`invp-status invp-status--${meta.cls}`}>{meta.label}</span></td>
                         <td className="invp-code">{p.sku || p.item_code || '—'}</td>
                         <td className="invp-price">{Number(p.purchase_price) > 0 ? fmtCurrency(p.purchase_price) : '—'}</td>
