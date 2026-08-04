@@ -5717,7 +5717,7 @@ select.form-input {
 
 .inv-ch-col {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 12px;
   min-width: 0;
 }
