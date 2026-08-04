@@ -604,6 +604,7 @@ export default function Products() {
                     <th>Category</th>
                     <th>Product Code</th>
                     <th>Quantity</th>
+                    <th>Status</th>
                     <th>Unit</th>
                     <th className="prd-th-num">MRP</th>
                     <th className="prd-th-num">Selling Price</th>
@@ -623,12 +624,12 @@ export default function Products() {
                         <td>
                           <div className="prd-name-wrap">
                             <div className="prd-name">{p.name}</div>
-                            <span className={`prd-status prd-status--${meta.cls}`}>{meta.label}</span>
                           </div>
                         </td>
                         <td className="prd-muted">{categoryName(p.category_id)}</td>
                         <td className="prd-code">{p.sku || p.item_code || '—'}</td>
                         <td className="prd-stock">{fmtQty(p.stock_quantity)}</td>
+                        <td className="prd-status-cell"><span className={`prd-status prd-status--${meta.cls}`}>{meta.label}</span></td>
                         <td className="prd-muted">{unitName(p.unit)}</td>
                         <td className="prd-price">{Number(p.mrp) > 0 ? fmtCurrency(p.mrp) : '—'}</td>
                         <td className="prd-price">{fmtCurrency(p.unit_price)}</td>

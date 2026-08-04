@@ -15593,6 +15593,10 @@ table th, table td {
   color: #B91C1C;
 }
 
+.prd-status-cell {
+  text-align: center;
+}
+
 .prd-muted {
   color: var(--prd-muted);
 }
