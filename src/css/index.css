@@ -260,8 +260,47 @@ select {
 .topbar__actions {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  margin-right: 6px;
+  gap: 10px;
+  margin-right: 12px;
+}
+
+.topbar__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0 14px;
+  height: 36px;
+  min-width: 260px;
+  max-width: 400px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.topbar__search:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(91, 79, 233, 0.12);
+}
+
+.topbar__search svg {
+  color: var(--text-tertiary, #9ca3af);
+  flex-shrink: 0;
+}
+
+.topbar__search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--text);
+}
+
+.topbar__search-input::placeholder {
+  color: var(--text-tertiary, #9ca3af);
 }
 
 .topbar__action-btn {

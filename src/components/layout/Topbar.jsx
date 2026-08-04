@@ -130,10 +130,16 @@ export default function Topbar({ onToggle }) {
       ))}
 
       <div className="topbar__actions">
-        <button type="button" className="topbar__action-btn" title="Search (⌘K)"
-          onClick={() => pageActions?.onSearch?.() ?? (pageActions?.searchRef?.current?.focus())}>
+        <div className="topbar__search">
           <Icon name="search" size={18} />
-        </button>
+          <input
+            type="text"
+            ref={pageActions?.searchRef}
+            placeholder="Search (⌘K)"
+            className="topbar__search-input"
+            aria-label="Global search"
+          />
+        </div>
         <button type="button" className="topbar__action-btn" title="Barcode scanner"
           onClick={() => pageActions?.onBarcode?.()}>
           <Icon name="scan" size={18} />
