@@ -14192,6 +14192,22 @@ button.qs-cancel:hover,
   background-image: none !important;
 }
 
+/* Left-align all table cell content across the app (products, inventory, invoices, vendors & other pages). */
+.prd-table th, .prd-table td,
+.invp-table th, .invp-table td,
+.invoice-table th, .invoice-table td,
+.vdr-table th, .vdr-table td,
+table th, table td {
+  text-align: left !important;
+}
+
+/* Checkbox / selection cells hold inputs, not text — keep them centered. */
+.prd-th-check, .prd-cell-check,
+.invp-th-select,
+.vdr-th-check, .vdr-cell-check {
+  text-align: center !important;
+}
+
 
 /* ==========================================================================
    Vendors page (Vendor Management)

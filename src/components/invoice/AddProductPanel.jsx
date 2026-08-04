@@ -110,6 +110,10 @@ export default function AddProductPanel({ open, onClose, onSubmit, editProduct }
       setTaxRates(tr);
       setItemGroups(ig);
       setManufacturers(mf);
+      if (isEdit && editProduct.unit && !un.some(u => u.name === editProduct.unit)) {
+        const match = un.find(u => (u.id || u.name) === editProduct.unit);
+        if (match) setForm(p => ({ ...p, unit: match.name }));
+      }
     });
   }, [open]);
 
@@ -213,14 +217,16 @@ export default function AddProductPanel({ open, onClose, onSubmit, editProduct }
         stock_quantity: parseFloat(form.opening_qty) || 0,
         stock_alert: parseFloat(form.low_stock_alert) || 0,
       };
-      const product = await invoiceService.createProduct(payload);
+       const saved = isEdit
+        ? await invoiceService.updateProduct(editProduct.id, payload)
+        : await invoiceService.createProduct(payload);
       if (priceListRows.length) {
-        await invoiceService.saveProductPriceLists(product.id, priceListRows.map(r => ({
+        await invoiceService.saveProductPriceLists(saved.id, priceListRows.map(r => ({
           ...r, selling_price: parseFloat(r.selling_price) || 0,
         })));
       }
-      notificationManager.success('Product', `${product.name} added.`);
-      onSubmit?.(product);
+      notificationManager.success('Product', `${saved.name} ${isEdit ? 'updated.' : 'added.'}`);
+      onSubmit?.(saved);
     } catch (e) {
       notificationManager.error('Product', e.message || 'Failed to save product.');
     } finally {
@@ -238,9 +244,9 @@ export default function AddProductPanel({ open, onClose, onSubmit, editProduct }
         <div className="drawerHeader">
           <div className="drawerTitle">
             <div className="drawerIcon"><Icon name="package" size={16} /></div>
-            <div>
-              <div className="drawerHeading">Add Item</div>
-            </div>
+              <div>
+                <div className="drawerHeading">{isEdit ? 'Edit Item' : 'Add Item'}</div>
+              </div>
           </div>
           <div className="drawerActions">
             <button className="drawerAction" onClick={onClose}><Icon name="x" size={16} /></button>
@@ -471,7 +477,7 @@ export default function AddProductPanel({ open, onClose, onSubmit, editProduct }
           </div>
           <div className="footerRight">
             <button className="btn btnPrimary" onClick={handleSubmit} disabled={busy}>
-              {busy ? 'Adding...' : 'Add Item'}
+              {busy ? (isEdit ? 'Updating...' : 'Adding...') : (isEdit ? 'Update Item' : 'Add Item')}
             </button>
           </div>
         </div>

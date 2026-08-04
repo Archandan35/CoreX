@@ -3,7 +3,7 @@ import Icon from '../../components/ui/Icon.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Select from '../../components/ui/Select.jsx';
-import { Field, Input } from '../../components/ui/Field.jsx';
+import { Input } from '../../components/ui/Field.jsx';
 import AddProductPanel from '../../components/invoice/AddProductPanel.jsx';
 import { invoiceService } from '../../services/invoice/index.js';
 import { notificationManager } from '../../managers/index.js';
@@ -191,7 +191,14 @@ export default function Products() {
 
   const handleCreate = useCallback(async (product) => {
     setAddOpen(false);
+    setEditProduct(null);
     notificationManager.success('Product', `${product.name} added.`);
+    await refresh();
+  }, [refresh]);
+
+  const handleEditSave = useCallback(async (product) => {
+    setEditProduct(null);
+    notificationManager.success('Product', `${product.name} updated.`);
     await refresh();
   }, [refresh]);
 
@@ -210,36 +217,6 @@ export default function Products() {
       setDeleting(false);
     }
   }, [deleteTarget, refresh]);
-
-  const handleEditSave = useCallback(async () => {
-    if (!editProduct) return;
-    setSaving(true);
-    try {
-      await invoiceService.updateProduct(editProduct.id, {
-        name: editProduct.name,
-        sku: editProduct.sku,
-        barcode: editProduct.barcode,
-        category_id: editProduct.category_id || null,
-        supplier_id: editProduct.supplier_id || null,
-        unit_price: Number(editProduct.unit_price) || 0,
-        mrp: Number(editProduct.mrp) || 0,
-        tax_rate: Number(editProduct.tax_rate) || 0,
-        unit: unitName(editProduct.unit),
-        hsn_code: editProduct.hsn_code,
-        stock_quantity: Number(editProduct.stock_quantity) || 0,
-        stock_alert: Number(editProduct.stock_alert) || 0,
-        is_service: editProduct.is_service,
-        brand: editProduct.brand,
-      });
-      notificationManager.success('Product', `${editProduct.name} updated.`);
-      setEditProduct(null);
-      await refresh();
-    } catch (e) {
-      notificationManager.error('Product', e.message || 'Failed to update product.');
-    } finally {
-      setSaving(false);
-    }
-  }, [editProduct, refresh]);
 
   const handleStockMove = useCallback(async (qty) => {
     if (!stockMove) return;
@@ -726,48 +703,12 @@ export default function Products() {
 
       <AddProductPanel open={addOpen} onClose={() => setAddOpen(false)} onSubmit={handleCreate} />
 
-      <Modal open={!!editProduct} onClose={() => setEditProduct(null)} title="Edit Product" size="md"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setEditProduct(null)} disabled={saving}>Cancel</Button>
-            <Button onClick={handleEditSave} loading={saving} icon="save">Save Changes</Button>
-          </>
-        }>
-        {editProduct && (
-          <div className="prd-edit-grid">
-            <Field label="Product Name" required>
-              <Input value={editProduct.name} onChange={(e) => setEditProduct({ ...editProduct, name: e.target.value })} />
-            </Field>
-            <Field label="Product Code / SKU">
-              <Input value={editProduct.sku || ''} onChange={(e) => setEditProduct({ ...editProduct, sku: e.target.value })} />
-            </Field>
-            <Field label="Category">
-              <Select placeholder="None" value={editProduct.category_id || ''} onChange={(v) => setEditProduct({ ...editProduct, category_id: v })} options={categories.map((c) => ({ value: c.id, label: c.name }))} />
-            </Field>
-            <Field label="Brand">
-              <Input value={editProduct.brand || ''} onChange={(e) => setEditProduct({ ...editProduct, brand: e.target.value })} />
-            </Field>
-            <Field label="Supplier">
-              <Select placeholder="None" value={editProduct.supplier_id || ''} onChange={(v) => setEditProduct({ ...editProduct, supplier_id: v })} options={suppliers.map((s) => ({ value: s.id, label: s.name }))} />
-            </Field>
-            <Field label="Unit">
-              <Select placeholder="None" value={editProduct.unit || ''} onChange={(v) => setEditProduct({ ...editProduct, unit: v })} options={unitOptions} />
-            </Field>
-            <Field label="Selling Price">
-              <Input type="number" min="0" step="0.01" value={editProduct.unit_price ?? 0} onChange={(e) => setEditProduct({ ...editProduct, unit_price: e.target.value })} />
-            </Field>
-            <Field label="MRP">
-              <Input type="number" min="0" step="0.01" value={editProduct.mrp ?? 0} onChange={(e) => setEditProduct({ ...editProduct, mrp: e.target.value })} />
-            </Field>
-            <Field label="Stock Quantity">
-              <Input type="number" min="0" value={editProduct.stock_quantity ?? 0} onChange={(e) => setEditProduct({ ...editProduct, stock_quantity: e.target.value })} />
-            </Field>
-            <Field label="Low Stock Alert">
-              <Input type="number" min="0" value={editProduct.stock_alert ?? 0} onChange={(e) => setEditProduct({ ...editProduct, stock_alert: e.target.value })} />
-            </Field>
-          </div>
-        )}
-      </Modal>
+      <AddProductPanel
+        open={!!editProduct}
+        editProduct={editProduct}
+        onClose={() => setEditProduct(null)}
+        onSubmit={handleEditSave}
+      />
 
       <StockMoveModal move={stockMove} saving={saving} onClose={() => setStockMove(null)} onSave={handleStockMove} />
       <BulkStockMoveModal move={bulkStockMove} saving={saving} onClose={() => setBulkStockMove(null)} onSave={handleBulkStockMove} />
