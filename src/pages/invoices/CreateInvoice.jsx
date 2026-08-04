@@ -183,7 +183,7 @@ export default function CreateInvoice() {
 
   // --- Fetch next invoice number ---
   useEffect(() => {
-    invoiceService.nextInvoiceNumber(prefix).then(n => { if (n) setInvoiceNumber(n); }).catch(e => console.warn('Failed to fetch next invoice number', e));
+    invoiceService.nextInvoiceNumber(prefix).then(n => { if (n?.number) setInvoiceNumber(n.number); }).catch(e => console.warn('Failed to fetch next invoice number', e));
   }, [prefix]);
 
   // --- DocType change → reload prefixes & settings ---
@@ -600,9 +600,9 @@ export default function CreateInvoice() {
   // Map API prefixes to { value, label } format for InvoiceHeader
   const prefixOptions = useMemo(() => {
     return prefixes.map(p => ({
-      value: p.prefix || p.value || p,
-      label: p.prefix || p.label || p,
-    }));
+      value: p.value || p.prefix || (typeof p === 'string' ? p : ''),
+      label: p.value || p.prefix || (typeof p === 'string' ? p : ''),
+    })).filter(p => p.value);
   }, [prefixes]);
 
   const [saveMenuOpen, setSaveMenuOpen] = useState(false);
@@ -641,7 +641,7 @@ export default function CreateInvoice() {
             <span className="ni-back-arrow" onClick={() => safeNavigate('/sales/invoices')}><Icon name="arrow-left" /></span>
             <div className="ni-title-block">
               <h1>Create Invoice</h1>
-              <div className="ni-sub">{companyState || 'Loading...'}</div>
+              <div className="ni-sub">{companyState}</div>
             </div>
             <div className="ni-topbar-mid">
               <div className="ni-select-box" onClick={() => setPrefixOpen(!prefixOpen)} style={{position:'relative'}}>
