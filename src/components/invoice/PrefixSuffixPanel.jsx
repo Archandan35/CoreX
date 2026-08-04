@@ -106,7 +106,6 @@ export default function PrefixSuffixPanel({ open, onClose }) {
     const valErr = validateValue(editForm.value, items, editItem?.id);
     if (valErr) errs.value = valErr;
 
-    if (!editForm.sequenceOrder || editForm.sequenceOrder < 1) errs.sequenceOrder = 'Must be at least 1.';
     if (Object.keys(errs).length) { setEditErrors(errs); return; }
 
     setEditSaving(true);
