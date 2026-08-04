@@ -10,6 +10,7 @@ import { useToolbar } from '../../components/layout/ToolbarContext.jsx';
 import { useFullscreen } from '../../components/layout/FullscreenContext.jsx';
 import { posService } from '../../services/pos/POSService.js';
 import { notificationManager } from '../../managers/NotificationManager.js';
+import QuickSalePaymentModal from '../../components/sales/QuickSalePaymentModal.jsx';
 
 function useDebounce(value, delay = 300) {
   const [debounced, setDebounced] = useState(value);
@@ -66,6 +67,7 @@ export default function QuickSale() {
 
   const [currencySymbol, setCurrencySymbol] = useState('₹');
   const [defaultTaxRate, setDefaultTaxRate] = useState(0);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -120,22 +122,6 @@ export default function QuickSale() {
     setShowCustomerResults(filteredCustomers.length > 0 && customerSearch.trim().length > 0);
   }, [filteredCustomers, customerSearch]);
 
-  useEffect(() => {
-    if (!debouncedProductSearch.trim()) {
-      setProductResults([]);
-      setShowProductResults(false);
-      return;
-    }
-    const q = debouncedProductSearch.toLowerCase();
-    const results = allProducts.filter(p =>
-      (p.name || '').toLowerCase().includes(q) ||
-      (p.code || p.sku || '').toLowerCase().includes(q) ||
-      (p.hsn_code || '').toLowerCase().includes(q)
-    );
-    setProductResults(results);
-    setShowProductResults(true);
-  }, [debouncedProductSearch, allProducts]);
-
   const addToCart = useCallback((product) => {
     setCartItems(prev => {
       const existing = prev.find(item => item.productId === product.id);
@@ -161,6 +147,31 @@ export default function QuickSale() {
     setProductSearch('');
     setShowProductResults(false);
   }, []);
+
+  useEffect(() => {
+    if (!debouncedProductSearch.trim()) {
+      setProductResults([]);
+      setShowProductResults(false);
+      return;
+    }
+    const q = debouncedProductSearch.toLowerCase();
+    const results = allProducts.filter(p =>
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.code || p.sku || '').toLowerCase().includes(q) ||
+      (p.hsn_code || '').toLowerCase().includes(q) ||
+      (p.barcode || '').toLowerCase() === q
+    );
+    setProductResults(results);
+    setShowProductResults(true);
+
+    const exactBarcode = allProducts.find(p => (p.barcode || '').toLowerCase() === q);
+    if (exactBarcode) {
+      addToCart(exactBarcode);
+      setProductSearch('');
+      setProductResults([]);
+      setShowProductResults(false);
+    }
+  }, [debouncedProductSearch, allProducts, addToCart]);
 
   const addRecentItem = useCallback((item) => {
     addToCart(item);
@@ -261,7 +272,7 @@ export default function QuickSale() {
       if (e.key === 'F1') { e.preventDefault(); customerInputRef.current?.focus(); }
       if (e.key === 'F2') { e.preventDefault(); setShowCalculator(true); }
       if (e.key === 'F3') { e.preventDefault(); alert('Cart held successfully!'); }
-      if (e.key === 'F4') { e.preventDefault(); alert('Processing payment...'); }
+      if (e.key === 'F4') { e.preventDefault(); if (cartItems.length === 0) { alert('Cart is empty'); return; } setShowPaymentModal(true); }
       if (e.key === 'F5') { e.preventDefault(); productInputRef.current?.focus(); }
       if (e.key === 'F6') { e.preventDefault(); if (cartItems.length > 0 && window.confirm('Cancel current sale?')) setCartItems([]); }
       if (e.key === 'Escape') {
@@ -274,7 +285,7 @@ export default function QuickSale() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showCalculator, showCustomerResults, showProductResults, cartItems, handleCalculatorInput]);
+  }, [showCalculator, showCustomerResults, showProductResults, cartItems, handleCalculatorInput, showPaymentModal]);
 
   const { setToolbarItems } = useToolbar();
 
@@ -303,6 +314,14 @@ export default function QuickSale() {
     ]);
     return () => setToolbarItems([]);
   }, [setToolbarItems, isFullscreen, toggleFullscreen]);
+
+  const handlePaymentComplete = useCallback((invoiceData) => {
+    setCartItems([]);
+    setSelectedCustomer(null);
+    setDiscount(0);
+    setDiscountType('%');
+    notificationManager.success('Payment Complete', `Invoice ${invoiceData.invoice_number} created successfully.`);
+  }, []);
 
   if (loading) {
     return (
@@ -475,7 +494,7 @@ export default function QuickSale() {
                 <input
                   ref={productInputRef}
                   type="text"
-                  placeholder="Search product by name, code, SKU..."
+                  placeholder="Search product by name, code, SKU or scan barcode..."
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
                   onFocus={() => { setProductSearchFocused(true); productResults.length > 0 && setShowProductResults(true); }}
@@ -598,7 +617,7 @@ export default function QuickSale() {
 
           <div className="qs-cart-actions">
             <div className="qs-action-row">
-              <button className="qs-action-btn qs-pay-now" onClick={() => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert(`Payment of ${currencySymbol}${grandTotal.toFixed(2)} processed!`); }}>
+              <button className="qs-action-btn qs-pay-now" onClick={() => { if (cartItems.length === 0) { alert('Cart is empty'); return; } setShowPaymentModal(true); }}>
                 <CreditCard size={17} />
                 Pay Now <span className="qs-shortcut">F5</span>
               </button>
@@ -620,7 +639,7 @@ export default function QuickSale() {
               { label: 'Card', icon: <CreditCard size={16} />, cls: 'card' },
               { label: 'Split', icon: <SplitSquareHorizontal size={16} />, cls: 'split' },
             ].map((pm, i) => (
-              <button key={i} className={`qs-pm-card ${pm.cls}`} onClick={() => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert(`Payment via ${pm.label}`); }}>
+              <button key={i} className={`qs-pm-card ${pm.cls}`} onClick={() => { if (cartItems.length === 0) { alert('Cart is empty'); return; } setShowPaymentModal(true); }}>
                 <div className={`qs-pm-icon ${pm.cls}`}>{pm.icon}</div>
                 <span className="qs-pm-label">{pm.label}</span>
               </button>
@@ -634,7 +653,7 @@ export default function QuickSale() {
           { label: 'Customer', icon: <Users size={16} />, cls: 'customer', shortcut: 'F1', action: () => customerInputRef.current?.focus() },
           { label: 'Discount', icon: <Tag size={16} />, cls: 'discount', shortcut: 'F2', action: () => setShowCalculator(true) },
           { label: 'Hold Cart', icon: <ShoppingCart size={16} />, cls: 'hold', shortcut: 'F3', action: () => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert('Cart held!'); } },
-          { label: 'Payment', icon: <CreditCard size={16} />, cls: 'payment', shortcut: 'F4', action: () => { if (cartItems.length === 0) { alert('Cart is empty'); return; } alert(`${currencySymbol}${grandTotal.toFixed(2)}`); } },
+          { label: 'Payment', icon: <CreditCard size={16} />, cls: 'payment', shortcut: 'F4', action: () => { if (cartItems.length === 0) { alert('Cart is empty'); return; } setShowPaymentModal(true); } },
           { label: 'Barcode', icon: <Barcode size={16} />, cls: 'barcode', shortcut: 'F5', action: () => productInputRef.current?.focus() },
           { label: 'Cancel', icon: <X size={16} />, cls: 'cancel', shortcut: 'F6', action: () => { if (cartItems.length > 0 && window.confirm('Cancel current sale?')) setCartItems([]); } },
         ].map((btn, i) => (
@@ -672,6 +691,21 @@ export default function QuickSale() {
           </div>
         </div>
       )}
+
+      <QuickSalePaymentModal
+        open={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        grandTotal={grandTotal}
+        subtotal={subtotal}
+        discountAmount={discountAmount}
+        tax={tax}
+        taxRate={defaultTaxRate}
+        cartItems={cartItems}
+        currencySymbol={currencySymbol}
+        selectedCustomer={selectedCustomer}
+        discount={discount}
+        onComplete={handlePaymentComplete}
+      />
     </div>
   );
 }

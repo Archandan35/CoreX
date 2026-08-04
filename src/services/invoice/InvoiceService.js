@@ -15,16 +15,15 @@ import { customHeaderService } from './services/CustomHeaderService.js';
 import { documentNoteService } from './services/DocumentNoteService.js';
 import { companyService } from './services/CompanyService.js';
 import { settingsService } from './services/SettingsService.js';
-import { INVOICE_NUMBER_PAD, INVOICE_NUMBER_DEFAULT_START } from '../../constants/index.js';
 
 function nextInvoiceNumber(prefix, lastNumber) {
   if (!lastNumber) {
-    return `${prefix}${String(INVOICE_NUMBER_DEFAULT_START).padStart(INVOICE_NUMBER_PAD, '0')}`;
+    return `${prefix}-1`;
   }
-  const regex = new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\d+)`);
+  const regex = new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-?(\\d+)`);
   const match = lastNumber.match(regex);
-  const num = match ? parseInt(match[1], 10) : (parseInt(lastNumber.replace(prefix, ''), 10) || 0);
-  return `${prefix}${String(num + 1).padStart(INVOICE_NUMBER_PAD, '0')}`;
+  const num = match ? parseInt(match[1], 10) : 0;
+  return `${prefix}-${num + 1}`;
 }
 
 function computeInvoiceStatus(invoice) {

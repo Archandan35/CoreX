@@ -364,8 +364,6 @@ export default function PrefixSuffixPanel({ open, onClose }) {
               <select className="filter" style={{ width: 130 }} value={`${sortField}:${sortDir}`} onChange={(e) => { const [f, d] = e.target.value.split(':'); setSortField(f); setSortDir(d); }}>
                 <option value="value:asc">{isPrefix ? 'Prefix' : 'Suffix'} A-Z</option>
                 <option value="value:desc">{isPrefix ? 'Prefix' : 'Suffix'} Z-A</option>
-                <option value="sequenceOrder:asc">Order ↑</option>
-                <option value="sequenceOrder:desc">Order ↓</option>
                 <option value="isDefault:desc">Default first</option>
               </select>
             </div>
@@ -423,15 +421,11 @@ export default function PrefixSuffixPanel({ open, onClose }) {
                         <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('value')}>
                           {isPrefix ? 'Prefix' : 'Suffix'} <SortIcon field="value" />
                         </th>
-                        <th>Description</th>
                         <th style={{ width: 80, cursor: 'pointer' }} onClick={() => toggleSort('isDefault')}>
                           Default <SortIcon field="isDefault" />
                         </th>
                         <th style={{ width: 80, cursor: 'pointer' }} onClick={() => toggleSort('isActive')}>
                           Active <SortIcon field="isActive" />
-                        </th>
-                        <th style={{ width: 70, cursor: 'pointer' }} onClick={() => toggleSort('sequenceOrder')}>
-                          Order <SortIcon field="sequenceOrder" />
                         </th>
                         <th style={{ width: 100 }}>Actions</th>
                       </tr>
@@ -443,7 +437,6 @@ export default function PrefixSuffixPanel({ open, onClose }) {
                             <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => handleSelectOne(item.id)} />
                           </td>
                           <td className="ps-value">{item.value}</td>
-                          <td className="ps-desc">{item.description || '\u2014'}</td>
                           <td>
                             <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_UPDATE : PERMISSIONS.SUFFIX_UPDATE}>
                               <label className="ps-toggle-label" onClick={(e) => e.stopPropagation()}>
@@ -468,7 +461,6 @@ export default function PrefixSuffixPanel({ open, onClose }) {
                               </label>
                             </PermissionGate>
                           </td>
-                          <td className="ps-order">{item.sequenceOrder ?? item.order ?? '-'}</td>
                           <td>
                             <div className="ps-actions">
                               <PermissionGate permission={isPrefix ? PERMISSIONS.PREFIX_UPDATE : PERMISSIONS.SUFFIX_UPDATE}>

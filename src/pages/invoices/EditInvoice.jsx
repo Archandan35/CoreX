@@ -175,7 +175,7 @@ export default function EditInvoice() {
       }).catch(e => console.warn('Failed to load products', e)),
       invoiceService.listBanks().then(d => { if (!loadedRef.current) setBanks(Array.isArray(d) ? d : []); }).catch(e => console.warn('Failed to load banks', e)),
       invoiceService.listSignatures().then(d => { if (!loadedRef.current) setSignatures(Array.isArray(d) ? d : []); }).catch(e => console.warn('Failed to load signatures', e)),
-      invoiceService.listPrefixes({ docType: 'invoice' }).then(d => { if (!loadedRef.current) setPrefixes((d?.items || []).filter(p => p.isActive !== false)); }).catch(e => console.warn('Failed to load prefixes', e)),
+      invoiceService.listPrefixes({ docType: 'Invoice' }).then(d => { if (!loadedRef.current) setPrefixes((d?.items || []).filter(p => p.isActive !== false)); }).catch(e => console.warn('Failed to load prefixes', e)),
       invoiceService.listUnits().then(d => { if (!loadedRef.current) setUnits(Array.isArray(d) ? d : []); }).catch(e => console.warn('Failed to load units', e)),
       invoiceService.listWarehouses().then(d => { if (!loadedRef.current) setWarehouses(Array.isArray(d) ? d : []); }).catch(e => console.warn('Failed to load warehouses', e)),
       invoiceService.getDocumentSettings().then(d => { if (d?.default_due_days) setDueDateOffset(Number(d.default_due_days)); }).catch(e => console.warn('Failed to load document settings', e)),

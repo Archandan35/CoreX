@@ -45,8 +45,7 @@ export default function CustomHeaderPanel({ open, onClose }) {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [filterActive, setFilterActive] = useState(null);
-  const [filterInputType, setFilterInputType] = useState('');
-  const [sortField, setSortField] = useState('displayOrder');
+  const [sortField, setSortField] = useState('displayName');
   const [sortDir, setSortDir] = useState('asc');
   const [selectedIds, setSelectedIds] = useState([]);
 
@@ -64,7 +63,6 @@ export default function CustomHeaderPanel({ open, onClose }) {
     const params = { page: String(page), pageSize: String(PAGE_SIZE), sortField, sortDir };
     if (search.trim()) params.q = search.trim();
     if (filterActive !== null) params.active = String(filterActive);
-    if (filterInputType) params.inputType = filterInputType;
 
     invoiceService.listCustomHeaders(params)
       .then((data) => {
@@ -73,11 +71,11 @@ export default function CustomHeaderPanel({ open, onClose }) {
       })
       .catch(() => { setItems([]); setTotal(0); })
       .finally(() => setLoading(false));
-  }, [open, page, search, filterActive, filterInputType, sortField, sortDir]);
+  }, [open, page, search, filterActive, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  useEffect(() => { setPage(1); }, [search, filterActive, filterInputType, sortField, sortDir]);
+  useEffect(() => { setPage(1); }, [search, filterActive, sortField, sortDir]);
 
   const toggleSort = useCallback((field) => {
     setSortField((prev) => {
@@ -189,11 +187,10 @@ export default function CustomHeaderPanel({ open, onClose }) {
     const params = { page: String(page), pageSize: String(PAGE_SIZE), sortField, sortDir };
     if (search.trim()) params.q = search.trim();
     if (filterActive !== null) params.active = String(filterActive);
-    if (filterInputType) params.inputType = filterInputType;
     invoiceService.listCustomHeaders(params)
       .then((data) => { setItems(data.items || []); setTotal(data.total || 0); })
       .catch(() => {});
-  }, [page, search, filterActive, filterInputType, sortField, sortDir]);
+  }, [page, search, filterActive, sortField, sortDir]);
 
   const handleBulkActivate = useCallback(async (active) => {
     const ids = selectedIds;
@@ -224,7 +221,6 @@ export default function CustomHeaderPanel({ open, onClose }) {
     setPage(1);
     setSearch('');
     setFilterActive(null);
-    setFilterInputType('');
     setSelectedIds([]);
   }, []);
 
@@ -272,12 +268,6 @@ export default function CustomHeaderPanel({ open, onClose }) {
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
-            <select className="filter" value={filterInputType} onChange={(e) => setFilterInputType(e.target.value)}>
-              <option value="">All Types</option>
-              {CUSTOM_HEADER_INPUT_TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
             <button className="refreshBtn" onClick={() => setPage(1)} title="Refresh">
               <Icon name="refresh-cw" size={16} />
             </button>
@@ -295,8 +285,6 @@ export default function CustomHeaderPanel({ open, onClose }) {
               <select className="filter" style={{ width: 130 }} value={`${sortField}:${sortDir}`} onChange={(e) => { const [f, d] = e.target.value.split(':'); setSortField(f); setSortDir(d); }}>
                 <option value="displayName:asc">Name A-Z</option>
                 <option value="displayName:desc">Name Z-A</option>
-                <option value="displayOrder:asc">Order ↑</option>
-                <option value="displayOrder:desc">Order ↓</option>
               </select>
             </div>
           </div>
@@ -347,12 +335,10 @@ export default function CustomHeaderPanel({ open, onClose }) {
                   <table className="ps-table" style={{ tableLayout: 'fixed' }}>
                     <thead>
                       <tr>
-                        <th style={{ width: 36 }}><input type="checkbox" onChange={handleSelectAll} checked={selectedIds.length === items.length && items.length > 0} /></th>
+                        <th style={{ width: 36 }}>
+                          <input type="checkbox" onChange={handleSelectAll} checked={selectedIds.length === items.length && items.length > 0} />
+                        </th>
                         <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('displayName')}>Display Name <SortIcon field="displayName" /></th>
-                        <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('internalKey')}>Key <SortIcon field="internalKey" /></th>
-                        <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('inputType')}>Type <SortIcon field="inputType" /></th>
-                        <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('columnPosition')}>Column <SortIcon field="columnPosition" /></th>
-                        <th style={{ width: 70, cursor: 'pointer' }} onClick={() => toggleSort('displayOrder')}>Order <SortIcon field="displayOrder" /></th>
                         <th style={{ width: 80, cursor: 'pointer' }} onClick={() => toggleSort('active')}>Active <SortIcon field="active" /></th>
                         <th style={{ width: 100 }}>Actions</th>
                       </tr>
@@ -360,12 +346,10 @@ export default function CustomHeaderPanel({ open, onClose }) {
                     <tbody>
                       {items.map((item) => (
                         <tr key={item.id}>
-                          <td><input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => handleSelectOne(item.id)} /></td>
+                          <td style={{ width: 36 }}>
+                            <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => handleSelectOne(item.id)} />
+                          </td>
                           <td className="ps-value">{item.displayName}</td>
-                          <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--invoice-muted2)' }}>{item.internalKey}</td>
-                          <td>{CUSTOM_HEADER_INPUT_TYPE_OPTIONS.find((o) => o.value === item.inputType)?.label || item.inputType}</td>
-                          <td>Col {item.columnPosition || 1}</td>
-                          <td className="ps-order">{item.displayOrder ?? item.order ?? '-'}</td>
                           <td>
                             <PermissionGate permission={PERMISSIONS.CUSTOM_HEADER_UPDATE}>
                               <label className="ps-toggle-label" onClick={(e) => e.stopPropagation()}>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useDebounce } from '../../hooks/useDebounce.js';
 import { useNavigate } from 'react-router-dom';
 import ProductModal from '../../components/invoice/ProductModal.jsx';
 import CustomerModal from '../../components/invoice/CustomerModal.jsx';
@@ -41,6 +42,8 @@ export default function CreateInvoice() {
   const [banks, setBanks] = useState([]);
   const [signatures, setSignatures] = useState([]);
   const [prefixes, setPrefixes] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [manufacturers, setManufacturers] = useState([]);
   const [dueDateOffset, setDueDateOffset] = useState(DEFAULT_DUE_DATE_OFFSET_DAYS);
   const [companyState, setCompanyState] = useState('');
 
@@ -73,6 +76,9 @@ export default function CreateInvoice() {
   const [items, setItems] = useState([]);
   const [showDescription, setShowDescription] = useState(true);
   const [aiBusy, setAiBusy] = useState(false);
+  const [productResults, setProductResults] = useState([]);
+  const [showProductResults, setShowProductResults] = useState(false);
+  const debouncedProductQuery = useDebounce(productQuery, 300);
 
   // Clear stale header errors when definitions change
   useEffect(() => {
@@ -143,6 +149,19 @@ export default function CreateInvoice() {
     return companyState.toLowerCase() === selectedCustomer.state.toLowerCase();
   }, [companyState, selectedCustomer]);
 
+  // --- Brand & Manufacturer lookup ---
+  const brandName = useCallback((id) => {
+    if (!id) return '—';
+    const found = brands.find(b => b.id === id);
+    return found?.name || id;
+  }, [brands]);
+
+  const manufacturerName = useCallback((id) => {
+    if (!id) return '—';
+    const found = manufacturers.find(m => m.id === id);
+    return found?.name || id;
+  }, [manufacturers]);
+
   // --- Load master data ---
   useEffect(() => {
     if (initialized.current) return;
@@ -154,9 +173,11 @@ export default function CreateInvoice() {
         setProducts(Array.isArray(pd.products) ? pd.products : []);
         setCategories(Array.isArray(pd.categories) ? pd.categories : []);
       }).catch(e => console.warn('Failed to load products', e)),
+      invoiceService.listBrands().then(d => setBrands(Array.isArray(d) ? d : [])).catch(e => console.warn('Failed to load brands', e)),
+      invoiceService.listManufacturers().then(d => setManufacturers(Array.isArray(d) ? d : [])).catch(e => console.warn('Failed to load manufacturers', e)),
       invoiceService.listBanks().then(d => setBanks(Array.isArray(d) ? d : [])).catch(e => console.warn('Failed to load banks', e)),
       invoiceService.listSignatures().then(d => setSignatures(Array.isArray(d) ? d : [])).catch(e => console.warn('Failed to load signatures', e)),
-      invoiceService.listPrefixes({ docType: 'invoice' }).then(d => {
+      invoiceService.listPrefixes({ docType: 'Invoice' }).then(d => {
         const items = d?.items || [];
         setPrefixes(items.filter(p => p.isActive !== false));
       }).catch(e => console.warn('Failed to load prefixes', e)),
@@ -280,7 +301,7 @@ export default function CreateInvoice() {
     const item = {
       _key: generateKey(), name: product.name || '',
       description: product.description || '',
-      quantity: Number(defaultQty) || 1, unitPrice: Number(product.unit_price) || 0,
+      quantity: Number(defaultQty) || 1, mrp: Number(product.mrp || product.unit_price) || 0,
       taxRate: Number(product.tax_rate) || 0, discountType: 'percent', discountValue: 0,
       product_id: product.id || null,
       stock_quantity: Number(product.stock_quantity) || 0,
@@ -305,20 +326,48 @@ export default function CreateInvoice() {
   const addProduct = useCallback((product) => {
     setItems(prev => [...prev, {
       _key: generateKey(), name: product.name || product, description: product.description || '',
-      quantity: Number(defaultQty) || 1, unitPrice: Number(product.unit_price) || 0,
+      quantity: Number(defaultQty) || 1, mrp: Number(product.mrp || product.unit_price) || 0,
       taxRate: Number(product.tax_rate) || 0, discountType: 'percent', discountValue: 0,
       product_id: product.id || null,
       stock_quantity: Number(product.stock_quantity) || 0,
       unit: product.unit || '',
       hsnSac: product.hsn_code || product.hsnSac || '',
+      sku: product.sku || product.code || '',
+      brand: product.brand || '',
+      manufacturer: product.manufacturer || '',
     }]);
     setProductQuery('');
   }, [defaultQty]);
 
+  useEffect(() => {
+    const q = debouncedProductQuery.trim().toLowerCase();
+    if (!q) {
+      setProductResults([]);
+      setShowProductResults(false);
+      return;
+    }
+    const results = products.filter(p =>
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.sku || '').toLowerCase().includes(q) ||
+      (p.hsn_code || '').toLowerCase().includes(q) ||
+      (p.barcode || '').toLowerCase().includes(q)
+    );
+    setProductResults(results);
+    setShowProductResults(true);
+
+    const exactBarcode = products.find(p => (p.barcode || '').toLowerCase() === q);
+    if (exactBarcode) {
+      addProduct(exactBarcode);
+      setProductQuery('');
+      setProductResults([]);
+      setShowProductResults(false);
+    }
+  }, [debouncedProductQuery, products, addProduct]);
+
   const addNewProductLine = useCallback(() => {
     setItems(prev => [...prev, {
       _key: generateKey(), name: '', description: '',
-      quantity: 1, unitPrice: 0, taxRate: 0, discountType: 'percent', discountValue: 0,
+      quantity: 1, mrp: 0, taxRate: 0, discountType: 'percent', discountValue: 0,
       product_id: null, stock_quantity: 0,
     }]);
   }, []);
@@ -374,7 +423,7 @@ export default function CreateInvoice() {
       if (result?.items) {
         setItems(result.items.map(it => ({
           _key: generateKey(), name: it.name || '', quantity: Number(it.quantity) || 1,
-          unitPrice: Number(it.unitPrice) || 0, taxRate: Number(it.taxRate) || 0,
+          mrp: Number(it.unitPrice || it.mrp) || 0, taxRate: Number(it.taxRate) || 0,
           discountType: 'percent', discountValue: 0,
         })));
       }
@@ -769,19 +818,17 @@ export default function CreateInvoice() {
           </div>
           <div>
             <div className="ni-field-label">Invoice Date</div>
-            <div className="ni-field-input ni-between">
-              <input type="text" value={invoiceDate || new Date().toISOString().split('T')[0]}
+            <div className="ni-field-input">
+              <input type="date" value={invoiceDate || new Date().toISOString().split('T')[0]}
                 onChange={e => { setInvoiceDate(e.target.value); }} />
-              <Icon name="calendar" />
             </div>
             {errors.invoiceDate && <div style={{color:'#e5484d',fontSize:'11px',marginTop:'4px'}}>{errors.invoiceDate}</div>}
           </div>
           <div>
             <div className="ni-field-label">Due Date</div>
-            <div className="ni-field-input ni-between">
-              <input type="text" value={dueDate || ''}
+            <div className="ni-field-input">
+              <input type="date" value={dueDate || ''}
                 onChange={e => setDueDate(e.target.value)} />
-              <Icon name="calendar" />
             </div>
             {errors.dueDate && <div style={{color:'#e5484d',fontSize:'11px',marginTop:'4px'}}>{errors.dueDate}</div>}
           </div>
@@ -835,10 +882,26 @@ export default function CreateInvoice() {
               </div>
             )}
           </div>
-          <div className="ni-field-input">
+          <div className="ni-field-input" style={{position:'relative'}}>
             <Icon name="search" />
             <input type="text" placeholder="Search or scan barcode for existing products"
-              value={productQuery} onChange={e => setProductQuery(e.target.value)} />
+              value={productQuery} onChange={e => setProductQuery(e.target.value)}
+              onFocus={() => { if (productResults.length > 0) setShowProductResults(true); }}
+              onBlur={() => setTimeout(() => setShowProductResults(false), 200)} />
+            {showProductResults && productResults.length > 0 && (
+              <div style={{position:'absolute',top:'100%',left:0,right:0,background:'#fff',border:'1px solid var(--ni-border)',borderRadius:'8px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:100,maxHeight:'220px',overflow:'auto',marginTop:'2px'}}>
+                {productResults.slice(0, 10).map(p => (
+                  <div key={p.id} style={{padding:'8px 12px',fontSize:'13px',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid var(--ni-border)'}}
+                    onMouseDown={() => { addProduct(p); setProductQuery(''); setProductResults([]); setShowProductResults(false); }}>
+                    <div>
+                      <div style={{fontWeight:500}}>{p.name}</div>
+                      <div style={{fontSize:'11px',color:'var(--ni-text-light-gray)'}}>{p.sku || p.code || ''}{p.barcode ? ` · ${p.barcode}` : ''}</div>
+                    </div>
+                    <div style={{fontSize:'12px',color:'var(--ni-text-light-gray)'}}>₹{Number(p.unit_price || 0).toFixed(2)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="ni-field-input">
             <input type="text" placeholder="Qty" value={defaultQty} onChange={e => setDefaultQty(Number(e.target.value) || 1)} />
@@ -875,14 +938,17 @@ export default function CreateInvoice() {
 
         <div className="ni-products-table">
           <div className="ni-products-table-header">
-            <div>#</div>
+            <div className="ni-header-center">#</div>
             <div>Product Name{showDescription ? ' + Desc' : ''}</div>
-            <div>Qty</div>
-            <div>Unit Price</div>
-            <div>Tax</div>
-            <div>Disc</div>
-            <div>Amount</div>
-            <div className="ni-col-total">Total<span className="ni-sub">(Net + Tax)</span></div>
+            <div className="ni-header-center">Brand</div>
+            <div className="ni-header-center">Manufacturer</div>
+            <div className="ni-header-center">Qty</div>
+            <div className="ni-header-center">MRP</div>
+            <div className="ni-header-center">Tax</div>
+            <div className="ni-header-center">Disc</div>
+            <div className="ni-header-center">Amount</div>
+            <div className="ni-header-center">Total</div>
+            <div className="ni-header-center">Action</div>
           </div>
 
           {items.length === 0 ? (
@@ -901,59 +967,66 @@ export default function CreateInvoice() {
           ) : (
             <div>
               {items.map((item, idx) => {
-                const lineAmount = item.quantity * item.unitPrice;
+                const lineAmount = item.quantity * item.mrp;
                 const lineDisc = item.discountType === 'percent' ? lineAmount * (item.discountValue || 0) / 100 : (item.discountValue || 0);
                 const lineNet = lineAmount - lineDisc;
                 const lineTax = lineNet * (item.taxRate || 0) / 100;
                 const lineTotal = lineNet + lineTax;
                 return (
-                <div key={item._key} className="ni-products-table-header" style={{ background:'#fff', borderBottom:'1px solid var(--ni-border)', gridTemplateColumns:'34px 1.6fr 70px 90px 70px 70px 80px 80px 34px', padding:'8px 16px', fontSize:'13px', fontWeight:400, alignItems:'center' }}>
-                  <div style={{color:'var(--ni-text-light-gray)',fontSize:'11px'}}>{idx + 1}</div>
-                  <div style={{minWidth:0}}>
-                    <input style={{ border:'none', outline:'none', width:'100%', fontSize:'13px', fontFamily:'inherit',color:'var(--ni-text-dark)' }}
+                <div key={item._key} className="ni-products-table-header ni-item-row">
+                  <div className="ni-item-idx">{idx + 1}</div>
+                  <div className="ni-item-name-col">
+                    <input className="ni-item-name-input"
                       value={item.name} onChange={e => onChangeItem(idx, { ...item, name: e.target.value })} placeholder="Product / HSN" />
-                    {item.hsnSac && <div style={{fontSize:'10px',color:'var(--ni-text-light-gray)'}}>HSN: {item.hsnSac}</div>}
+                    {item.sku && <div className="ni-item-meta">SKU: {item.sku}</div>}
+                    {item.hsnSac && <div className="ni-item-meta">HSN: {item.hsnSac}</div>}
                     {showDescription && (
-                      <input style={{ border:'none', outline:'none', width:'100%', fontSize:'11px', color:'var(--ni-text-gray)', marginTop:'2px', fontFamily:'inherit' }}
+                      <input className="ni-item-desc-input"
                         value={item.description || ''} onChange={e => onChangeItem(idx, { ...item, description: e.target.value })} placeholder="Description" />
                     )}
-                    {errors.lines?.[idx]?.name && <div style={{color:'#e5484d',fontSize:'10px',marginTop:'1px'}}>{errors.lines[idx].name}</div>}
+                    {errors.lines?.[idx]?.name && <div className="ni-item-error">{errors.lines[idx].name}</div>}
                   </div>
-                  <div>
-                    <input style={{ border:'1px solid var(--ni-border)', borderRadius:'6px', padding:'6px 8px', width:'100%', fontSize:'13px', fontFamily:'inherit' }}
+                  <div className="ni-item-cell-center">
+                    <span className="ni-item-meta">{brandName(item.brand)}</span>
+                  </div>
+                  <div className="ni-item-cell-center">
+                    <span className="ni-item-meta">{manufacturerName(item.manufacturer)}</span>
+                  </div>
+                  <div className="ni-item-cell-center">
+                    <input className="ni-item-input ni-item-input-center"
+                      style={{width: `${Math.max(4, String(item.quantity || 0).length) + 3}ch`}}
                       type="number" min="0" step="any" value={item.quantity} onChange={e => onChangeItem(idx, { ...item, quantity: Number(e.target.value) || 0 })} />
-                    {errors.lines?.[idx]?.quantity && <div style={{color:'#e5484d',fontSize:'10px',marginTop:'1px'}}>{errors.lines[idx].quantity}</div>}
+                    {errors.lines?.[idx]?.quantity && <div className="ni-item-error">{errors.lines[idx].quantity}</div>}
                   </div>
-                  <div>
-                    <input style={{ border:'1px solid var(--ni-border)', borderRadius:'6px', padding:'6px 8px', width:'100%', fontSize:'13px', fontFamily:'inherit' }}
-                      type="number" min="0" step="any" value={item.unitPrice} onChange={e => onChangeItem(idx, { ...item, unitPrice: Number(e.target.value) || 0 })} />
-                    {errors.lines?.[idx]?.unitPrice && <div style={{color:'#e5484d',fontSize:'10px',marginTop:'1px'}}>{errors.lines[idx].unitPrice}</div>}
+                  <div className="ni-item-cell-center">
+                    <input className="ni-item-input ni-item-input-center"
+                      style={{width: `${Math.max(5, Number(item.mrp || 0).toFixed(2).length) + 2}ch`}}
+                      type="number" min="0" step="any" value={item.mrp} onChange={e => onChangeItem(idx, { ...item, mrp: Number(e.target.value) || 0 })} />
+                    {errors.lines?.[idx]?.mrp && <div className="ni-item-error">{errors.lines[idx].mrp}</div>}
                   </div>
-                  <div style={{position:'relative'}}>
-                    <select style={{border:'1px solid var(--ni-border)',borderRadius:'6px',padding:'6px 4px',fontSize:'12px',width:'100%',fontFamily:'inherit',background:'#fff'}}
+                  <div className="ni-item-cell-center-pos">
+                    <select className="ni-item-select"
                       value={item.taxRate} onChange={e => onChangeItem(idx, { ...item, taxRate: Number(e.target.value) })}>
                       {TAX_RATE_OPTIONS.map(r => <option key={r} value={r}>{r}%</option>)}
                     </select>
-                    {errors.lines?.[idx]?.taxRate && <div style={{color:'#e5484d',fontSize:'10px',marginTop:'1px'}}>{errors.lines[idx].taxRate}</div>}
+                    {errors.lines?.[idx]?.taxRate && <div className="ni-item-error">{errors.lines[idx].taxRate}</div>}
                   </div>
-                  <div style={{display:'flex',gap:'2px',alignItems:'center'}}>
-                    <select style={{border:'1px solid var(--ni-border)',borderRadius:'6px',padding:'6px 2px',fontSize:'11px',width:'40px',fontFamily:'inherit',background:'#fff'}}
+                  <div className="ni-item-disc-group">
+                    <input className="ni-item-disc-input"
+                      style={{width: `${Math.max(5, String(item.discountValue || 0).length) + 4}ch`}}
+                      type="number" min="0" value={item.discountValue || 0} onChange={e => onChangeItem(idx, { ...item, discountValue: Number(e.target.value) || 0 })} />
+                    <select className="ni-item-disc-select"
                       value={item.discountType} onChange={e => onChangeItem(idx, { ...item, discountType: e.target.value })}>
                       <option value="percent">%</option>
                       <option value="fixed">₹</option>
                     </select>
-                    <input style={{border:'1px solid var(--ni-border)',borderRadius:'6px',padding:'6px 4px',width:'36px',fontSize:'11px',fontFamily:'inherit'}}
-                      type="number" min="0" value={item.discountValue || 0} onChange={e => onChangeItem(idx, { ...item, discountValue: Number(e.target.value) || 0 })} />
                   </div>
-                  <div style={{textAlign:'right',fontSize:'12px'}}>₹ {lineNet.toFixed(2)}</div>
-                  <div className="ni-col-total" style={{textAlign:'right'}}>
-                    ₹ {lineTotal.toFixed(2)}
-                    <span className="ni-sub" style={{display:'block',fontSize:'10px',color:'var(--ni-text-light-gray)'}}>
-                      ₹ {lineNet.toFixed(2)} + ₹ {lineTax.toFixed(2)}
-                    </span>
-                  </div>
-                  <div style={{cursor:'pointer',color:'var(--ni-text-light-gray)'}} onClick={() => onRemoveItem(idx)} title="Remove item">
-                    <Icon name="x" size={14} />
+                  <div className="ni-item-amount">₹ {lineNet.toFixed(2)}</div>
+                  <div className="ni-item-total">₹ {lineTotal.toFixed(2)}</div>
+                  <div className="ni-item-action">
+                    <button className="ni-item-delete" onClick={() => onRemoveItem(idx)} title="Remove item">
+                      <Icon name="trash" size={16} />
+                    </button>
                   </div>
                 </div>
                 );
@@ -1186,9 +1259,8 @@ export default function CreateInvoice() {
                 <div>
                   <div className="ni-col-label">Payment Date</div>
                   <div className="ni-pt-input">
-                    <input type="text" value={pmt.paymentDate}
+                    <input type="date" value={pmt.paymentDate}
                       onChange={e => updatePayment(i, { ...pmt, paymentDate: e.target.value })} />
-                    <Icon name="calendar" />
                   </div>
                 </div>
                 <div>

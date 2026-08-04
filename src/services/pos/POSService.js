@@ -175,8 +175,16 @@ class POSService {
 
   async saveInvoice(invoiceData) {
     const supabase = await getSupabaseClient();
-    const { data, error } = await supabase.from('invoices').insert(invoiceData).select().single();
+    const { items, payments, ...invoiceRow } = invoiceData;
+    invoiceRow.id = crypto.randomUUID();
+    const { data, error } = await supabase.from('invoices').insert(invoiceRow).select().single();
     if (error) throw new Error(error.message);
+    if (items?.length) {
+      await supabase.from('invoice_items').insert(items.map((it, i) => ({ ...it, id: crypto.randomUUID(), invoice_id: data.id, sort_order: it.sort_order ?? i })));
+    }
+    if (payments?.length) {
+      await supabase.from('invoice_payments').insert(payments.map((p) => ({ ...p, id: crypto.randomUUID(), invoice_id: data.id })));
+    }
     return data;
   }
 }
