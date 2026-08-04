@@ -14463,7 +14463,7 @@ button.qs-cancel:hover,
   border-radius: 12px;
   padding: 0 12px;
   height: 40px;
-  width: 300px;
+  flex: 1 1 340px;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 

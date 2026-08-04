@@ -4,7 +4,7 @@ export class ProductService {
   async listProducts() {
     const supabase = await getSupabaseClient();
     const [pr, cr] = await Promise.all([
-      supabase.from('products').select('*, category:product_categories(id,name), supplier:product_suppliers(id,name)').order('created_at', { ascending: false }),
+      supabase.from('products').select('*').order('created_at', { ascending: false }),
       supabase.from('product_categories').select('*').order('name', { ascending: true }),
     ]);
     if (pr.error) return { products: [], categories: [] };

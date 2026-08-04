@@ -520,6 +520,16 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS cess NUMERIC DEFAULT 0;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS reorder_qty NUMERIC DEFAULT 0;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_id UUID;
 
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'products_category_id_fkey') THEN
+    ALTER TABLE products ADD CONSTRAINT products_category_id_fkey FOREIGN KEY (category_id) REFERENCES product_categories(id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'products_supplier_id_fkey') THEN
+    ALTER TABLE products ADD CONSTRAINT products_supplier_id_fkey FOREIGN KEY (supplier_id) REFERENCES product_suppliers(id);
+  END IF;
+END $$;
+
 ALTER TABLE product_suppliers ADD COLUMN IF NOT EXISTS category_id UUID;
 ALTER TABLE product_suppliers ADD COLUMN IF NOT EXISTS city TEXT;
 ALTER TABLE product_suppliers ADD COLUMN IF NOT EXISTS payment_terms TEXT;
