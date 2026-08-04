@@ -790,7 +790,10 @@ export default function CreateInvoice() {
             </div>
           </div>
         </div>
+      </div>
 
+      {/* ===== Custom Fields card ===== */}
+      <div className="ni-card">
         <DynamicCustomHeaders
           values={customHeaderValues}
           onChange={(key, val) => setCustomHeaderValues(p => ({ ...p, [key]: val }))}

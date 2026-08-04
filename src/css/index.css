@@ -5433,11 +5433,6 @@ select.form-input {
 
 /* ===== CARD ===== */
 .inv-card {
-  background: var(--inv-card-bg);
-  border: 1px solid var(--inv-border);
-  border-radius: var(--inv-radius-lg);
-  box-shadow: var(--inv-shadow-card);
-  margin-bottom: 16px;
 }
 
 /* ===== CUSTOMER / DATES CARD ===== */
@@ -5597,6 +5592,77 @@ select.form-input {
   font-size: 13px;
   font-weight: 700;
   color: var(--inv-text-main);
+}
+
+/* Chip Input */
+.chip-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid var(--inv-border, #e2e4e9);
+  border-radius: 8px;
+  background: #fff;
+  cursor: text;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.chip-input:focus-within {
+  border-color: var(--inv-indigo, #5b3fd9);
+  box-shadow: 0 0 0 3px rgba(91, 63, 217, 0.10);
+}
+
+.chip-input__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--inv-indigo-pale, #efebff);
+  color: var(--inv-indigo, #5b3fd9);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.chip-input__chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: transparent;
+  color: var(--inv-indigo, #5b3fd9);
+  cursor: pointer;
+  border-radius: 50%;
+  padding: 0;
+  opacity: 0.6;
+  transition: opacity 120ms ease;
+}
+
+.chip-input__chip-remove:hover {
+  opacity: 1;
+  background: rgba(91, 63, 217, 0.15);
+}
+
+.chip-input__field {
+  flex: 1 1 80px;
+  min-width: 80px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--inv-text, #1a1d26);
+  padding: 2px 0;
+}
+
+.chip-input__field::placeholder {
+  color: var(--inv-muted, #9ca3af);
 }
 
 .inv-chip-row {

@@ -6,9 +6,15 @@ import Icon from '../ui/Icon.jsx';
 import Button from '../ui/Button.jsx';
 import PermissionGate from '../ui/PermissionGate.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
+import ChipInput from '../ui/ChipInput.jsx';
 
 const INPUT_TYPE_RENDERERS = {
-  text: ({ value, onChange, placeholder, readOnly }) => <Input value={value ?? ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} readOnly={readOnly} />,
+  text: ({ value, onChange, placeholder, readOnly, chipMode }) => {
+    if (chipMode) {
+      return <ChipInput value={value} onChange={onChange} placeholder={placeholder} readOnly={readOnly} />;
+    }
+    return <Input value={value ?? ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} readOnly={readOnly} />;
+  },
   number: ({ value, onChange, placeholder, readOnly }) => <Input type="number" value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} placeholder={placeholder} readOnly={readOnly} />,
   currency: ({ value, onChange, placeholder, readOnly }) => <Input type="number" min="0" step="0.01" value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} placeholder={placeholder} readOnly={readOnly} />,
   date: ({ value, onChange, readOnly }) => <Input type="date" value={value ?? ''} onChange={(e) => onChange(e.target.value)} readOnly={readOnly} />,
@@ -156,7 +162,7 @@ export default function DynamicCustomHeaders({ values, onChange, docType, chipMo
                         )}
                       </div>
                       <div className="inv-ch-field-input">
-                        {renderField(header, values[header.internalKey] ?? header.defaultValue ?? '', (val) => handleChange(header, val))}
+                        {renderField(header, values[header.internalKey] ?? header.defaultValue ?? '', (val) => handleChange(header, val), chipMode)}
                       </div>
                       {errors?.[header.internalKey] && (
                         <span className="inv-field-error">{errors[header.internalKey]}</span>
@@ -190,7 +196,7 @@ export default function DynamicCustomHeaders({ values, onChange, docType, chipMo
   );
 }
 
-function renderField(header, value, onChange) {
+function renderField(header, value, onChange, chipMode) {
   const type = header.inputType || 'text';
   const placeholder = header.placeholder || '';
   const readOnly = !!header.readOnly;
@@ -200,7 +206,7 @@ function renderField(header, value, onChange) {
   if (INPUT_TYPE_RENDERERS[type]) {
     if (type === 'checkbox') return INPUT_TYPE_RENDERERS.checkbox({ value, onChange, label });
     if (type === 'toggle') return INPUT_TYPE_RENDERERS.toggle({ value, onChange, label });
-    return INPUT_TYPE_RENDERERS[type]({ value, onChange, placeholder, readOnly, label });
+    return INPUT_TYPE_RENDERERS[type]({ value, onChange, placeholder, readOnly, label, chipMode });
   }
 
   if (type === 'dropdown') {
