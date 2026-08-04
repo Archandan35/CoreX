@@ -12,8 +12,7 @@ import { notificationManager } from '../../managers/index.js';
 import { invalidateCache } from '../../services/ui-sync/index.js';
 import { usePermission } from '../../identity/authorization/PermissionContext.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
-import { useFullscreen } from '../../components/layout/FullscreenContext.jsx';
-import { themeManager } from '../../managers/ThemeManager.js';
+import { useHeaderActions } from '../../components/layout/HeaderActionsContext.jsx';
 
 const STATUS_META = {
   in: { label: 'In Stock', cls: 'in' },
@@ -43,7 +42,6 @@ function fmtQty(n) {
 
 export default function Inventory() {
   const { hasPermission } = usePermission();
-  const { isFullscreen, toggleFullscreen } = useFullscreen();
   const canCreate = hasPermission(PERMISSIONS.PRODUCT_CREATE);
   const canUpdate = hasPermission(PERMISSIONS.PRODUCT_UPDATE);
   const canDelete = hasPermission(PERMISSIONS.PRODUCT_DELETE);
@@ -80,9 +78,6 @@ export default function Inventory() {
 
   const headerSearchRef = useRef(null);
   const importRef = useRef(null);
-
-  const [isDark, setIsDark] = useState(themeManager.isDark());
-  useEffect(() => themeManager.onChange(() => setIsDark(themeManager.isDark())), []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -148,6 +143,29 @@ export default function Inventory() {
       outPct: total ? Math.round((out / total) * 1000) / 10 : 0,
     };
   }, [products]);
+
+  const { registerPageActions } = useHeaderActions();
+
+  // Register this page's page-specific header actions so the shared Topbar
+  // (Search / Barcode / Notifications) renders them on every page.
+  useEffect(() => {
+    const alerts = kpis.low + kpis.out;
+    registerPageActions({
+      searchRef: headerSearchRef,
+      onBarcode: () => headerSearchRef.current?.focus(),
+      onSearch: () => headerSearchRef.current?.focus(),
+      notify: {
+        count: alerts,
+        onClick: () => {
+          notificationManager.info(
+            'Notifications',
+            alerts > 0 ? `${alerts} product(s) need attention.` : 'No new notifications.'
+          );
+        },
+      },
+    });
+    return () => registerPageActions(null);
+  }, [registerPageActions, kpis.low, kpis.out, headerSearchRef]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -366,36 +384,8 @@ export default function Inventory() {
           <p>Manage and track your product inventory.</p>
         </div>
         <div className="invp-header-actions">
-          <div className="invp-search">
-            <Icon name="search" size={16} />
-            <input
-              ref={headerSearchRef}
-              type="text"
-              placeholder="Search products..."
-              value={query}
-              onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-              aria-label="Search products"
-            />
-            <kbd>Ctrl K</kbd>
-          </div>
           <button type="button" className="invp-icon-btn" title="Product Masters" onClick={() => setMastersOpen(true)}>
             <Icon name="layers" size={17} />
-          </button>
-          <button type="button" className="invp-icon-btn" title="Barcode Scanner" onClick={() => headerSearchRef.current?.focus()}>
-            <Icon name="scan" size={17} />
-          </button>
-          <button type="button" className="invp-icon-btn" title="Notifications" onClick={() => {
-            const alerts = kpis.low + kpis.out;
-            notificationManager.info('Notifications', alerts > 0 ? `${alerts} product(s) need attention.` : 'No new notifications.');
-          }}>
-            <Icon name="bell" size={17} />
-            {(kpis.low + kpis.out) > 0 && <span className="invp-notif-dot" />}
-          </button>
-          <button type="button" className="invp-icon-btn" title="Toggle dark mode" onClick={() => themeManager.toggle()}>
-            <Icon name={isDark ? 'sun' : 'moon'} size={17} />
-          </button>
-          <button type="button" className="invp-icon-btn" title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'} onClick={toggleFullscreen}>
-            <Icon name="maximize" size={17} />
           </button>
           {canCreate && (
             <button type="button" className="invp-btn invp-btn--primary" onClick={() => setAddOpen(true)}>
@@ -453,6 +443,7 @@ export default function Inventory() {
           <div className="invp-filter-search">
             <Icon name="search" size={16} />
             <input
+              ref={headerSearchRef}
               type="text"
               placeholder="Search products by name, code, SKU..."
               value={query}

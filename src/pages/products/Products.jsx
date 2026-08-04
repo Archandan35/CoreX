@@ -10,7 +10,7 @@ import { notificationManager } from '../../managers/index.js';
 import { invalidateCache } from '../../services/ui-sync/index.js';
 import { usePermission } from '../../identity/authorization/PermissionContext.jsx';
 import { PERMISSIONS } from '../../identity/rbac/permissions.js';
-import { useFullscreen } from '../../components/layout/FullscreenContext.jsx';
+import { useHeaderActions } from '../../components/layout/HeaderActionsContext.jsx';
 
 const STATUS_META = {
   in: { label: 'In Stock', cls: 'in' },
@@ -49,7 +49,6 @@ function useDebounced(value, delay = 250) {
 
 export default function Products() {
   const { hasPermission } = usePermission();
-  const { isFullscreen, toggleFullscreen } = useFullscreen();
   const canCreate = hasPermission(PERMISSIONS.PRODUCT_CREATE);
   const canUpdate = hasPermission(PERMISSIONS.PRODUCT_UPDATE);
   const canDelete = hasPermission(PERMISSIONS.PRODUCT_DELETE);
@@ -144,6 +143,29 @@ export default function Products() {
     });
     return { total: products.length, inStock, low, out };
   }, [products]);
+
+  const { registerPageActions } = useHeaderActions();
+
+  // Push this page's header actions (Search / Barcode / Notifications) into
+  // the shared Topbar so they are visible on every page.
+  useEffect(() => {
+    const alerts = kpis.low + kpis.out;
+    registerPageActions({
+      searchRef,
+      onBarcode: () => searchRef.current?.focus(),
+      onSearch: () => searchRef.current?.focus(),
+      notify: {
+        count: alerts,
+        onClick: () => {
+          notificationManager.info(
+            'Notifications',
+            alerts > 0 ? `${alerts} product(s) need attention.` : 'No new notifications.'
+          );
+        },
+      },
+    });
+    return () => registerPageActions(null);
+  }, [registerPageActions, kpis.low, kpis.out]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -427,31 +449,6 @@ export default function Products() {
           <p>Manage all products and inventory.</p>
         </div>
         <div className="prd-header-actions">
-          <div className="prd-search">
-            <Icon name="search" size={16} />
-            <input
-              ref={searchRef}
-              type="text"
-              placeholder="Search products..."
-              value={query}
-              onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-              aria-label="Search products"
-            />
-            <kbd>Ctrl K</kbd>
-          </div>
-          <button type="button" className="prd-icon-btn" title="Barcode Scanner" onClick={() => searchRef.current?.focus()}>
-            <Icon name="scan" size={17} />
-          </button>
-          <button type="button" className="prd-icon-btn" title="Notifications" onClick={() => {
-            const alerts = kpis.low + kpis.out;
-            notificationManager.info('Notifications', alerts > 0 ? `${alerts} product(s) need attention.` : 'No new notifications.');
-          }}>
-            <Icon name="bell" size={17} />
-            {(kpis.low + kpis.out) > 0 && <span className="prd-notif-dot" />}
-          </button>
-          <button type="button" className="prd-icon-btn" title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'} onClick={toggleFullscreen}>
-            <Icon name="maximize" size={17} />
-          </button>
           {canCreate && (
             <Button variant="primary" className="prd-btn-primary" icon="plus" onClick={() => setAddOpen(true)}>Add Product</Button>
           )}
@@ -495,6 +492,7 @@ export default function Products() {
           <div className="prd-filter-search">
             <Icon name="search" size={16} />
             <input
+              ref={searchRef}
               type="text"
               placeholder="Search Products"
               value={query}

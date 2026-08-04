@@ -9,6 +9,7 @@ import { settingsManager } from '../../managers/SettingsManager.js';
 import { themeManager } from '../../managers/ThemeManager.js';
 import { Minimize2 } from 'lucide-react';
 import { useFullscreen } from './FullscreenContext.jsx';
+import { useHeaderActions } from './HeaderActionsContext.jsx';
 
 export default function Topbar({ onToggle }) {
   const { pathname } = useLocation();
@@ -16,9 +17,10 @@ export default function Topbar({ onToggle }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const { items } = useToolbar();
+  const { pageActions } = useHeaderActions();
   const [logoUrl, setLogoUrl] = useState(null);
   const isDark = themeManager.isDark();
-  const { isFullscreen, exitFullscreen } = useFullscreen();
+  const { isFullscreen, exitFullscreen, toggleFullscreen } = useFullscreen();
 
   useEffect(() => {
     settingsApiService.getAll().then((res) => {
@@ -66,6 +68,22 @@ export default function Topbar({ onToggle }) {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
+  // Global Ctrl/Cmd+K: focus the active page's search input when registered.
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        if (pageActions?.searchRef?.current) {
+          pageActions.searchRef.current.focus();
+        } else if (pageActions?.onSearch) {
+          pageActions.onSearch();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pageActions]);
+
   const initials = (user?.name || 'U').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
   const tabs = items.filter(i => i.type === 'tab');
@@ -110,6 +128,26 @@ export default function Topbar({ onToggle }) {
           {item.label}
         </button>
       ))}
+
+      <div className="topbar__actions">
+        <button type="button" className="topbar__action-btn" title="Search (⌘K)"
+          onClick={() => pageActions?.onSearch?.() ?? (pageActions?.searchRef?.current?.focus())}>
+          <Icon name="search" size={18} />
+        </button>
+        <button type="button" className="topbar__action-btn" title="Barcode scanner"
+          onClick={() => pageActions?.onBarcode?.()}>
+          <Icon name="scan" size={18} />
+        </button>
+        <button type="button" className={`topbar__action-btn${(pageActions?.notify?.count ?? 0) > 0 ? ' has-notif' : ''}`}
+          title="Notifications" onClick={() => pageActions?.notify?.onClick?.()}>
+          <Icon name="bell" size={18} />
+          {(pageActions?.notify?.count ?? 0) > 0 && <span className="topbar__notif-dot" />}
+        </button>
+        <button type="button" className="topbar__action-btn"
+          title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'} onClick={() => toggleFullscreen()}>
+          <Icon name="maximize" size={18} />
+        </button>
+      </div>
 
       <button className="topbar__theme-toggle" onClick={() => themeManager.toggle()} aria-label="Toggle theme">
         <div className={`topbar__theme-track ${isDark ? 'dark' : ''}`}>

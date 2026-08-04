@@ -4,6 +4,7 @@ import Sidebar from './Sidebar.jsx';
 import Topbar from './Topbar.jsx';
 import { ToolbarProvider } from './ToolbarContext.jsx';
 import { FullscreenProvider, useFullscreen } from './FullscreenContext.jsx';
+import { HeaderActionsProvider } from './HeaderActionsContext.jsx';
 
 function MainLayoutContent() {
   const [collapsed, setCollapsed] = useState(false);
@@ -29,14 +30,16 @@ function MainLayoutContent() {
           )}
         </>
       )}
-      <div className={`app-main ${collapsed ? 'collapsed' : ''} ${isFullscreen ? 'fullscreen-main' : ''}`} ref={containerRef}>
-        <ToolbarProvider>
-          <Topbar onToggle={toggle} />
-          <main id="main-content" className="page-area">
-            <Outlet />
-          </main>
-        </ToolbarProvider>
-      </div>
+        <div className={`app-main ${collapsed ? 'collapsed' : ''} ${isFullscreen ? 'fullscreen-main' : ''}`} ref={containerRef}>
+          <ToolbarProvider>
+            <HeaderActionsProvider>
+              <Topbar onToggle={toggle} />
+              <main id="main-content" className="page-area">
+                <Outlet />
+              </main>
+            </HeaderActionsProvider>
+          </ToolbarProvider>
+        </div>
     </div>
   );
 }
