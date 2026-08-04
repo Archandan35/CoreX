@@ -648,9 +648,12 @@ export default function CreateInvoice() {
                 {prefix || 'Select Prefix'} <Icon name="chevronDown" />
                 {prefixOpen && (
                   <div style={{position:'absolute',top:'100%',left:0,background:'#fff',border:'1px solid var(--ni-border)',borderRadius:'8px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:100,minWidth:'120px',marginTop:'4px'}}>
+                    {prefixOptions.length === 0 && (
+                      <div style={{padding:'8px 14px',fontSize:'13px',color:'var(--ni-text-light-gray)'}}>No prefixes found</div>
+                    )}
                     {prefixOptions.map(p => (
                       <div key={p.value} style={{padding:'8px 14px',fontSize:'13px',cursor:'pointer',fontWeight:p.value===prefix?'700':'400'}}
-                        onClick={() => { setPrefix(p.value); setPrefixOpen(false); }}>{p.label}</div>
+                        onClick={(e) => { e.stopPropagation(); setPrefix(p.value); setPrefixOpen(false); }}>{p.label}</div>
                     ))}
                   </div>
                 )}
