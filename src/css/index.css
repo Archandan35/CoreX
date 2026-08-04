@@ -15527,12 +15527,10 @@ button.qs-cancel:hover,
 }
 
 .prd-stock {
-  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .prd-price {
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -16291,11 +16289,10 @@ button.qs-cancel:hover,
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12.5px;
   color: var(--invp-primary);
-  font-weight: 700;
 }
 
 .invp-name {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--invp-text);
 }
 
@@ -16306,11 +16303,9 @@ button.qs-cancel:hover,
 }
 
 .invp-stock {
-  font-weight: 700;
 }
 
 .invp-price {
-  font-weight: 700;
   color: var(--invp-text);
 }
 

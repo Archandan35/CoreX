@@ -27,6 +27,6 @@
     "vite": "^5.0.0"
   },
   "optionalDependencies": {
-    "@supabase/supabase-js": "^2.110.8"
+    "@supabase/supabase-js": "~2.109.0"
   }
 }

@@ -183,6 +183,12 @@ export default function Products() {
     return s ? s.name : '—';
   };
 
+  const unitName = (value) => {
+    if (!value) return '—';
+    const u = units.find((x) => (x.id || x.name) === value);
+    return u ? (u.name || value) : value;
+  };
+
   const handleCreate = useCallback(async (product) => {
     setAddOpen(false);
     notificationManager.success('Product', `${product.name} added.`);
@@ -218,7 +224,7 @@ export default function Products() {
         unit_price: Number(editProduct.unit_price) || 0,
         mrp: Number(editProduct.mrp) || 0,
         tax_rate: Number(editProduct.tax_rate) || 0,
-        unit: editProduct.unit,
+        unit: unitName(editProduct.unit),
         hsn_code: editProduct.hsn_code,
         stock_quantity: Number(editProduct.stock_quantity) || 0,
         stock_alert: Number(editProduct.stock_alert) || 0,
@@ -648,7 +654,7 @@ export default function Products() {
                         <td className="prd-muted">{categoryName(p.category_id)}</td>
                         <td className="prd-code">{p.sku || p.item_code || '—'}</td>
                         <td className="prd-stock">{fmtQty(p.stock_quantity)}</td>
-                        <td className="prd-muted">{p.unit || '—'}</td>
+                        <td className="prd-muted">{unitName(p.unit)}</td>
                         <td className="prd-price">{Number(p.mrp) > 0 ? fmtCurrency(p.mrp) : '—'}</td>
                         <td className="prd-price">{fmtCurrency(p.unit_price)}</td>
                         <td>

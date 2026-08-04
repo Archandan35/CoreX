@@ -28,7 +28,8 @@ const PRICE_LIST_EMPTY = { price_list_id: '', selling_price: '', currency: 'INR'
 
 const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'video/mp4', 'video/webm'];
 
-export default function AddProductPanel({ open, onClose, onSubmit }) {
+export default function AddProductPanel({ open, onClose, onSubmit, editProduct }) {
+  const isEdit = !!editProduct;
   const [tab, setTab] = useState('details');
   const [form, setForm] = useState(EMPTY_PRODUCT);
   const [errors, setErrors] = useState({});
@@ -44,9 +45,49 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
   const [manufacturers, setManufacturers] = useState([]);
   const [configPriceLists, setConfigPriceLists] = useState([]);
 
+  const mapProductToForm = useCallback((p) => ({
+    ...EMPTY_PRODUCT,
+    name: p.name || '',
+    is_service: !!p.is_service,
+    selling_price: p.unit_price ?? '',
+    tax_rate: p.tax_rate ?? '',
+    tax_type: p.tax_type || 'exclusive',
+    unit: p.unit || '',
+    hsn_sac: p.hsn_code || '',
+    purchase_price: p.purchase_price ?? '',
+    barcode: p.barcode || '',
+    auto_barcode: false,
+    category_id: p.category_id || '',
+    brand: p.brand || '',
+    manufacturer: p.manufacturer || '',
+    sku: p.sku || '',
+    item_code: p.item_code || '',
+    item_group: p.item_group || '',
+    description: p.description || '',
+    opening_qty: p.stock_quantity ?? '',
+    opening_price: '',
+    warehouse: '',
+    batch: '',
+    discount: '',
+    discount_type: 'percent',
+    max_discount: p.max_discount ?? '',
+    cess: p.cess ?? '',
+    inventory_tracking: false,
+    low_stock_alert: p.stock_alert ?? '',
+    reorder_qty: '',
+    show_online: !!p.show_online,
+    not_for_sale: !!p.not_for_sale,
+    featured: !!p.is_featured,
+    allow_negative: !!p.allow_negative,
+    track_serial: !!p.track_serial,
+    track_batch: !!p.track_batch,
+    track_expiry: !!p.track_expiry,
+    custom_fields: {},
+  }), []);
+
   useEffect(() => {
     if (!open) return;
-    setForm(EMPTY_PRODUCT);
+    setForm(isEdit ? mapProductToForm(editProduct) : EMPTY_PRODUCT);
     setErrors({});
     setPriceListRows([]);
     setMoreOpen(false);
@@ -244,7 +285,7 @@ export default function AddProductPanel({ open, onClose, onSubmit }) {
                     <Select options={[{ value: 'exclusive', label: 'Exclusive' }, { value: 'inclusive', label: 'Inclusive' }]} value={form.tax_type} onChange={set('tax_type')} />
                   </Field>
                   <Field label="Primary Unit">
-                    <Select options={[{ value: '', label: 'Select Unit' }, ...units.map(u => ({ value: u.id || u.name, label: u.name }))]} value={form.unit} onChange={set('unit')} />
+                    <Select options={[{ value: '', label: 'Select Unit' }, ...units.map(u => ({ value: u.name, label: u.name }))]} value={form.unit} onChange={set('unit')} />
                   </Field>
                 </div>
               </div>
