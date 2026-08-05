@@ -8,6 +8,7 @@ import AdminSetupBanner from './components/layout/AdminSetupBanner.jsx';
 import DatabaseHealthBanner from './components/layout/DatabaseHealthBanner.jsx';
 import Toast from './components/ui/Toast.jsx';
 import PermissionGate from './components/ui/PermissionGate.jsx';
+import { keepAliveService } from './services/keepAlive/index.js';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import SetupWizard from './setup-wizard/SetupWizard.jsx';
@@ -452,6 +453,11 @@ function AppRoutes() {
 }
 
 export default function App() {
+  useEffect(() => {
+    keepAliveService.start();
+    return () => keepAliveService.stop();
+  }, []);
+
   return (
     <AppProvider>
       <AuthProvider>
